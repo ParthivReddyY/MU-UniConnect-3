@@ -1,0 +1,195 @@
+/* Transition animations for two-step login */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+/* Fix for duplicate focus styles */
+input:focus, select:focus {
+  outline: none !important;
+}
+
+/* Override browser default focus styles */
+input:-moz-focusring, 
+select:-moz-focusring {
+  outline: none;
+}
+
+input:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
+/* Enhanced placeholder text */
+input::placeholder {
+  color: rgba(156, 163, 175, 0.7);
+  opacity: 1;
+  transition: color 0.2s ease;
+}
+
+input:focus::placeholder {
+  color: rgba(156, 163, 175, 0.5);
+}
+
+/* Enhanced focus animation */
+input:focus, select:focus {
+  box-shadow: 0 0 0 2px rgba(229, 62, 62, 0.4);
+  transform: translateY(-1px);
+}
+
+/* Group hover effects */
+.group:hover .group-hover\:text-red-400 {
+  color: #f87171;
+}
+
+.group:hover .group-hover\:-translate-x-1 {
+  transform: translateX(-4px);
+}
+
+.group:hover .group-hover\:animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .6;
+  }
+}
+
+/* Custom select styling */
+select option {
+  background-color: #1f2937;
+  color: #e5e7eb;
+}
+
+/* Button hover animation */
+button:not(:disabled):hover.hover\:-translate-y-1 {
+  transform: translateY(-2px);
+}
+
+/* Backdrop blur effect */
+.backdrop-blur-sm {
+  backdrop-filter: blur(6px);
+}
+
+/* Section header icons hover effect */
+h3:hover .bg-gradient-to-br {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(239, 68, 68, 0.3), 0 4px 6px -4px rgba(239, 68, 68, 0.2);
+}
+
+h3:hover .fas {
+  animation: iconPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Icon container styling */
+.bg-gradient-to-br {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Square icon container styling */
+h3 .bg-gradient-to-br {
+  /* Ensure perfect square with rounded corners */
+  aspect-ratio: 1/1;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  /* Subtle border effect */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0.5rem; /* Consistent with rounded-lg */
+}
+
+/* Add subtle animation for square corners on hover */
+h3:hover .bg-gradient-to-br::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  opacity: 0;
+  animation: borderPulse 2s infinite;
+  border-radius: 0.5rem; /* Match the container */
+}
+
+@keyframes borderPulse {
+  0%, 100% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Remove navbar hiding CSS - now handled by conditional rendering in App.js */
+
+/* Consistent input styling */
+input, select {
+  min-height: 50px;
+  line-height: normal;
+}
+
+/* Fix for date input in some browsers */
+input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 10px;
+}
+
+/* Ensure select elements have consistent height */
+select {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+/* Add min-height to form groups to help with alignment when errors appear */
+.form-field-container {
+  min-height: 90px;
+}
+
+/* Consistent label styling */
+label {
+  display: flex;
+  align-items: center;
+  min-height: 20px;
+  line-height: 1.2;
+}
+
+/* Form field containers for alignment */
+.h-full {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Error message consistent spacing */
+.mt-1.text-xs.text-red-500 {
+  min-height: 18px;
+  margin-top: 4px;
+}

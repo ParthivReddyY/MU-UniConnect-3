@@ -1,0 +1,243 @@
+/* Essential styles that Tailwind can't easily handle */
+
+/* Container styles */
+.container-fluid {
+  width: 100%;
+  padding: 0;
+}
+
+.content-container {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Special section styles */
+.hero.full-width {
+  width: 100%;
+}
+
+.stats-section.full-width,
+.campus-gallery.full-width,
+.cta-section.full-width {
+  width: 100%;
+}
+
+/* Section title decoration */
+.section-title:after {
+  content: '';
+  display: block;
+  width: 60px;
+  height: 4px;
+  background: var(--primary-red);
+  margin: 16px auto 0;
+  border-radius: 2px;
+}
+
+/* Special animation behaviors */
+.feature-link:hover i {
+  transform: translateX(3px);
+}
+
+.news-card:hover .news-image img {
+  transform: scale(1.05);
+}
+
+/* Announcement Banner - enhanced for responsiveness and functionality */
+.announcement-slider {
+  display: flex;
+  overflow-x: auto;
+  -ms-overflow-style: none; /* IE/Edge */
+  gap: 40px;
+  padding: 8px 0;
+  scroll-behavior: smooth;
+  position: relative;
+  will-change: scroll-position; /* Optimize for animation */
+}
+
+@supports (overscroll-behavior-x: contain) {
+  .announcement-slider {
+    overscroll-behavior-x: contain; /* Prevent scroll chaining */
+  }
+}
+
+.announcement-slider::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Opera */
+}
+
+.announcement-item {
+  flex-shrink: 0;
+  animation: fadeIn 0.5s ease-in-out;
+  display: flex;
+  align-items: center;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+  cursor: default;
+}
+
+.announcement-item:hover {
+  background-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Add gradients to indicate more content */
+.announcement-slider::before,
+.announcement-slider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.announcement-slider::before {
+  left: 0;
+  background: linear-gradient(to right, var(--red-light), transparent);
+}
+
+.announcement-slider::after {
+  right: 0;
+  background: linear-gradient(to left, var(--red-light), transparent);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Ensure the link buttons in announcements are properly styled */
+.announcement-item button {
+  flex-shrink: 0; /* Prevent button from shrinking when text is long */
+  position: relative; /* For tooltip positioning */
+}
+
+.announcement-item span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Better mobile styles for announcements */
+@media (max-width: 480px) {
+  .announcement-item {
+    max-width: 90vw; /* Allow items to take up most of the screen but still show a hint of next item */
+    scroll-snap-align: start; /* Enable snap points for touch devices */
+  }
+  
+  .announcement-slider {
+    scroll-snap-type: x mandatory; /* Enable snap scrolling on mobile */
+    gap: 20px;
+  }
+}
+
+/* Testimonials slider special behavior */
+.testimonials-slider {
+  display: flex;
+  gap: 30px;
+  overflow-x: auto;
+  padding: 20px 0 30px;
+  scroll-snap-type: x mandatory;
+  min-height: 250px; /* Ensure consistent height */
+}
+
+.testimonials-slider::-webkit-scrollbar {
+  height: 8px;
+}
+
+.testimonials-slider::-webkit-scrollbar-thumb {
+  background-color: var(--medium-gray);
+  border-radius: 4px;
+}
+
+.testimonials-slider::-webkit-scrollbar-track {
+  background-color: var(--light-gray);
+}
+
+.testimonial-card {
+  scroll-snap-align: start;
+  min-width: 280px;
+  max-width: 400px;
+  flex: 1;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.testimonial-card:hover,
+.testimonial-card:focus {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+  outline: none;
+}
+
+.testimonial-card:focus-visible {
+  box-shadow: 0 0 0 3px var(--primary-red), 0 10px 25px rgba(0,0,0,0.1);
+}
+
+/* Dots navigation for testimonials */
+.testimonial-controls button {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.testimonial-controls button:hover,
+.testimonial-controls button:focus {
+  transform: scale(1.5);
+  outline: none;
+}
+
+/* Gallery overlay gradient - complex CSS */
+.gallery-overlay {
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+}
+
+/* Responsive announcement controls */
+.announcement-controls {
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+.announcement-controls:hover {
+  opacity: 1;
+}
+
+/* Add XS breakpoint to Tailwind via CSS for super small devices */
+@media screen and (min-width: 480px) {
+  .xs\:grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Additional responsive adjustments */
+@media screen and (max-width: 640px) {
+  .announcement-slider {
+    gap: 20px;
+  }
+  
+  .announcement-item {
+    padding: 5px 10px;
+  }
+  
+  /* Optimize feature cards for mobile */
+  .feature-card {
+    padding: 15px;
+  }
+  
+  /* Improve stats section readability on small screens */
+  .stats-section .text-5xl {
+    font-size: 2.5rem;
+  }
+  
+  .stats-section .text-lg {
+    font-size: 0.9rem;
+  }
+}
+
+/* Improve touch targets for mobile */
+@media (max-width: 480px) {
+  .announcement-item button,
+  .feature-link,
+  .news-link {
+    padding: 5px;
+    min-height: 44px; /* Ensure minimum touch target size */
+    display: inline-flex;
+    align-items: center;
+  }
+}

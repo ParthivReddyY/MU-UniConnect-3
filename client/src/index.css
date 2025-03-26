@@ -1,0 +1,99 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Add color variables to Tailwind */
+@layer base {
+  :root {
+    /* Primary Colors */
+    --primary-red: #D32F2F;
+    --secondary-red: #F44336;
+    --primary-teal: #1e3a8a;
+    
+    /* Neutrals */
+    --dark-gray: #263238;
+    --medium-gray: #757575;
+    --light-gray: #E0E0E0;
+    --off-white: #F5F5F5;
+    --white: #FFFFFF;
+    
+    /* Accent Colors */
+    --accent-gold: #FFB300;
+    --red-light: #FFEBEE;
+    --teal-light: #e0e8f2;
+    --gold-light: #FFF8E1;
+    --success-green: #43A047;
+    --green-light: #E8F5E9;
+    
+    /* Mobile viewport height fix */
+    --vh: 1vh;
+  }
+  
+  /* Improve default focus styling for better accessibility */
+  *:focus-visible {
+    outline: 2px solid var(--primary-red);
+    outline-offset: 2px;
+  }
+  
+  /* Ensure better mobile experience */
+  html, body {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+    overflow-x: hidden;
+    scroll-behavior: smooth;
+  }
+  
+  /* Better mobile link/button tap targets */
+  a, button {
+    touch-action: manipulation;
+  }
+}
+
+/* Tailwind component extensions */
+@layer components {
+  .btn-primary {
+    @apply bg-primary-red text-white font-medium py-2 px-5 rounded hover:bg-secondary-red transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-white text-primary-red border border-primary-red py-2 px-5 rounded hover:bg-red-light transition-colors;
+  }
+  
+  .btn-outline {
+    @apply bg-transparent text-primary-red border border-primary-red py-2 px-5 rounded hover:bg-red-light transition-colors;
+  }
+  
+  .btn-teal {
+    @apply bg-primary-teal text-white font-medium py-2 px-5 rounded hover:bg-blue-600 transition-colors;
+  }
+  
+  .card {
+    @apply bg-white rounded-lg shadow-sm p-5 transition-transform hover:translate-y-[-5px];
+  }
+  
+  /* Responsive utility classes */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
+  }
+  
+  /* Loading animation */
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+}
+
+/* Additional responsive utilities */
+@layer utilities {
+  .min-h-screen-safe {
+    min-height: calc(var(--vh, 1vh) * 100);
+  }
+  
+  .text-balance {
+    text-wrap: balance;
+  }
+}
