@@ -1,40 +1,62 @@
-// server/server.js
-require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
+const path = require('path');
+const dotenv = require('dotenv');
 const cors = require('cors');
+const mongoose = require('mongoose');
+
+// Load environment variables
+dotenv.config();
+
+// Import routes
 const authRoutes = require('./routes/authRoutes');
+// Import other routes as needed
 
 const app = express();
-const PORT = process.env.PORT || 9000;
+const PORT = process.env.PORT || 5000;
+
+// MongoDB Connection
+const connectDB = async () => {
+  try {
+    const conn = await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+    });
+    console.log(`MongoDB Connected: ${conn.connection.host}`);
+  } catch (error) {
+    console.error(`Error connecting to MongoDB: ${error.message}`);
+    process.exit(1);
+  }
+};
 
 // Middleware
 app.use(cors());
-app.use(express.json()); // To parse JSON bodies
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() => console.log('MongoDB connected'))
-.catch(err => console.error('MongoDB connection error:', err));
-
-// Routes
+// API Routes
 app.use('/api/auth', authRoutes);
+// Add other API routes here
 
-// Basic route
-app.get('/', (req, res) => {
-  res.send('Hello from Express!');
-});
+// Serve static files from the React app in production
+if (process.env.NODE_ENV === 'production') {
+  // Set static folder
+  app.use(express.static(path.join(__dirname, '../client/build')));
+
+  // For any route that doesn't match an API route, serve the React app
+  app.get('*', (req, res) => {
+    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+  });
+}
 
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
+  res.status(500).send('Server Error');
 });
 
-// Start the server
-app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+// Connect to MongoDB first, then start the server
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
 });
