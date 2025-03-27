@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../CSS/faculty.css'; // Keep importing the CSS for custom animations and complex styles
+import { useAuth } from '../contexts/AuthContext';
+import axios from 'axios';
 
 const Faculty = () => {
   // State variables
@@ -17,6 +19,10 @@ const Faculty = () => {
     searchQuery: ''
   });
   
+  // Auth context for role-based controls
+  const { isAdmin } = useAuth();
+  const navigate = useNavigate();
+  
   const pageSize = 12;
 
   // Fetch faculty data on component mount
@@ -24,12 +30,11 @@ const Faculty = () => {
     const fetchFacultyData = async () => {
       setIsLoading(true);
       try {
-        // Replace with your actual API endpoint
-        const response = await fetch('/api/faculty');
-        if (!response.ok) {
+        const response = await axios.get('/api/faculty');
+        if (response.status !== 200) {
           throw new Error('Network response was not ok');
         }
-        const data = await response.json();
+        const data = response.data;
         setAllFacultyData(data);
         setFilteredFacultyData(data);
         
@@ -55,6 +60,11 @@ const Faculty = () => {
 
     fetchFacultyData();
   }, []);
+
+  // Navigate to add faculty page
+  const handleAddFaculty = () => {
+    navigate('/faculty-detail/new');
+  };
 
   // Apply filters to faculty data
   const applyFilters = useCallback(() => {
@@ -249,6 +259,7 @@ const Faculty = () => {
                        document.getElementById('filters-container').scrollIntoView({behavior: 'smooth'});
                      }}
                   >Advanced Search</a>
+                  {/* Remove the Add Faculty button from here */}
                 </div>
               </div>
               <div className="hero-stats-area">
@@ -278,8 +289,8 @@ const Faculty = () => {
         
         <section className="bg-off-white py-8 shadow-light">
           <div className="container">
-            <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-5">
-              <div className="search-box w-full md:w-1/2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-5">
+              <div className="search-box w-full md:w-2/5">
                 <input 
                   type="text" 
                   id="faculty-search" 
@@ -296,6 +307,19 @@ const Faculty = () => {
                   <i className="fas fa-search text-sm"></i>
                 </button>
               </div>
+              
+              {/* Add Faculty button positioned between search and filters */}
+              {isAdmin() && (
+                <button 
+                  onClick={handleAddFaculty}
+                  className="filter-toggle w-full md:w-auto md:ml-[20%]"
+                  aria-label="Add new faculty member"
+                >
+                  <i className="fas fa-plus-circle text-primary-red mr-2"></i>
+                  <span>Add Faculty</span>
+                </button>
+              )}
+              
               <button 
                 className="filter-toggle w-full md:w-auto"
                 id="filter-toggle"
@@ -395,22 +419,26 @@ const Faculty = () => {
               ))}
             </div>
             
-            <div className="flex items-center gap-2.5 mb-4 justify-end">
-              <label htmlFor="sort-faculty" className="text-medium-gray">Sort by:</label>
-              <select 
-                id="sort-faculty" 
-                onChange={handleSortChange}
-                className="px-3 py-2 rounded border border-light-gray bg-off-white text-medium-gray"
-              >
-                <option value="name-asc">Name (A-Z)</option>
-                <option value="name-desc">Name (Z-A)</option>
-                <option value="department">Department</option>
-                <option value="designation">Designation</option>
-              </select>
-            </div>
-            
-            <div id="faculty-count" className="mb-4 text-medium-gray">
-              <span className="font-semibold text-primary-red">{filteredFacultyData.length}</span> faculty members found
+            <div className="flex items-center justify-between gap-2.5 mb-4">
+              {/* Add faculty count on the left */}
+              <div id="faculty-count" className="text-medium-gray">
+                <span className="font-semibold text-primary-red">{filteredFacultyData.length}</span> faculty members found
+              </div>
+              
+              {/* Only show sort controls - remove the Add Faculty button from here */}
+              <div className="flex items-center">
+                <label htmlFor="sort-faculty" className="text-medium-gray mr-2">Sort by:</label>
+                <select 
+                  id="sort-faculty" 
+                  onChange={handleSortChange}
+                  className="px-3 py-2 rounded border border-light-gray bg-off-white text-medium-gray"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="department">Department</option>
+                  <option value="designation">Designation</option>
+                </select>
+              </div>
             </div>
             
             <div className="faculty-grid" id="faculty-grid">

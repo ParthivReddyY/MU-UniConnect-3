@@ -13,6 +13,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Unauthorized from './pages/Unauthorized';
+import FacultyDetail from './pages/FacultyDetail';
 
 // Import components
 import Navbar from './components/Navbar';
@@ -135,6 +136,12 @@ function App() {
                 <Route path="/faculty" element={
                   <main className="flex-1 w-full mt-8 md:mt-10">
                     <Faculty />
+                  </main>
+                } />
+                
+                <Route path="/faculty-detail/:id" element={
+                  <main className="flex-1 w-full">
+                    <FacultyDetail />
                   </main>
                 } />
                 

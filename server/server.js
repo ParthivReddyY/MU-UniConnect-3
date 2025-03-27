@@ -9,6 +9,7 @@ dotenv.config();
 
 // Import routes
 const authRoutes = require('./routes/authRoutes');
+const facultyRoutes = require('./routes/facultyRoutes');
 // Import other routes as needed
 
 const app = express();
@@ -35,6 +36,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/faculty', facultyRoutes);
 // Add other API routes here
 
 // Serve static files from the React app in production
