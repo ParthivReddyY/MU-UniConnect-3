@@ -1,7 +1,10 @@
 import axios from 'axios';
 
-// Set the base URL for API requests
-const baseURL = process.env.REACT_APP_API_URL || 'http://localhost:9000';
+// Determine baseURL with better fallback handling
+const baseURL = process.env.REACT_APP_API_URL || 
+                (window.location.hostname === 'localhost' ? 
+                'http://localhost:9000/api' : 
+                'https://mu-uniconnect-ob9x.onrender.com/api');
 
 // Create an Axios instance with the base URL
 const api = axios.create({

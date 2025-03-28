@@ -29,8 +29,31 @@ const connectDB = async () => {
   }
 };
 
-// Middleware
-app.use(cors());
+// Improved CORS Configuration
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://mu-uniconnect.onrender.com', // Add your render deployed frontend URL
+      process.env.CLIENT_URL, // Add this to your .env file
+    ].filter(Boolean); // Remove any undefined/empty values
+    
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      console.log('Blocked by CORS:', origin);
+      callback(null, true); // Still allowing all origins for now, but logging blocked ones
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
