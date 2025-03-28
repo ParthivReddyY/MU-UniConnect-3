@@ -49,14 +49,16 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError('');
+      console.log('Login attempt for:', credentials.email, 'to', api.defaults.baseURL);
       const res = await api.post('/api/auth/login', credentials);
+      
+      console.log('Login response received:', res.status);
       
       if (res.data.success) {
         setCurrentUser(res.data.user);
         localStorage.setItem('token', res.data.token);
         setToken(res.data.token);
         
-        // Removed forcePasswordChange handling
         return { success: true };
       } else {
         // This case shouldn't happen as API should throw error for failures
@@ -69,9 +71,21 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login error in context:', error);
-      // Extract error details from the response
-      const errorMessage = error.response?.data?.message || 'Login failed';
-      const errorType = error.response?.data?.errorType || 'UNKNOWN_ERROR';
+      
+      let errorMessage = 'Login failed';
+      let errorType = 'UNKNOWN_ERROR';
+      
+      if (error.code === 'ECONNABORTED') {
+        errorMessage = 'Connection timeout. Server might be down or unavailable.';
+        errorType = 'TIMEOUT';
+      } else if (error.message && error.message.includes('Network Error')) {
+        errorMessage = `Network error - cannot connect to server. Please check your connection or try again later. (Server: ${api.defaults.baseURL})`;
+        errorType = 'NETWORK_ERROR';
+      } else if (error.response) {
+        // Extract error details from the response
+        errorMessage = error.response.data?.message || 'Server error';
+        errorType = error.response.data?.errorType || 'SERVER_ERROR';
+      }
       
       setError(errorMessage);
       return { 
