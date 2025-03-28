@@ -8,7 +8,8 @@ const {
   forgotPassword,
   resetPassword,
   getCurrentUser,
-  checkEmail
+  checkEmail,
+  changePassword
 } = require('../controllers/authController');
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
@@ -25,5 +26,8 @@ router.get('/me', authenticateUser, getCurrentUser);
 
 // Admin-only routes
 router.post('/create-user', authenticateUser, isAdmin, createUser);
+
+// Fix the route to use the correctly imported authenticateUser middleware
+router.post('/change-password', authenticateUser, changePassword);
 
 module.exports = router;

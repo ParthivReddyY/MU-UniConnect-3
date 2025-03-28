@@ -138,21 +138,27 @@ const FacultyDetail = () => {
       let response;
       
       if (isNewFaculty) {
-        // Create new faculty
+        // Validate password for new faculty
+        if (!data.password) {
+          setError('Please provide a password for the faculty account');
+          return;
+        }
+        
+        if (data.password.length < 6) {
+          setError('Password must be at least 6 characters long');
+          return;
+        }
+        
+        // Create new faculty with password
         response = await api.post('/api/faculty', formattedData);
         
-        // Fix: Correctly extract email for password notification
-        const primaryEmail = formattedData.emails[0]; // This is now a string
-        const emailUsername = primaryEmail.split('@')[0];
-        const defaultPasswordFormat = `${emailUsername}@MU`;
-        
-        // Make password format more explicit
-        setSuccess(`Faculty added successfully! An account has been created with password: ${defaultPasswordFormat} (username@MU format)`);
+        // Show success message
+        setSuccess(`Faculty added successfully! A user account has been created for ${response.data.email}`);
         
         // Navigate to the newly created faculty page
         setTimeout(() => {
           navigate(`/faculty-detail/${response.data._id}`);
-        }, 3000);
+        }, 2000);
       } else {
         // Update existing faculty
         response = await api.put(`/api/faculty/${id}`, formattedData);
@@ -695,6 +701,38 @@ const FacultyDetail = () => {
                         {...register('mobileNumber')}
                       />
                     </div>
+
+                    {isNewFaculty && (
+                      <div className="mb-6 mt-6 border-t border-gray-200 pt-6">
+                        <h3 className="text-lg font-medium text-gray-800 mb-4">Account Information</h3>
+                        
+                        <div className="mb-4">
+                          <label className="block text-gray-700 font-medium mb-2">
+                            Account Password <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input 
+                              type="password" 
+                              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                              placeholder="Create a secure password for faculty login"
+                              {...register('password', { 
+                                required: isNewFaculty ? 'Password is required' : false,
+                                minLength: {
+                                  value: 6,
+                                  message: 'Password must be at least 6 characters long'
+                                }
+                              })}
+                            />
+                            {errors.password && (
+                              <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                            )}
+                          </div>
+                          <p className="text-xs text-gray-500 mt-2">
+                            The faculty will use this password to log in. They will be required to change it on first login.
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
     

@@ -66,11 +66,7 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  lastLogin: Date,
-  forcePasswordChange: {
-    type: Boolean,
-    default: false
-  }
+  lastLogin: Date
 }, { timestamps: true });
 
 // Hash password before saving
@@ -83,13 +79,33 @@ UserSchema.pre('save', async function(next) {
   next();
 });
 
-// Method to compare passwords
+// Method to compare passwords - Adding logging for debugging
 UserSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  if (!this.password) {
+    console.error('User has no password set, cannot compare');
+    return false;
+  }
+  
+  try {
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    console.log(`Password comparison result: ${isMatch ? 'Match' : 'No match'}`);
+    return isMatch;
+  } catch (error) {
+    console.error('Error comparing passwords:', error);
+    return false;
+  }
 };
 
 // Method to generate JWT
 UserSchema.methods.createJWT = function() {
+  // Log the user data being used for the token
+  console.log('Creating JWT with user data:', {
+    userId: this._id,
+    name: this.name,
+    role: this.role,
+    email: this.email
+  });
+  
   return jwt.sign(
     { userId: this._id, name: this.name, role: this.role, email: this.email },
     process.env.JWT_SECRET,

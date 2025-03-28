@@ -15,6 +15,7 @@ import ResetPassword from './pages/ResetPassword';
 import Dashboard from './pages/Dashboard';
 import Unauthorized from './pages/Unauthorized';
 import FacultyDetail from './pages/FacultyDetail';
+import ChangePassword from './pages/ChangePassword';
 
 // Import components
 import Navbar from './components/Navbar';
@@ -158,6 +159,12 @@ function App() {
                     <main className="flex-1 mt-16 md:mt-20 w-full">
                       <Dashboard />
                     </main>
+                  </ProtectedRoute>
+                } />
+                
+                <Route path="/change-password" element={
+                  <ProtectedRoute>
+                    <ChangePassword />
                   </ProtectedRoute>
                 } />
                 

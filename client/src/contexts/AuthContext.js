@@ -47,20 +47,38 @@ export const AuthProvider = ({ children }) => {
 
   // Login user
   const login = async (credentials) => {
-    setLoading(true);
     try {
+      setError('');
       const res = await api.post('/api/auth/login', credentials);
       
-      localStorage.setItem('token', res.data.token);
-      setToken(res.data.token);
-      setCurrentUser(res.data.user);
-      setLoading(false);
-      
-      return { success: true };
+      if (res.data.success) {
+        setCurrentUser(res.data.user);
+        localStorage.setItem('token', res.data.token);
+        setToken(res.data.token);
+        
+        // Removed forcePasswordChange handling
+        return { success: true };
+      } else {
+        // This case shouldn't happen as API should throw error for failures
+        setError(res.data.message || 'Login failed');
+        return { 
+          success: false, 
+          message: res.data.message || 'Login failed',
+          errorType: res.data.errorType 
+        };
+      }
     } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Login failed');
-      return { success: false, message: error.response?.data?.message || 'Login failed' };
+      console.error('Login error in context:', error);
+      // Extract error details from the response
+      const errorMessage = error.response?.data?.message || 'Login failed';
+      const errorType = error.response?.data?.errorType || 'UNKNOWN_ERROR';
+      
+      setError(errorMessage);
+      return { 
+        success: false, 
+        message: errorMessage,
+        errorType: errorType 
+      };
     }
   };
 

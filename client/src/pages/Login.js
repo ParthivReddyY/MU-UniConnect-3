@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios'; // Re-add this import for API calls
+// Replace direct axios import with the configured api client
+import api from '../utils/axiosConfig';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -20,8 +21,6 @@ const Login = () => {
   const { login, error, setError, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9000/api';
   
   const adminEmails = [
     'parthivreddy7769@gmail.com',
@@ -58,7 +57,7 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle first step (email verification) - FIXING THIS TO ACTUALLY CHECK EMAIL EXISTS
+  // Handle first step (email verification)
   const handleContinue = async (e) => {
     e.preventDefault();
     
@@ -68,8 +67,8 @@ const Login = () => {
     setLoginError('');
     
     try {
-      // Make an actual API call to check if the email exists
-      const response = await axios.post(`${API_URL}/auth/check-email`, {
+      // Use the configured api client instead of direct axios
+      const response = await api.post('/api/auth/check-email', {
         email: formData.email
       });
       
@@ -88,18 +87,25 @@ const Login = () => {
         });
       }
     } catch (err) {
+      // Improved error handling with more specific messages
       console.error("Error checking email:", err);
       
-      // For demo purposes, allowing login without backend verification
-      // For demo purposes, allowing login without backend verification
-      // In a real app, you would handle the error properly
-      if (process.env.NODE_ENV === 'development') {
-        setCurrentStep(2);
-        setTimeout(() => {
-          const passwordField = document.getElementById('password');
-          if (passwordField) passwordField.focus();
-        }, 100);
+      if (err.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        setErrors({
+          email: err.response.data.message || 'Server error. Please try again.'
+        });
+      } else if (err.request) {
+        // The request was made but no response was received
+        setErrors({
+          email: 'No response from server. Please check your connection.'
+        });
       } else {
+        // Something happened in setting up the request that triggered an Error
+        setErrors({
+          email: 'An error occurred while checking your email. Please try again.'
+        });
       }
     } finally {
       setIsCheckingEmail(false);
@@ -130,15 +136,40 @@ const Login = () => {
     
     if (!validateForm()) return;
     
-    setIsSubmitting(true);
-    
     try {
+      setIsSubmitting(true);
       const result = await login(formData);
+      setIsSubmitting(false);
       
-      if (!result.success) {
-        setLoginError(result.message);
+      if (result.success) {
+        // Removed forcePasswordChange check and redirect
+        // Always redirect to dashboard or home on successful login
+        const from = location.state?.from?.pathname || '/dashboard';
+        navigate(from);
+      } else {
+        // Format error message based on the type of error
+        if (result.errorType === 'INVALID_PASSWORD') {
+          setLoginError('Incorrect password. Please try again.');
+          // Focus on password field and clear it for re-entry
+          setFormData({...formData, password: ''});
+          setTimeout(() => {
+            const passwordField = document.getElementById('password');
+            if (passwordField) {
+              passwordField.focus();
+            }
+          }, 100);
+        } else if (result.errorType === 'EMAIL_NOT_FOUND') {
+          // If email not found, go back to step 1
+          setLoginError('No account found with this email. Please check the email address.');
+          setCurrentStep(1);
+        } else if (result.errorType === 'EMAIL_NOT_VERIFIED') {
+          setLoginError('Please verify your email address before logging in.');
+        } else {
+          setLoginError(result.message || 'Login failed. Please try again.');
+        }
       }
     } catch (err) {
+      console.error('Login error:', err);
       setLoginError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);

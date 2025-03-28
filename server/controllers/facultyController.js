@@ -27,11 +27,11 @@ const getFacultyById = async (req, res) => {
   }
 };
 
-// Create new faculty
+// Create new faculty - The function is correct, just adding extra logging
 const createFaculty = async (req, res) => {
   try {
     // Extract basic information for user account
-    const { name, emails, school } = req.body;
+    const { name, emails, school, password } = req.body;
     
     // Validate that emails array exists and has at least one email
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
@@ -46,6 +46,12 @@ const createFaculty = async (req, res) => {
       return res.status(400).json({ message: 'Primary email is required' });
     }
     
+    // Validate email format
+    const emailRegex = /^\S+@\S+\.\S+$/;
+    if (!emailRegex.test(primaryEmail)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+    
     // Check if faculty with this email already exists
     const existingFaculty = await Faculty.findOne({ email: primaryEmail });
     if (existingFaculty) {
@@ -57,6 +63,11 @@ const createFaculty = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ message: 'User account with this email already exists' });
     }
+
+    // Validate password
+    if (!password || password.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
     
     // Create faculty record
     const faculty = new Faculty({
@@ -66,36 +77,26 @@ const createFaculty = async (req, res) => {
     
     await faculty.save();
     
-    // Generate default password (email username + @MU)
-    // For example: johndoe@example.com → johndoe@MU
-    const emailUsername = primaryEmail.split('@')[0];
-    const defaultPassword = `${emailUsername}@MU`;
-    
-    // Create user account for faculty
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(defaultPassword, salt);
-    
-    const newUser = new User({
+    // Create user account for faculty - DO NOT HASH PASSWORD HERE
+    // Let the User model's pre-save middleware handle hashing
+    const user = await User.create({
       name,
-      email: primaryEmail,
-      password: hashedPassword,
+      email: emails[0], // Primary email
       role: 'faculty',
       department: school,
-      forcePasswordChange: true, // Force password change on first login
-      isVerified: true // Faculty accounts are pre-verified
+      password // Pass plaintext password - it will be hashed by the pre-save hook
+      // Removed forcePasswordChange flag
     });
     
-    await newUser.save();
+    console.log(`Creating user account for faculty: ${name}, email: ${primaryEmail}`);
     
-    // Send email to faculty with their credentials (in a real application)
-    // For now, we'll just include the password in the response for demonstration
+    console.log(`Faculty user account created successfully: ${primaryEmail}`);
     
     res.status(201).json({
       _id: faculty._id,
       name: faculty.name,
       email: faculty.email,
-      defaultPassword, // Only include in development/testing
-      message: 'Faculty created successfully. Default password format is [username]@MU'
+      message: 'Faculty created successfully. A user account has been created.'
     });
   } catch (error) {
     console.error('Error in createFaculty:', error);
