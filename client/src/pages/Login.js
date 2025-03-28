@@ -67,10 +67,13 @@ const Login = () => {
     setLoginError('');
     
     try {
+      console.log('Checking email with API:', formData.email);
       // Use the configured api client instead of direct axios
       const response = await api.post('/api/auth/check-email', {
         email: formData.email
       });
+      
+      console.log('Email check response:', response.data);
       
       if (response.data.exists) {
         // Email exists, proceed to step 2
@@ -90,7 +93,11 @@ const Login = () => {
       // Improved error handling with more specific messages
       console.error("Error checking email:", err);
       
-      if (err.response) {
+      if (err.code === 'ECONNABORTED') {
+        setErrors({
+          email: 'Request timed out. Please try again.'
+        });
+      } else if (err.response) {
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
         setErrors({
@@ -99,12 +106,12 @@ const Login = () => {
       } else if (err.request) {
         // The request was made but no response was received
         setErrors({
-          email: 'No response from server. Please check your connection.'
+          email: `No response from server. Please check your connection. Server URL: ${api.defaults.baseURL}`
         });
       } else {
         // Something happened in setting up the request that triggered an Error
         setErrors({
-          email: 'An error occurred while checking your email. Please try again.'
+          email: `An error occurred while checking your email. ${err.message}`
         });
       }
     } finally {
@@ -138,6 +145,7 @@ const Login = () => {
     
     try {
       setIsSubmitting(true);
+      console.log('Attempting login with:', formData.email);
       const result = await login(formData);
       setIsSubmitting(false);
       
@@ -170,7 +178,11 @@ const Login = () => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      setLoginError('An unexpected error occurred. Please try again.');
+      if (err.message && err.message.includes('Network Error')) {
+        setLoginError(`Network error connecting to server. Please check your connection or try again later. (Server: ${api.defaults.baseURL})`);
+      } else {
+        setLoginError(`An unexpected error occurred: ${err.message}. Please try again.`);
+      }
     } finally {
       setIsSubmitting(false);
     }
