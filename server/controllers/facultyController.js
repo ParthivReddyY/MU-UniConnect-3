@@ -33,8 +33,18 @@ const createFaculty = async (req, res) => {
     // Extract basic information for user account
     const { name, emails, school } = req.body;
     
+    // Validate that emails array exists and has at least one email
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ message: 'At least one email address is required' });
+    }
+    
     // Use the first email as primary email for account
     const primaryEmail = emails[0];
+    
+    // Additional validation for email
+    if (!primaryEmail) {
+      return res.status(400).json({ message: 'Primary email is required' });
+    }
     
     // Check if faculty with this email already exists
     const existingFaculty = await Faculty.findOne({ email: primaryEmail });
@@ -57,6 +67,7 @@ const createFaculty = async (req, res) => {
     await faculty.save();
     
     // Generate default password (email username + @MU)
+    // For example: johndoe@example.com → johndoe@MU
     const emailUsername = primaryEmail.split('@')[0];
     const defaultPassword = `${emailUsername}@MU`;
     
@@ -69,16 +80,22 @@ const createFaculty = async (req, res) => {
       email: primaryEmail,
       password: hashedPassword,
       role: 'faculty',
-      department: school
+      department: school,
+      forcePasswordChange: true, // Force password change on first login
+      isVerified: true // Faculty accounts are pre-verified
     });
     
     await newUser.save();
+    
+    // Send email to faculty with their credentials (in a real application)
+    // For now, we'll just include the password in the response for demonstration
     
     res.status(201).json({
       _id: faculty._id,
       name: faculty.name,
       email: faculty.email,
-      message: 'Faculty created successfully with user account'
+      defaultPassword, // Only include in development/testing
+      message: 'Faculty created successfully. Default password format is [username]@MU'
     });
   } catch (error) {
     console.error('Error in createFaculty:', error);

@@ -312,7 +312,7 @@ const getCurrentUser = async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        profileImage: user.profileImage,
+        profileImage: user.profileImage || null,
         department: user.department,
         studentId: user.studentId,
         clubManaging: user.clubManaging,

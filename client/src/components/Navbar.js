@@ -105,27 +105,28 @@ function Navbar() {
           <div className="auth-section">
             <button 
               id="auth-button" 
-              className="auth-icon-btn" 
+              className="auth-icon-btn relative group" 
               onClick={handleAuthClick}
               title={currentUser ? "Account menu" : "Login or access account"}
             >
               {currentUser ? (
                 <span className="w-full h-full flex items-center justify-center overflow-hidden">
-                  {currentUser.profileImage ? (
-                    <img 
+                  {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
+                    <img
+                      className="h-8 w-8 rounded-full object-cover"
                       src={currentUser.profileImage} 
-                      alt={currentUser.name} 
-                      className="w-full h-full object-cover" 
+                      alt={`${currentUser.name}'s profile`}
                     />
                   ) : (
-                    <span className="text-white text-sm font-semibold">
-                      {currentUser.name.charAt(0).toUpperCase()}
-                    </span>
+                    <i className="fas fa-user"></i>
                   )}
                 </span>
               ) : (
                 <i className="fas fa-user"></i>
               )}
+              <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-full mt-1 right-0">
+                {currentUser ? 'Profile' : 'Log In'}
+              </span>
             </button>
             
             {/* User profile dropdown menu */}

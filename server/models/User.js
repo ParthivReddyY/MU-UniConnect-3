@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide an email'],
     match: [
-      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       'Please provide a valid email'
     ],
     unique: true,
@@ -52,8 +52,7 @@ const UserSchema = new mongoose.Schema({
     }
   },
   profileImage: {
-    type: String,
-    default: 'default-profile.png'
+    type: String
   },
   isVerified: {
     type: Boolean,
@@ -67,7 +66,11 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  lastLogin: Date
+  lastLogin: Date,
+  forcePasswordChange: {
+    type: Boolean,
+    default: false
+  }
 }, { timestamps: true });
 
 // Hash password before saving

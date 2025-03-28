@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import '../CSS/faculty.css'; // Keep importing the CSS for custom animations and complex styles
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
+import api from '../utils/axiosConfig';  // Using our configured axios instance
 
 const Faculty = () => {
   // State variables
@@ -30,7 +30,7 @@ const Faculty = () => {
     const fetchFacultyData = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get('/api/faculty');
+        const response = await api.get('/api/faculty');
         if (response.status !== 200) {
           throw new Error('Network response was not ok');
         }

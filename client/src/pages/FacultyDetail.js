@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
-import axios from 'axios';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css';
+import api from '../utils/axiosConfig';
+import QuillEditor from '../components/QuillEditor'; // Import our custom QuillEditor component
+import 'react-quill/dist/quill.snow.css'; // Still need the CSS
 
 const FacultyDetail = () => {
   const { id } = useParams();
@@ -20,20 +20,14 @@ const FacultyDetail = () => {
   const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('basic');
   
-  // Enhanced Editor configurations
-  const modules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
-      [{ 'align': [] }],
-      ['link', 'image', 'blockquote', 'code-block'],
-      ['clean']
-    ],
-  };
+  // Create refs for QuillEditor components
+  const overviewEditorRef = useRef(null);
+  const educationEditorRef = useRef(null);
+  const workExperienceEditorRef = useRef(null);
+  const publicationsEditorRef = useRef(null);
+  const researchEditorRef = useRef(null);
   
-  // Custom styles for ReactQuill editors
+  // Custom styles for editors
   const quillStyle = {
     backgroundColor: '#f8f9fa',
     border: '1px solid #e2e8f0',
@@ -42,7 +36,7 @@ const FacultyDetail = () => {
   };
 
   // Form handling
-  const { register, control, handleSubmit, reset, setValue, formState: { errors } } = useForm();
+  const { register, control, handleSubmit, reset, formState: { errors } } = useForm();
   
   // Projects field array
   const { fields: projectFields, append: appendProject, remove: removeProject } = useFieldArray({
@@ -54,12 +48,6 @@ const FacultyDetail = () => {
   const { fields: emailFields, append: appendEmail, remove: removeEmail } = useFieldArray({
     control,
     name: "emails"
-  });
-
-  // Publications field array
-  const { fields: publicationFields, append: appendPublication, remove: removePublication } = useFieldArray({
-    control,
-    name: "publications"
   });
 
   // Check if user has edit permissions
@@ -79,7 +67,7 @@ const FacultyDetail = () => {
       
       try {
         setIsLoading(true);
-        const response = await axios.get(`/api/faculty/${id}`);
+        const response = await api.get(`/api/faculty/${id}`);
         setFaculty(response.data);
         
         // Set form values
@@ -115,10 +103,16 @@ const FacultyDetail = () => {
   // Handle form submission
   const onSubmit = async (data) => {
     try {
+      // Check if emails array exists and has at least one non-empty email
+      if (!data.emails || data.emails.length === 0 || !data.emails[0].value.trim()) {
+        setError('At least one email address is required');
+        return;
+      }
+      
       // Format data for API
       const formattedData = {
         ...data,
-        emails: data.emails.map(email => email.value),
+        emails: data.emails.map(email => email.value.trim()).filter(email => email), // Filter out empty emails
         department: data.school
       };
       
@@ -126,16 +120,23 @@ const FacultyDetail = () => {
       
       if (isNewFaculty) {
         // Create new faculty
-        response = await axios.post('/api/faculty', formattedData);
-        setSuccess('Faculty added successfully!');
+        response = await api.post('/api/faculty', formattedData);
+        
+        // Fix: Correctly extract email for password notification
+        const primaryEmail = formattedData.emails[0]; // This is now a string
+        const emailUsername = primaryEmail.split('@')[0];
+        const defaultPasswordFormat = `${emailUsername}@MU`;
+        
+        // Make password format more explicit
+        setSuccess(`Faculty added successfully! An account has been created with password: ${defaultPasswordFormat} (username@MU format)`);
         
         // Navigate to the newly created faculty page
         setTimeout(() => {
           navigate(`/faculty-detail/${response.data._id}`);
-        }, 2000);
+        }, 3000);
       } else {
         // Update existing faculty
-        response = await axios.put(`/api/faculty/${id}`, formattedData);
+        response = await api.put(`/api/faculty/${id}`, formattedData);
         setFaculty(response.data);
         setSuccess('Faculty details updated successfully!');
         setIsEditing(false);
@@ -173,6 +174,83 @@ const FacultyDetail = () => {
       </div>
     );
   }
+
+  // Replace all ReactQuill render functions with our new QuillEditor
+
+  const renderOverviewEditor = ({ field }) => {
+    const { onChange, value } = field;
+    return (
+      <QuillEditor 
+        ref={overviewEditorRef}
+        value={value}
+        onChange={onChange}
+        readOnly={!isEditing}
+        style={quillStyle}
+        className="bg-blue-50 rounded-md"
+        placeholder="Enter an overview of your background, expertise, and research interests"
+      />
+    );
+  };
+  
+  const renderEducationEditor = ({ field }) => {
+    const { onChange, value } = field;
+    return (
+      <QuillEditor 
+        ref={educationEditorRef}
+        value={value}
+        onChange={onChange}
+        placeholder="Enter your education details (degrees, institutions, years, etc.)"
+        readOnly={!isEditing}
+        style={quillStyle}
+        className="bg-green-50 rounded-md"
+      />
+    );
+  };
+  
+  const renderWorkExperienceEditor = ({ field }) => {
+    const { onChange, value } = field;
+    return (
+      <QuillEditor 
+        ref={workExperienceEditorRef}
+        value={value}
+        onChange={onChange}
+        placeholder="Enter your work experience details (positions, organizations, durations, responsibilities, etc.)"
+        readOnly={!isEditing}
+        style={quillStyle}
+        className="bg-yellow-50 rounded-md"
+      />
+    );
+  };
+  
+  const renderPublicationsEditor = ({ field }) => {
+    const { onChange, value } = field;
+    return (
+      <QuillEditor 
+        ref={publicationsEditorRef}
+        value={value}
+        onChange={onChange}
+        placeholder="Enter your publications (journal articles, conference papers, books, etc.)"
+        readOnly={!isEditing}
+        style={quillStyle}
+        className="bg-purple-50 rounded-md"
+      />
+    );
+  };
+  
+  const renderResearchEditor = ({ field }) => {
+    const { onChange, value } = field;
+    return (
+      <QuillEditor 
+        ref={researchEditorRef}
+        value={value}
+        onChange={onChange}
+        placeholder="Describe your current research interests, areas of focus, and any ongoing research projects"
+        readOnly={!isEditing}
+        style={quillStyle}
+        className="bg-pink-50 rounded-md"
+      />
+    );
+  };
 
   return (
     <div className="flex justify-center w-full">
@@ -373,16 +451,7 @@ const FacultyDetail = () => {
                     name="overview"
                     control={control}
                     defaultValue=""
-                    render={({ field }) => (
-                      <ReactQuill 
-                        theme="snow" 
-                        modules={modules}
-                        readOnly={!isEditing}
-                        style={quillStyle}
-                        className="bg-blue-50 rounded-md" 
-                        {...field}
-                      />
-                    )}
+                    render={renderOverviewEditor}
                   />
                 </div>
               </div>
@@ -402,17 +471,7 @@ const FacultyDetail = () => {
                       name="education"
                       control={control}
                       defaultValue=""
-                      render={({ field }) => (
-                        <ReactQuill 
-                          theme="snow" 
-                          modules={modules}
-                          placeholder="Enter your education details (degrees, institutions, years, etc.)"
-                          readOnly={!isEditing}
-                          style={quillStyle}
-                          className="bg-green-50 rounded-md"
-                          {...field}
-                        />
-                      )}
+                      render={renderEducationEditor}
                     />
                   </div>
                 </div>
@@ -428,17 +487,7 @@ const FacultyDetail = () => {
                       name="workExperience"
                       control={control}
                       defaultValue=""
-                      render={({ field }) => (
-                        <ReactQuill 
-                          theme="snow" 
-                          modules={modules}
-                          placeholder="Enter your work experience details (positions, organizations, durations, responsibilities, etc.)"
-                          readOnly={!isEditing}
-                          style={quillStyle}
-                          className="bg-yellow-50 rounded-md"
-                          {...field}
-                        />
-                      )}
+                      render={renderWorkExperienceEditor}
                     />
                   </div>
                 </div>
@@ -459,17 +508,7 @@ const FacultyDetail = () => {
                       name="publications"
                       control={control}
                       defaultValue=""
-                      render={({ field }) => (
-                        <ReactQuill 
-                          theme="snow" 
-                          modules={modules}
-                          placeholder="Enter your publications (journal articles, conference papers, books, etc.)"
-                          readOnly={!isEditing}
-                          style={quillStyle}
-                          className="bg-purple-50 rounded-md"
-                          {...field}
-                        />
-                      )}
+                      render={renderPublicationsEditor}
                     />
                   </div>
                 </div>
@@ -485,17 +524,7 @@ const FacultyDetail = () => {
                       name="research"
                       control={control}
                       defaultValue=""
-                      render={({ field }) => (
-                        <ReactQuill 
-                          theme="snow" 
-                          modules={modules}
-                          placeholder="Describe your current research interests, areas of focus, and any ongoing research projects"
-                          readOnly={!isEditing}
-                          style={quillStyle}
-                          className="bg-pink-50 rounded-md"
-                          {...field}
-                        />
-                      )}
+                      render={renderResearchEditor}
                     />
                   </div>
                 </div>

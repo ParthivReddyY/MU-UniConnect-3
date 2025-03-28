@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/axiosConfig';  // Using our configured axios instance
 
 const AuthContext = createContext();
 
@@ -8,17 +8,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:9000/api';
-
-  // Configure axios with token
-  useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-    } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
 
   // Load user data on initial load or token change
   useEffect(() => {
@@ -29,7 +18,7 @@ export const AuthProvider = ({ children }) => {
       }
 
       try {
-        const res = await axios.get(`${API_URL}/auth/me`);
+        const res = await api.get('/api/auth/me');
         setCurrentUser(res.data.user);
       } catch (error) {
         localStorage.removeItem('token');
@@ -40,13 +29,13 @@ export const AuthProvider = ({ children }) => {
     };
 
     loadUser();
-  }, [token, API_URL]);
+  }, [token]);
 
   // Register user (students only)
   const register = async (userData) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/register`, userData);
+      const res = await api.post('/api/auth/register', userData);
       setLoading(false);
       return { success: true, message: res.data.message };
     } catch (error) {
@@ -60,7 +49,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/login`, credentials);
+      const res = await api.post('/api/auth/login', credentials);
       
       localStorage.setItem('token', res.data.token);
       setToken(res.data.token);
@@ -86,7 +75,7 @@ export const AuthProvider = ({ children }) => {
   const createUser = async (userData) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/create-user`, userData);
+      const res = await api.post('/api/auth/create-user', userData);
       setLoading(false);
       return { success: true, message: res.data.message };
     } catch (error) {
@@ -100,7 +89,7 @@ export const AuthProvider = ({ children }) => {
   const forgotPassword = async (email) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/forgot-password`, { email });
+      const res = await api.post('/api/auth/forgot-password', { email });
       setLoading(false);
       return { success: true, message: res.data.message };
     } catch (error) {
@@ -114,7 +103,7 @@ export const AuthProvider = ({ children }) => {
   const resetPassword = async (token, password) => {
     setLoading(true);
     try {
-      const res = await axios.post(`${API_URL}/auth/reset-password/${token}`, { password });
+      const res = await api.post(`/api/auth/reset-password/${token}`, { password });
       setLoading(false);
       return { success: true, message: res.data.message };
     } catch (error) {
