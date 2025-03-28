@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import '../CSS/faculty.css'; // Keep importing the CSS for custom animations and complex styles
+import '../CSS/faculty.css'; // Still needed for custom animations and complex styles
 import { useAuth } from '../contexts/AuthContext';
-import api from '../utils/axiosConfig';  // Using our configured axios instance
+import api from '../utils/axiosConfig';  
 
 const Faculty = () => {
   // State variables
@@ -240,15 +240,17 @@ const Faculty = () => {
 
   return (
     <div className="faculty-page">
-      <main className="main-content">
-        <section className="hero-section">
+      <main className="w-full">
+        <section className="hero-section relative min-h-[620px] py-20 bg-black overflow-hidden w-full">
           <div className="hero-overlay"></div>
-          <div className="container">
-            <div className="hero-content">
-              <div className="hero-text-area">
+          <div className="container w-full max-w-7xl mx-auto px-5 relative z-10">
+            <div className="flex flex-wrap items-center justify-between gap-12 md:gap-15">
+              <div className="hero-text-area flex-1 min-w-[300px] max-w-[45%] flex flex-col justify-center items-start">
                 <h1 className="hero-title">FACULTY <span className="accent">DIRECTORY</span></h1>
-                <p className="hero-description">Connect with Mahindra University's distinguished faculty members across all schools and departments.</p>
-                <div className="hero-actions">
+                <p className="text-white text-xl opacity-90 leading-relaxed mb-8 max-w-xl">
+                  Connect with Mahindra University's distinguished faculty members across all schools and departments.
+                </p>
+                <div className="flex flex-wrap gap-5 self-start">
                   <a href="#faculty-grid" className="btn-hero primary">Explore Faculty</a>
                   <a href="#filters-container" 
                      className="btn-hero secondary" 
@@ -259,26 +261,33 @@ const Faculty = () => {
                        document.getElementById('filters-container').scrollIntoView({behavior: 'smooth'});
                      }}
                   >Advanced Search</a>
-                  {/* Remove the Add Faculty button from here */}
                 </div>
               </div>
-              <div className="hero-stats-area">
-                <div className="stat-card" aria-label="Faculty Statistics">
-                  <div className="stat-icon"><i className="fas fa-user-tie"></i></div>
-                  <div className="stat-value" id="total-faculty-count">
-                    {allFacultyData.length > 0 ? allFacultyData.length : '150+'}
+              <div className="hero-stats-area flex flex-col gap-5">
+                <div className="grid grid-cols-2 gap-5">
+                  <div className="stat-card bg-black bg-opacity-30 rounded-2xl p-5 shadow-lg text-center border border-white border-opacity-10 backdrop-filter backdrop-blur-md transition-all hover:translate-y-[-10px] hover:border-primary-red hover:bg-black hover:bg-opacity-40">
+                    <div className="stat-icon text-primary-red text-4xl mb-4">
+                      <i className="fas fa-user-tie"></i>
+                    </div>
+                    <div className="stat-value">
+                      {allFacultyData.length > 0 ? allFacultyData.length : '150+'}
+                    </div>
+                    <div className="text-sm uppercase text-white text-opacity-70 tracking-wider">Faculty Members</div>
                   </div>
-                  <div className="stat-label">Faculty Members</div>
+                  <div className="stat-card bg-black bg-opacity-30 rounded-2xl p-5 shadow-lg text-center border border-white border-opacity-10 backdrop-filter backdrop-blur-md transition-all hover:translate-y-[-10px] hover:border-primary-red hover:bg-black hover:bg-opacity-40">
+                    <div className="stat-icon text-primary-red text-4xl mb-4">
+                      <i className="fas fa-graduation-cap"></i>
+                    </div>
+                    <div className="stat-value">11</div>
+                    <div className="text-sm uppercase text-white text-opacity-70 tracking-wider">Schools</div>
+                  </div>
                 </div>
-                <div className="stat-card" aria-label="Schools Statistics">
-                  <div className="stat-icon"><i className="fas fa-graduation-cap"></i></div>
-                  <div className="stat-value">11</div>
-                  <div className="stat-label">Schools</div>
-                </div>
-                <div className="stat-card" aria-label="Research Projects Statistics">
-                  <div className="stat-icon"><i className="fas fa-flask"></i></div>
+                <div className="stat-card bg-black bg-opacity-30 rounded-2xl p-5 shadow-lg text-center border border-white border-opacity-10 backdrop-filter backdrop-blur-md transition-all hover:translate-y-[-10px] hover:border-primary-red hover:bg-black hover:bg-opacity-40">
+                  <div className="stat-icon text-primary-red text-4xl mb-4">
+                    <i className="fas fa-flask"></i>
+                  </div>
                   <div className="stat-value">200+</div>
-                  <div className="stat-label">Research Projects</div>
+                  <div className="text-sm uppercase text-white text-opacity-70 tracking-wider">Research Projects</div>
                 </div>
               </div>
             </div>
@@ -287,32 +296,31 @@ const Faculty = () => {
           <div className="hero-shape shape-2"></div>
         </section>
         
-        <section className="bg-off-white py-8 shadow-light">
-          <div className="container">
+        <section className="bg-gray-50 py-8 shadow-sm">
+          <div className="container max-w-7xl mx-auto px-5">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-5">
-              <div className="search-box w-full md:w-2/5">
+              <div className="search-box w-full md:w-2/5 h-[50px] rounded-full bg-white shadow-md transition-all hover:shadow-lg relative overflow-hidden">
                 <input 
                   type="text" 
                   id="faculty-search" 
                   placeholder="Search by name, research area, or expertise..."
-                  className="w-full h-full border-none text-base text-dark-gray bg-transparent"
+                  className="w-full h-full px-6 border-none text-base text-gray-700 bg-transparent focus:outline-none"
                   onKeyUp={(e) => e.key === 'Enter' && handleSearch(e)}
                 />
                 <button 
                   id="search-button" 
                   title="Search"
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 w-9 h-9 rounded-full bg-primary-red text-white flex items-center justify-center transition-colors hover:bg-secondary-red"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 w-9 h-9 rounded-full bg-primary-red text-white flex items-center justify-center transition-colors hover:bg-red-700"
                   onClick={handleSearch}
                 >
                   <i className="fas fa-search text-sm"></i>
                 </button>
               </div>
               
-              {/* Add Faculty button positioned between search and filters */}
               {isAdmin() && (
                 <button 
                   onClick={handleAddFaculty}
-                  className="filter-toggle w-full md:w-auto md:ml-[20%]"
+                  className="h-[45px] px-5 rounded-full bg-white shadow-md font-semibold text-gray-700 flex items-center gap-2 cursor-pointer transition-all hover:shadow-lg hover:bg-blue-50 hover:-translate-y-1 w-full md:w-auto md:ml-[20%]"
                   aria-label="Add new faculty member"
                 >
                   <i className="fas fa-plus-circle text-primary-red mr-2"></i>
@@ -321,7 +329,7 @@ const Faculty = () => {
               )}
               
               <button 
-                className="filter-toggle w-full md:w-auto"
+                className="h-[45px] px-5 rounded-full bg-white shadow-md font-semibold text-gray-700 flex items-center gap-2 cursor-pointer transition-all hover:shadow-lg hover:bg-blue-50 hover:-translate-y-1 w-full md:w-auto"
                 id="filter-toggle"
                 onClick={() => setShowFilters(!showFilters)}
               >
@@ -330,43 +338,43 @@ const Faculty = () => {
             </div>
             
             <div 
-              className={`filters-container ${showFilters ? 'active' : ''}`} 
+              className={`${showFilters ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'} bg-gray-100 rounded-xl p-6 mb-5 overflow-hidden transition-all duration-500`} 
               id="filters-container"
               style={{display: showFilters ? 'block' : 'none'}}
             >
               <div className="mb-5">
-                <h3 className="text-lg font-semibold mb-3 text-dark-gray">School</h3>
-                <div className="filter-options school-filters">
-                  <label className="cursor-pointer"><input type="checkbox" value="ECSE" className="school-filter mr-2" /> ECSE</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="SOL" className="school-filter mr-2" /> SOL</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="SOM" className="school-filter mr-2" /> SOM</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="IMSOE" className="school-filter mr-2" /> IMSOE</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="SDMC" className="school-filter mr-2" /> SDMC</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="SODI" className="school-filter mr-2" /> SODI</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="SOHM" className="school-filter mr-2" /> SOHM</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="CEI" className="school-filter mr-2" /> CEI</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="CEE" className="school-filter mr-2" /> CEE</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="CLS" className="school-filter mr-2" /> CLS</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="CS" className="school-filter mr-2" /> CS</label>
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">School</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="ECSE" className="school-filter mr-2" /> ECSE</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SOL" className="school-filter mr-2" /> SOL</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SOM" className="school-filter mr-2" /> SOM</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="IMSOE" className="school-filter mr-2" /> IMSOE</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SDMC" className="school-filter mr-2" /> SDMC</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SODI" className="school-filter mr-2" /> SODI</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SOHM" className="school-filter mr-2" /> SOHM</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CEI" className="school-filter mr-2" /> CEI</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CEE" className="school-filter mr-2" /> CEE</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CLS" className="school-filter mr-2" /> CLS</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CS" className="school-filter mr-2" /> CS</label>
                 </div>
               </div>
               
               <div className="mb-5">
-                <h3 className="text-lg font-semibold mb-3 text-dark-gray">Designation</h3>
-                <div className="filter-options">
-                  <label className="cursor-pointer"><input type="checkbox" value="Professor" className="designation-filter mr-2" /> Professor</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="Associate Professor" className="designation-filter mr-2" /> Associate Professor</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="Assistant Professor" className="designation-filter mr-2" /> Assistant Professor</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="Lecturer" className="designation-filter mr-2" /> Lecturer</label>
-                  <label className="cursor-pointer"><input type="checkbox" value="Adjunct Faculty" className="designation-filter mr-2" /> Adjunct Faculty</label>
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">Designation</h3>
+                <div className="flex flex-wrap gap-2.5">
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Professor" className="designation-filter mr-2" /> Professor</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Associate Professor" className="designation-filter mr-2" /> Associate Professor</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Assistant Professor" className="designation-filter mr-2" /> Assistant Professor</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Lecturer" className="designation-filter mr-2" /> Lecturer</label>
+                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Adjunct Faculty" className="designation-filter mr-2" /> Adjunct Faculty</label>
                 </div>
               </div>
               
               <div className="mb-5">
-                <h3 className="text-lg font-semibold mb-3 text-dark-gray">Research Areas</h3>
-                <div className="filter-options research-filters">
+                <h3 className="text-lg font-semibold mb-3 text-gray-800">Research Areas</h3>
+                <div className="flex flex-wrap gap-2.5">
                   {Array.from(uniqueResearchAreas).sort().map((area, index) => (
-                    <label key={index} className="cursor-pointer"><input type="checkbox" value={area} className="research-filter mr-2" /> {area}</label>
+                    <label key={index} className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value={area} className="research-filter mr-2" /> {area}</label>
                   ))}
                 </div>
               </div>
@@ -374,12 +382,12 @@ const Faculty = () => {
               <div className="flex gap-3 mt-5">
                 <button 
                   id="apply-filters" 
-                  className="btn-primary"
+                  className="px-5 py-2.5 bg-primary-red text-white rounded-md font-medium hover:bg-red-700 transition-colors"
                   onClick={collectFilters}
                 >Apply Filters</button>
                 <button 
                   id="reset-filters" 
-                  className="btn-secondary"
+                  className="px-5 py-2.5 bg-white text-gray-700 border border-gray-300 rounded-md font-medium hover:bg-gray-100 transition-colors"
                   onClick={resetFilters}
                 >Reset</button>
               </div>
@@ -388,31 +396,31 @@ const Faculty = () => {
         </section>
 
         <section className="py-10">
-          <div className="container">
+          <div className="container max-w-7xl mx-auto px-5">
             <div className="flex flex-wrap gap-2.5 mb-5" id="active-filters">
               {filters.searchQuery && (
-                <div className="filter-tag bg-opacity-10 bg-primary-red text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center">
+                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center">
                   <span>Search: {filters.searchQuery}</span>
                   <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('search')}></i>
                 </div>
               )}
               
               {filters.schools.map((school, index) => (
-                <div className="filter-tag bg-opacity-10 bg-primary-red text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`school-${index}`}>
+                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`school-${index}`}>
                   <span>School: {school}</span>
                   <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('school', school)}></i>
                 </div>
               ))}
               
               {filters.designations.map((designation, index) => (
-                <div className="filter-tag bg-opacity-10 bg-primary-red text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`designation-${index}`}>
+                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`designation-${index}`}>
                   <span>Designation: {designation}</span>
                   <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('designation', designation)}></i>
                 </div>
               ))}
               
               {filters.researchAreas.map((area, index) => (
-                <div className="filter-tag bg-opacity-10 bg-primary-red text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`area-${index}`}>
+                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`area-${index}`}>
                   <span>Research: {area}</span>
                   <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('research', area)}></i>
                 </div>
@@ -420,18 +428,16 @@ const Faculty = () => {
             </div>
             
             <div className="flex items-center justify-between gap-2.5 mb-4">
-              {/* Add faculty count on the left */}
-              <div id="faculty-count" className="text-medium-gray">
+              <div className="text-gray-500">
                 <span className="font-semibold text-primary-red">{filteredFacultyData.length}</span> faculty members found
               </div>
               
-              {/* Only show sort controls - remove the Add Faculty button from here */}
               <div className="flex items-center">
-                <label htmlFor="sort-faculty" className="text-medium-gray mr-2">Sort by:</label>
+                <label htmlFor="sort-faculty" className="text-gray-500 mr-2">Sort by:</label>
                 <select 
                   id="sort-faculty" 
                   onChange={handleSortChange}
-                  className="px-3 py-2 rounded border border-light-gray bg-off-white text-medium-gray"
+                  className="px-3 py-2 rounded border border-gray-300 bg-gray-50 text-gray-500"
                 >
                   <option value="name-asc">Name (A-Z)</option>
                   <option value="name-desc">Name (Z-A)</option>
@@ -443,40 +449,42 @@ const Faculty = () => {
             
             <div className="faculty-grid" id="faculty-grid">
               {isLoading ? (
-                <div className="loader col-span-full flex flex-col items-center justify-center py-10">
+                <div className="col-span-full flex flex-col items-center justify-center py-10">
                   <div className="spinner"></div>
-                  <p className="mt-4 text-medium-gray">Loading faculty profiles...</p>
+                  <p className="mt-4 text-gray-500">Loading faculty profiles...</p>
                 </div>
               ) : currentPageData.length === 0 ? (
-                <div className="no-results flex flex-col items-center justify-center py-10 col-span-full text-medium-gray">
+                <div className="col-span-full flex flex-col items-center justify-center py-10 text-gray-500">
                   <i className="fas fa-search text-5xl text-primary-red opacity-50 mb-4"></i>
                   <h3 className="text-xl mb-2.5">No faculty members found</h3>
                   <p>Try adjusting your filters or search query</p>
                 </div>
               ) : (
                 currentPageData.map((faculty, index) => (
-                  <div className="faculty-card bg-white rounded-lg overflow-hidden shadow-light transition-all hover:translate-y-[-5px] hover:shadow-medium" key={index}>
-                    <div className="faculty-image h-50 overflow-hidden">
+                  <div className="bg-white rounded-lg overflow-hidden shadow-sm transition-all hover:-translate-y-1 hover:shadow-md" key={index}>
+                    <div className="h-50 overflow-hidden">
                       <img 
-                        src={faculty.image || "../img/default-faculty.png"}
+                        src={faculty.image || "/img/default-faculty.png"}
                         alt={faculty.name}
                         className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                        onError={(e) => {e.target.src = "../img/default-faculty.png"}}
+                        onError={(e) => {
+                          e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e0e0e0'/%3E%3Ccircle cx='50' cy='40' r='20' fill='%23c0c0c0'/%3E%3Cpath d='M30,80 Q50,60 70,80' fill='%23c0c0c0'/%3E%3C/svg%3E`;
+                        }}
                       />
                     </div>
                     <div className="p-4">
-                      <h3 className="text-lg font-semibold mb-1 text-dark-gray">{faculty.name}</h3>
+                      <h3 className="text-lg font-semibold mb-1 text-gray-800">{faculty.name}</h3>
                       <p className="text-sm text-primary-red mb-1">{faculty.designation}</p>
-                      <p className="text-xs text-medium-gray mb-2.5">{faculty.department}</p>
+                      <p className="text-xs text-gray-500 mb-2.5">{faculty.department}</p>
                       <div className="flex items-center justify-between mt-2.5">
                         {faculty.email ? (
-                          <a href={`mailto:${faculty.email}`} className="text-lg text-medium-gray transition-colors hover:text-primary-red" title={`Email ${faculty.name}`}>
+                          <a href={`mailto:${faculty.email}`} className="text-lg text-gray-500 transition-colors hover:text-primary-red" title={`Email ${faculty.name}`}>
                             <i className="fas fa-envelope"></i>
                           </a>
                         ) : <span></span>}
                         <Link 
                           to={`/faculty-detail/${faculty._id}`} 
-                          className="bg-red-light bg-opacity-100 text-primary-red px-3 py-1.5 rounded text-sm font-medium hover:bg-opacity-20 transition-colors"
+                          className="bg-red-50 text-primary-red px-3 py-1.5 rounded text-sm font-medium hover:bg-red-100 transition-colors"
                         >
                           View Profile
                         </Link>
@@ -490,17 +498,15 @@ const Faculty = () => {
             {!isLoading && totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 my-8" id="faculty-pagination">
                 <button 
-                  className="min-w-[40px] h-10 rounded border border-light-gray bg-white flex items-center justify-center px-4 transition-all hover:bg-light-gray disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-w-[40px] h-10 rounded border border-gray-300 bg-white flex items-center justify-center px-4 transition-all hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 >
                   <i className="fas fa-chevron-left mr-1"></i> Prev
                 </button>
                 
-                {/* Calculate visible page buttons */}
                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                   .filter(page => {
-                    // Show first page, last page, and pages around current page
                     const maxVisiblePages = 5;
                     const halfVisible = Math.floor(maxVisiblePages / 2);
                     return (
@@ -511,7 +517,6 @@ const Faculty = () => {
                     );
                   })
                   .map((page, index, array) => {
-                    // Add ellipsis when there are gaps
                     if (index > 0 && array[index - 1] !== page - 1) {
                       return (
                         <React.Fragment key={`ellipsis-${page}`}>
@@ -521,7 +526,7 @@ const Faculty = () => {
                             className={`min-w-[40px] h-10 rounded border flex items-center justify-center transition-all ${
                               currentPage === page 
                                 ? 'bg-primary-red text-white border-primary-red' 
-                                : 'bg-white text-dark-gray border-light-gray hover:bg-light-gray'
+                                : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
                             }`}
                             onClick={() => setCurrentPage(page)}
                           >
@@ -536,7 +541,7 @@ const Faculty = () => {
                         className={`min-w-[40px] h-10 rounded border flex items-center justify-center transition-all ${
                           currentPage === page 
                             ? 'bg-primary-red text-white border-primary-red' 
-                            : 'bg-white text-dark-gray border-light-gray hover:bg-light-gray'
+                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
                         }`}
                         onClick={() => setCurrentPage(page)}
                       >
@@ -546,7 +551,7 @@ const Faculty = () => {
                   })}
                 
                 <button 
-                  className="min-w-[40px] h-10 rounded border border-light-gray bg-white flex items-center justify-center px-4 transition-all hover:bg-light-gray disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="min-w-[40px] h-10 rounded border border-gray-300 bg-white flex items-center justify-center px-4 transition-all hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={currentPage === totalPages}
                   onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 >

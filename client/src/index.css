@@ -3,97 +3,150 @@
 @tailwind utilities;
 
 /* Add color variables to Tailwind */
-@layer base {
-  :root {
-    /* Primary Colors */
-    --primary-red: #D32F2F;
-    --secondary-red: #F44336;
-    --primary-teal: #1e3a8a;
-    
-    /* Neutrals */
-    --dark-gray: #263238;
-    --medium-gray: #757575;
-    --light-gray: #E0E0E0;
-    --off-white: #F5F5F5;
-    --white: #FFFFFF;
-    
-    /* Accent Colors */
-    --accent-gold: #FFB300;
-    --red-light: #FFEBEE;
-    --teal-light: #e0e8f2;
-    --gold-light: #FFF8E1;
-    --success-green: #43A047;
-    --green-light: #E8F5E9;
-    
-    /* Mobile viewport height fix */
-    --vh: 1vh;
-  }
+/* Base styles compatible with older browsers */
+:root {
+  /* Primary Colors */
+  --primary-red: #D32F2F;
+  --secondary-red: #F44336;
+  --primary-teal: #1e3a8a;
   
-  /* Improve default focus styling for better accessibility */
-  *:focus-visible {
-    outline: 2px solid var(--primary-red);
-    outline-offset: 2px;
-  }
+  /* Neutrals */
+  --dark-gray: #263238;
+  --medium-gray: #757575;
+  --light-gray: #E0E0E0;
+  --off-white: #F5F5F5;
+  --white: #FFFFFF;
   
-  /* Ensure better mobile experience */
-  html, body {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    overflow-x: hidden;
-    scroll-behavior: smooth;
-  }
+  /* Accent Colors */
+  --accent-gold: #FFB300;
+  --red-light: #FFEBEE;
+  --teal-light: #e0e8f2;
+  --gold-light: #FFF8E1;
+  --success-green: #43A047;
+  --green-light: #E8F5E9;
   
-  /* Better mobile link/button tap targets */
-  a, button {
-    touch-action: manipulation;
-  }
+  /* Mobile viewport height fix */
+  --vh: 1vh;
+}
+
+/* Improve default focus styling for better accessibility */
+*:focus-visible {
+  outline: 2px solid var(--primary-red);
+  outline-offset: 2px;
+}
+
+/* Ensure better mobile experience */
+html, body {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  overflow-x: hidden;
+  scroll-behavior: smooth;
+}
+
+/* Better mobile link/button tap targets */
+a, button {
+  touch-action: manipulation;
+}
+
+/* Fix scrollbar jumping issue */
+html {
+  overflow-y: scroll;
 }
 
 /* Tailwind component extensions */
-@layer components {
-  .btn-primary {
-    @apply bg-primary-red text-white font-medium py-2 px-5 rounded hover:bg-secondary-red transition-colors;
-  }
-  
-  .btn-secondary {
+.btn-primary {
+    background-color: var(--primary-red);
+    color: var(--white);
+    font-weight: 500;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    padding-left: 1.25rem;
+    padding-right: 1.25rem;
+    border-radius: 0.25rem;
+    transition-property: background-color;
+    transition-duration: 150ms;
+}
+.btn-primary:hover {
+    background-color: var(--secondary-red);
+}
+
+.btn-secondary {
     @apply bg-white text-primary-red border border-primary-red py-2 px-5 rounded hover:bg-red-light transition-colors;
-  }
-  
-  .btn-outline {
+}
+
+.btn-outline {
     @apply bg-transparent text-primary-red border border-primary-red py-2 px-5 rounded hover:bg-red-light transition-colors;
-  }
-  
-  .btn-teal {
+}
+
+.btn-teal {
     @apply bg-primary-teal text-white font-medium py-2 px-5 rounded hover:bg-blue-600 transition-colors;
-  }
-  
-  .card {
+}
+
+.card {
     @apply bg-white rounded-lg shadow-sm p-5 transition-transform hover:translate-y-[-5px];
-  }
-  
-  /* Responsive utility classes */
-  .touch-target {
+}
+
+/* Responsive utility classes */
+.touch-target {
     @apply min-h-[44px] min-w-[44px] flex items-center justify-center;
-  }
-  
-  /* Loading animation */
-  .animate-pulse {
+}
+/* Loading animation */
+.animate-pulse {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
+}
   
-  @keyframes pulse {
+@keyframes pulse {
     0%, 100% { opacity: 1; }
     50% { opacity: 0.5; }
-  }
+}
+  
+/* Add a top margin to all main content sections to account for fixed navbar height */
+.content-container {
+    padding-top: 5rem; /* Adjust this value based on your navbar height */
+}
+  
+/* Responsive container that takes full width but has reasonable max width on large screens */
+.full-width-container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+}
+  
+/* Make sure tables and other large elements don't overflow the container */
+.prose {
+    overflow-x: auto;
+}
+
+/* Image-related components */
+.profile-image-container {
+    @apply relative bg-gray-100 overflow-hidden;
+}
+  
+.profile-image {
+    @apply w-full h-full object-cover transition-opacity;
+}
+  
+.profile-image-placeholder {
+    @apply absolute inset-0 flex items-center justify-center bg-gray-200;
+}
+  
+/* File input styling */
+.file-input-container {
+    @apply relative cursor-pointer;
+}
+  
+.file-input {
+    @apply w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-red file:text-white hover:file:bg-secondary-red;
 }
 
 /* Additional responsive utilities */
-@layer utilities {
-  .min-h-screen-safe {
+/* Additional responsive utilities */
+/* Additional responsive utilities */
+/* Additional responsive utilities */
+.min-h-screen-safe {
     min-height: calc(var(--vh, 1vh) * 100);
-  }
-  
-  .text-balance {
+}
+
+.text-balance {
     text-wrap: balance;
-  }
 }
