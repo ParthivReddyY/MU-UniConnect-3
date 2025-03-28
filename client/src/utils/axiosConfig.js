@@ -1,14 +1,15 @@
 import axios from 'axios';
 
-console.log('Environment API URL:', process.env.REACT_APP_API_URL);
+// Set the base URL for API requests - more robust handling for production
+let baseURL;
 
-// Determine baseURL with better fallback handling
-const baseURL = process.env.REACT_APP_API_URL || 
-                (window.location.hostname === 'localhost' ? 
-                'http://localhost:9000/api' : 
-                'https://mu-uniconnect-ob9x.onrender.com/api');
-
-console.log('Using API baseURL:', baseURL);
+// In production, use the same domain (no need for explicit URL)
+if (process.env.NODE_ENV === 'production') {
+  baseURL = ''; // Empty string means use the same domain as the client
+} else {
+  // In development, use localhost or the environment variable
+  baseURL = process.env.REACT_APP_API_URL || 'http://localhost:9000';
+}
 
 // Create an Axios instance with the base URL
 const api = axios.create({
@@ -16,7 +17,7 @@ const api = axios.create({
   headers: {
     'Content-Type': 'application/json'
   },
-  timeout: 15000 // 15 seconds timeout
+  withCredentials: true // Important for cookies if you use them
 });
 
 // Request interceptor to add auth token to requests
@@ -29,25 +30,26 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor for better error handling
+// Add response interceptor for better error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    return response;
+  },
   (error) => {
-    console.error('API Error:', error);
-    
-    if (error.code === 'ECONNABORTED') {
-      console.error('Request timeout');
+    // Log details about the error in production for debugging
+    if (process.env.NODE_ENV === 'production') {
+      console.error('API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        message: error.message,
+        details: error.response?.data
+      });
     }
-    
-    if (!error.response) {
-      console.error('Network error - no response received');
-    }
-    
     return Promise.reject(error);
   }
 );

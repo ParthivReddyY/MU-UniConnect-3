@@ -49,10 +49,13 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError('');
-      console.log('Login attempt for:', credentials.email, 'to', api.defaults.baseURL);
+      // Add a timeout to handle network issues
+      const timeout = setTimeout(() => {
+        console.log('Request is taking too long, might be a connectivity issue');
+      }, 10000); // 10 second warning
+
       const res = await api.post('/api/auth/login', credentials);
-      
-      console.log('Login response received:', res.status);
+      clearTimeout(timeout);
       
       if (res.data.success) {
         setCurrentUser(res.data.user);
@@ -72,20 +75,19 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Login error in context:', error);
       
-      let errorMessage = 'Login failed';
-      let errorType = 'UNKNOWN_ERROR';
-      
-      if (error.code === 'ECONNABORTED') {
-        errorMessage = 'Connection timeout. Server might be down or unavailable.';
-        errorType = 'TIMEOUT';
-      } else if (error.message && error.message.includes('Network Error')) {
-        errorMessage = `Network error - cannot connect to server. Please check your connection or try again later. (Server: ${api.defaults.baseURL})`;
-        errorType = 'NETWORK_ERROR';
-      } else if (error.response) {
-        // Extract error details from the response
-        errorMessage = error.response.data?.message || 'Server error';
-        errorType = error.response.data?.errorType || 'SERVER_ERROR';
+      // Add deployment-specific error checks
+      if (error.message === 'Network Error') {
+        setError('Cannot connect to server. Please check your connection or try again later.');
+        return {
+          success: false,
+          message: 'Cannot connect to server. Please check your connection or try again later.',
+          errorType: 'NETWORK_ERROR'
+        };
       }
+      
+      // Extract error details from the response
+      const errorMessage = error.response?.data?.message || 'Login failed';
+      const errorType = error.response?.data?.errorType || 'UNKNOWN_ERROR';
       
       setError(errorMessage);
       return { 

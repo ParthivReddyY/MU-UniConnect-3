@@ -29,64 +29,43 @@ const connectDB = async () => {
   }
 };
 
-// Improved CORS Configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'https://mu-uniconnect.onrender.com', // Add your render deployed frontend URL
-      process.env.CLIENT_URL, // Add this to your .env file
-    ].filter(Boolean); // Remove any undefined/empty values
-    
-    // Allow requests with no origin (like mobile apps, curl requests)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      console.log('Blocked by CORS:', origin);
-      callback(null, true); // Still allowing all origins for now, but logging blocked ones
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
-app.use(cors(corsOptions));
+// Middleware
+app.use(cors({
+  origin: [
+    'https://mu-uniconnect-ob9x.onrender.com',
+    'https://mu-uniconnect.onrender.com', 
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-      // In production, we're still allowing all origins but logging blocked ones
+
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'UP', 
+    message: 'Server is running',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 // Add other API routes here
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-  res.status(200).json({
-    status: 'ok',
-    environment: process.env.NODE_ENV,
-    timestamp: new Date().toISOString(),
-    serverTime: new Date().toString()
-  });
-});
-
-// Add server info endpoint to debug deployment
-app.get('/api/server-info', (req, res) => {
-  res.status(200).json({
-    nodeVersion: process.version,
-    platform: process.platform,
-    memory: process.memoryUsage(),
-    uptime: process.uptime(),
-    NODE_ENV: process.env.NODE_ENV,
-    PORT: process.env.PORT
-  });
-});
-
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
-  // Set static folder
-  app.use(express.static(path.join(__dirname, '../client/build')));
+  console.log('Running in production mode - serving static files from ../client/build');
+  
+  // Set static folder - ensure path is correct relative to server directory
+  const staticPath = path.join(__dirname, '../client/build');
+  console.log(`Static path: ${staticPath}`);
+  app.use(express.static(staticPath));
+
+  // For any route that doesn't match an API route, serve the React app
   app.get('*', (req, res) => {
     res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
   });
