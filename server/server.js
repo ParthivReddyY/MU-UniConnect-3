@@ -30,9 +30,26 @@ const connectDB = async () => {
 };
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: [
+    'https://mu-uniconnect-ob9x.onrender.com',
+    'https://mu-uniconnect.onrender.com', 
+    'http://localhost:3000'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Health check endpoint for Render
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'UP', 
+    message: 'Server is running',
+    environment: process.env.NODE_ENV,
+    timestamp: new Date().toISOString()
+  });
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -41,8 +58,12 @@ app.use('/api/faculty', facultyRoutes);
 
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
-  // Set static folder
-  app.use(express.static(path.join(__dirname, '../client/build')));
+  console.log('Running in production mode - serving static files from ../client/build');
+  
+  // Set static folder - ensure path is correct relative to server directory
+  const staticPath = path.join(__dirname, '../client/build');
+  console.log(`Static path: ${staticPath}`);
+  app.use(express.static(staticPath));
 
   // For any route that doesn't match an API route, serve the React app
   app.get('*', (req, res) => {

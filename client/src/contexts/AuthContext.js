@@ -49,14 +49,19 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       setError('');
+      // Add a timeout to handle network issues
+      const timeout = setTimeout(() => {
+        console.log('Request is taking too long, might be a connectivity issue');
+      }, 10000); // 10 second warning
+
       const res = await api.post('/api/auth/login', credentials);
+      clearTimeout(timeout);
       
       if (res.data.success) {
         setCurrentUser(res.data.user);
         localStorage.setItem('token', res.data.token);
         setToken(res.data.token);
         
-        // Removed forcePasswordChange handling
         return { success: true };
       } else {
         // This case shouldn't happen as API should throw error for failures
@@ -69,6 +74,17 @@ export const AuthProvider = ({ children }) => {
       }
     } catch (error) {
       console.error('Login error in context:', error);
+      
+      // Add deployment-specific error checks
+      if (error.message === 'Network Error') {
+        setError('Cannot connect to server. Please check your connection or try again later.');
+        return {
+          success: false,
+          message: 'Cannot connect to server. Please check your connection or try again later.',
+          errorType: 'NETWORK_ERROR'
+        };
+      }
+      
       // Extract error details from the response
       const errorMessage = error.response?.data?.message || 'Login failed';
       const errorType = error.response?.data?.errorType || 'UNKNOWN_ERROR';
