@@ -88,6 +88,7 @@ button:not(:disabled):hover.hover\:-translate-y-1 {
 
 /* Backdrop blur effect */
 .backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(6px); /* For Safari compatibility */
   backdrop-filter: blur(6px);
 }
 
@@ -121,18 +122,31 @@ h3:hover .fas {
 /* Square icon container styling */
 h3 .bg-gradient-to-br {
   /* Ensure perfect square with rounded corners */
-  aspect-ratio: 1/1;
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%; /* Fallback for aspect-ratio: creates 1:1 ratio */
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   /* Subtle border effect */
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0.5rem; /* Consistent with rounded-lg */
 }
 
+/* Apply aspect-ratio only in browsers that support it */
+@supports (aspect-ratio: 1 / 1) {
+  h3 .bg-gradient-to-br {
+    aspect-ratio: 1 / 1;
+    padding-bottom: 0; /* Remove padding when aspect-ratio is supported */
+  }
+}
+
 /* Add subtle animation for square corners on hover */
 h3:hover .bg-gradient-to-br::before {
   content: '';
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   border: 2px solid rgba(255, 255, 255, 0.2);
   opacity: 0;
   animation: borderPulse 2s infinite;
@@ -158,8 +172,8 @@ input, select {
 
 /* Fix for date input in some browsers */
 input[type="date"] {
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   padding-right: 10px;
 }
 
