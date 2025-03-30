@@ -37,11 +37,38 @@ export const AuthProvider = ({ children }) => {
     try {
       const res = await api.post('/api/auth/register', userData);
       setLoading(false);
-      return { success: true, message: res.data.message };
+      return { 
+        success: true, 
+        message: res.data.message,
+        email: res.data.email // Return email for verification step
+      };
     } catch (error) {
       setLoading(false);
       setError(error.response?.data?.message || 'Registration failed');
-      return { success: false, message: error.response?.data?.message || 'Registration failed' };
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Registration failed' 
+      };
+    }
+  };
+
+  // Add verification method
+  const verifyEmail = async (email, otp) => {
+    setLoading(true);
+    try {
+      const res = await api.post('/api/auth/verify-email', { email, otp });
+      setLoading(false);
+      return { 
+        success: true, 
+        message: res.data.message 
+      };
+    } catch (error) {
+      setLoading(false);
+      setError(error.response?.data?.message || 'Verification failed');
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Verification failed' 
+      };
     }
   };
 
@@ -172,6 +199,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     register,
+    verifyEmail, // Add the new method to the context
     login,
     logout,
     createUser,

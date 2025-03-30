@@ -24,6 +24,10 @@ const SignUp = () => {
   const [signupSuccess, setSignupSuccess] = useState('');
   const [availablePrograms, setAvailablePrograms] = useState([]);
   const [availableDepartments, setAvailableDepartments] = useState([]);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState('');
   
   // Academic data structure containing the hierarchy of schools, programs, and departments
   const academicData = useMemo(() => ({
@@ -181,7 +185,7 @@ const SignUp = () => {
     (_, i) => `${startYear + i}`
   ).reverse(); // Reverse so most recent years appear first
   
-  const { register, currentUser } = useAuth();
+  const { register, verifyEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   
   // Redirect if already logged in
@@ -309,8 +313,36 @@ const SignUp = () => {
       });
       
       if (result.success) {
-        setSignupSuccess(result.message || 'Registration successful! Please check your email to verify your account.');
-        // Clear form after successful signup
+        // Instead of showing success message, show OTP verification screen
+        setVerificationEmail(result.email);
+        setIsVerifying(true);
+        setSignupSuccess('Verification code sent to your email. Please enter it below to complete registration.');
+      } else {
+        setSignupError(result.message || 'Registration failed. Please try again.');
+      }
+    } catch (err) {
+      setSignupError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add a new handler for OTP verification
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    
+    if (!otpCode.trim()) {
+      setOtpError('Please enter the verification code');
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      const result = await verifyEmail(verificationEmail, otpCode);
+      
+      if (result.success) {
+        // Clear form after successful verification
         setFormData({
           name: '',
           email: '',
@@ -320,15 +352,18 @@ const SignUp = () => {
           program: '',
           department: '',
           studentId: '',
-          accommodationType: '', // Reset new field
+          accommodationType: '',
           password: '',
           confirmPassword: ''
         });
+        setIsVerifying(false);
+        setOtpCode('');
+        setSignupSuccess(result.message || 'Registration completed successfully! You can now log in.');
       } else {
-        setSignupError(result.message || 'Registration failed. Please try again.');
+        setOtpError(result.message || 'Verification failed. Please try again.');
       }
     } catch (err) {
-      setSignupError('An unexpected error occurred. Please try again.');
+      setOtpError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -345,6 +380,91 @@ const SignUp = () => {
   const selectClasses = (fieldName, disabled = false) => `${inputClasses(fieldName)} appearance-none ${
     disabled ? 'opacity-50 cursor-not-allowed' : ''
   }`;
+
+  // Create a separate OTP verification form
+  if (isVerifying) {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
+        {/* Background gradient overlay */}
+        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+        
+        <div className="w-full max-w-md bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-12 backdrop-blur-sm">
+          <div className="px-10 pt-10 pb-6 text-center">
+            <h1 className="text-3xl font-bold text-white mb-3">Verify Your Email</h1>
+            <p className="text-gray-400">Enter the verification code sent to {verificationEmail}</p>
+          </div>
+          
+          {signupSuccess && (
+            <div className="mx-10 mb-6 bg-green-900 bg-opacity-30 text-green-400 p-4 rounded-md text-sm border border-green-800 animate-pulse">
+              <i className="fas fa-check-circle mr-2"></i>
+              {signupSuccess}
+            </div>
+          )}
+          
+          {otpError && (
+            <div className="mx-10 mb-6 bg-red-900 bg-opacity-30 text-red-400 p-4 rounded-md text-sm border border-red-800 animate-pulse">
+              <i className="fas fa-exclamation-triangle mr-2"></i>
+              {otpError}
+            </div>
+          )}
+          
+          <form className="px-10 pb-10 pt-2" onSubmit={handleVerifyOTP}>
+            <div className="mb-6">
+              <label htmlFor="otpCode" className={labelClass}>Verification Code</label>
+              <div className="relative group">
+                <input
+                  id="otpCode"
+                  type="text"
+                  className={inputClasses('otpCode')}
+                  placeholder="Enter 6-digit code"
+                  value={otpCode}
+                  onChange={(e) => {
+                    setOtpCode(e.target.value);
+                    setOtpError('');
+                  }}
+                  maxLength={6}
+                />
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors">
+                  <i className="fas fa-key"></i>
+                </div>
+              </div>
+            </div>
+            
+            <div className="mb-6">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full flex justify-center items-center bg-red-600 hover:bg-red-700 text-white font-medium py-4 px-4 rounded-md transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed text-lg shadow-md hover:shadow-lg transform hover:-translate-y-1"
+              >
+                {isSubmitting ? (
+                  <>
+                    <i className="fas fa-circle-notch fa-spin mr-2"></i>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check mr-2"></i>
+                    Verify & Complete Registration
+                  </>
+                )}
+              </button>
+            </div>
+            
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsVerifying(false)}
+                className="text-gray-400 hover:text-white transition-colors"
+              >
+                <i className="fas fa-arrow-left mr-1"></i>
+                Back to Registration
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">

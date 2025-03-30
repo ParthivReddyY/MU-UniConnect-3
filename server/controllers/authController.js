@@ -1,9 +1,12 @@
 const User = require('../models/User');
 const crypto = require('crypto');
-const sendEmail = require('../utils/sendEmail');
+const { sendEmail, TEMPLATES } = require('../utils/sendEmail');
 const jwt = require('jsonwebtoken');
 
-// Register a new student
+// Temporary storage for registration data (in production, use Redis or a temporary DB collection)
+const pendingRegistrations = new Map();
+
+// Register a new student - first step
 const register = async (req, res) => {
   try {
     const { name, email, password, studentId } = req.body;
@@ -17,43 +20,107 @@ const register = async (req, res) => {
     // Check if student ID already exists
     const studentIdExists = await User.findOne({ studentId });
     if (studentIdExists) {
+      return res.status(400).json({ message: 'Student ID already exists' });
     }
     
-    // Generate verification token
-    const verificationToken = crypto.randomBytes(32).toString('hex');
+    // Generate verification OTP (6 digits)
+    const verificationOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
     
-    // Create user with student role
-    const user = await User.create({
-      name,
-      email,
-      password,
-      studentId,
-      role: 'student',
-      verificationToken,
-      verificationTokenExpires: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    // Store user data temporarily with OTP
+    pendingRegistrations.set(email, {
+      userData: req.body,
+      verificationOTP,
+      otpExpires
     });
     
-    // Send verification email (implementation depends on your email service)
-    const verificationUrl = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
+    // Send verification email with OTP using Brevo template
+    try {
+      await sendEmail({
+        email: email,
+        templateId: TEMPLATES.OTP_VERIFICATION,
+        params: {
+          name: name || email.split('@')[0], // Use name or extract from email
+          otp: verificationOTP,
+          expiryTime: '10 minutes'
+        }
+      });
+      
+      res.status(200).json({
+        success: true,
+        message: 'Verification code sent to your email. Please verify to complete registration.',
+        email: email // Return email for the frontend to use in verification
+      });
+    } catch (error) {
+      console.error('Email sending error:', error);
+      // Clean up pending registration on email failure
+      pendingRegistrations.delete(email);
+      return res.status(500).json({ message: 'Email could not be sent. Please try again.' });
+    }
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Verify OTP and complete registration
+const verifyEmail = async (req, res) => {
+  try {
+    const { email, otp } = req.body;
     
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and verification code are required' });
+    }
+    
+    // Get pending registration data
+    const registration = pendingRegistrations.get(email);
+    
+    if (!registration) {
+      return res.status(400).json({ message: 'No pending registration found or session expired' });
+    }
+    
+    // Check if OTP is expired
+    if (Date.now() > registration.otpExpires) {
+      pendingRegistrations.delete(email);
+      return res.status(400).json({ message: 'Verification code has expired' });
+    }
+    
+    // Verify OTP
+    if (registration.verificationOTP !== otp) {
+      return res.status(400).json({ message: 'Invalid verification code' });
+    }
+    
+    // Create user with verified status
+    const userData = registration.userData;
+    const user = await User.create({
+      ...userData,
+      role: 'student',
+      isVerified: true // User is now pre-verified since they completed OTP verification
+    });
+    
+    // Send welcome email using Brevo template
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Email Verification',
-        message: `Please verify your email by clicking: ${verificationUrl}`
+        templateId: TEMPLATES.WELCOME,
+        params: {
+          name: user.name,
+          studentId: user.studentId,
+          loginLink: `${req.protocol}://${req.get('host')}/login`
+        }
       });
-      
-      res.status(201).json({
-        success: true,
-        message: 'User registered! Please check your email to verify your account.'
-      });
-    } catch (error) {
-      user.verificationToken = undefined;
-      user.verificationTokenExpires = undefined;
-      await user.save();
-      
-      return res.status(500).json({ message: 'Email could not be sent' });
+    } catch (emailError) {
+      // If welcome email fails, log but don't block registration completion
+      console.error('Welcome email error:', emailError);
     }
+    
+    // Clean up pending registration
+    pendingRegistrations.delete(email);
+    
+    res.status(201).json({ 
+      success: true, 
+      message: 'Email verified and registration completed successfully. You can now log in.' 
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -108,8 +175,13 @@ const createUser = async (req, res) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: 'MU-UniConnect Account Created',
-        message: `Your account has been created. Your temporary password is: ${temporaryPassword}`
+        templateId: TEMPLATES.WELCOME,
+        params: {
+          name: user.name,
+          role: user.role,
+          password: temporaryPassword,
+          loginLink: `${req.protocol}://${req.get('host')}/login`
+        }
       });
       
       res.status(201).json({
@@ -219,36 +291,6 @@ const login = async (req, res) => {
   }
 };
 
-// Verify email
-const verifyEmail = async (req, res) => {
-  try {
-    const { token } = req.params;
-    
-    const user = await User.findOne({
-      verificationToken: token,
-      verificationTokenExpires: { $gt: Date.now() }
-    });
-    
-    if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
-    }
-    
-    // Update user verification status
-    user.isVerified = true;
-    user.verificationToken = undefined;
-    user.verificationTokenExpires = undefined;
-    await user.save();
-    
-    res.status(200).json({ 
-      success: true, 
-      message: 'Email verified successfully. You can now log in.' 
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-};
-
 // Forgot password
 const forgotPassword = async (req, res) => {
   try {
@@ -275,8 +317,12 @@ const forgotPassword = async (req, res) => {
     try {
       await sendEmail({
         email: user.email,
-        subject: 'Password Reset',
-        message: `You requested a password reset. Please go to: ${resetUrl}`
+        templateId: TEMPLATES.PASSWORD_RESET,
+        params: {
+          name: user.name,
+          resetLink: resetUrl,
+          expiryTime: '10 minutes'
+        }
       });
       
       res.status(200).json({ 

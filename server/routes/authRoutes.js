@@ -16,7 +16,8 @@ const { authenticateUser, isAdmin } = require('../middleware/auth');
 // Public routes
 router.post('/register', register); // Student registration only
 router.post('/login', login);
-router.get('/verify-email/:token', verifyEmail);
+// Change the verify-email route to accept POST requests with email and OTP
+router.post('/verify-email', verifyEmail);
 router.post('/forgot-password', forgotPassword);
 router.post('/reset-password/:token', resetPassword);
 router.post('/check-email', checkEmail); // New endpoint for checking if email exists

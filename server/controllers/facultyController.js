@@ -1,6 +1,7 @@
 const Faculty = require('../models/Faculty');
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
+const { sendEmail, TEMPLATES } = require('../utils/sendEmail');
 
 // Get all faculty
 const getAllFaculty = async (req, res) => {
@@ -97,6 +98,16 @@ const createFaculty = async (req, res) => {
       name: faculty.name,
       email: faculty.email,
       message: 'Faculty created successfully. A user account has been created.'
+    });
+
+    // Send welcome email
+    await sendEmail({
+      email: user.email,
+      templateId: TEMPLATES.WELCOME,
+      params: {
+        name: user.name,
+        role: 'faculty'
+      }
     });
   } catch (error) {
     console.error('Error in createFaculty:', error);
