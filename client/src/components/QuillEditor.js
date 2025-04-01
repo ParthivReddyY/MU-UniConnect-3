@@ -1,65 +1,96 @@
-import React, { forwardRef, useRef, useImperativeHandle } from 'react';
+import React, { forwardRef, useEffect, useImperativeHandle } from 'react';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import '../CSS/quill-custom.css';
 
 /**
- * QuillEditor - A wrapper component for ReactQuill that properly handles refs
- * and fixes findDOMNode deprecation warnings
+ * Enhanced QuillEditor component with improved read-only mode and better content rendering
  */
 const QuillEditor = forwardRef(({
   value,
   onChange,
-  placeholder,
+  placeholder = "Start writing...",
   readOnly = false,
-  modules,
-  style,
-  className,
-  theme = "snow",
-  ...rest
+  className = "",
+  style = {},
+  modules = {},
+  formats = null,
 }, ref) => {
-  // Create a local ref to attach to ReactQuill
-  const quillRef = useRef(null);
-  
-  // Expose the quill instance and editor element through the forwarded ref
-  useImperativeHandle(ref, () => ({
-    // The Quill instance itself
-    getQuill: () => quillRef.current?.getEditor(),
-    // The editor element
-    getEditor: () => quillRef.current?.getEditingArea(),
-  }));
-
-  // Default modules configuration
+  // Default Quill modules with better toolbar
   const defaultModules = {
-    toolbar: [
-      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-      ['bold', 'italic', 'underline', 'strike'],
-      [{ 'color': [] }, { 'background': [] }],
-      [{ 'list': 'ordered' }, { 'list': 'bullet' }, { 'indent': '-1' }, { 'indent': '+1' }],
-      [{ 'align': [] }],
-      ['link', 'image', 'blockquote', 'code-block'],
+    toolbar: readOnly ? false : [
+      [{ 'header': [1, 2, 3, false] }],
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'code-block'],
       ['clean']
-    ]
+    ],
+    clipboard: {
+      matchVisual: false
+    }
   };
 
-  // Merge custom modules with defaults
-  const mergedModules = modules ? { ...defaultModules, ...modules } : defaultModules;
-
+  // Default formats that Quill should allow
+  const defaultFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet', 'indent',
+    'link', 'code-block'
+  ];
+  
+  // Merge modules and formats with defaults
+  const effectiveModules = { ...defaultModules, ...modules };
+  const effectiveFormats = formats || defaultFormats;
+  
+  // Set up ref methods
+  useImperativeHandle(ref, () => ({
+    getEditor: () => ReactQuill.current?.getEditor(),
+    focus: () => ReactQuill.current?.focus(),
+    blur: () => ReactQuill.current?.blur(),
+    getHTML: () => value,
+    setHTML: (html) => onChange && onChange(html),
+    clear: () => onChange && onChange('')
+  }));
+  
+  // Pre-process code blocks on read mode
+  useEffect(() => {
+    if (readOnly && value) {
+      // Handle code blocks display data-language attribute for the pre tag
+      setTimeout(() => {
+        const codeBlocks = document.querySelectorAll('.ql-editor pre');
+        codeBlocks.forEach(pre => {
+          // Find the code tag inside and try to determine language
+          const codeTag = pre.querySelector('code');
+          if (codeTag && codeTag.className) {
+            const langMatch = codeTag.className.match(/language-(\w+)/);
+            if (langMatch && langMatch[1]) {
+              pre.setAttribute('data-language', langMatch[1]);
+            } else {
+              pre.setAttribute('data-language', 'code');
+            }
+          } else {
+            pre.setAttribute('data-language', 'code');
+          }
+        });
+      }, 100);
+    }
+  }, [readOnly, value]);
+  
   return (
-    <div className={`quill-editor-container ${className || ''} ${readOnly ? 'quill-read-only' : ''}`} style={style}>
+    <div className={`quill-editor-container ${readOnly ? 'quill-read-only' : ''} ${className}`}>
       <ReactQuill
-        ref={quillRef}
+        theme="snow"
         value={value || ''}
         onChange={onChange}
-        placeholder={placeholder}
         readOnly={readOnly}
-        modules={mergedModules}
-        theme={theme}
-        {...rest}
+        placeholder={placeholder}
+        modules={effectiveModules}
+        formats={effectiveFormats}
+        className={readOnly ? 'read-only-editor' : ''}
+        style={style}
       />
     </div>
   );
 });
-
-QuillEditor.displayName = 'QuillEditor';
 
 export default QuillEditor;

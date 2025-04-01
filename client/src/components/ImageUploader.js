@@ -1,188 +1,269 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
-const ImageUploader = ({ initialImage, onImageChange, defaultImage = "/img/default-faculty.png" }) => {
-  const [imagePreview, setImagePreview] = useState(initialImage || defaultImage);
-  const [isUsingUrl, setIsUsingUrl] = useState(!initialImage || (initialImage && initialImage.startsWith('http')));
-  const [imageUrl, setImageUrl] = useState(initialImage && initialImage.startsWith('http') ? initialImage : '');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [hasErrored, setHasErrored] = useState(false);
+const ImageUploader = ({ initialImage, onImageChange, defaultImage = '/img/default-faculty.png' }) => {
+  // State variables
+  const [image, setImage] = useState(initialImage || defaultImage);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isHovering, setIsHovering] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageSource, setImageSource] = useState(initialImage ? 'url' : 'default');
   const fileInputRef = useRef(null);
-
-  // Update the preview if the initialImage prop changes
+  
+  // Update image state when initialImage prop changes
   useEffect(() => {
     if (initialImage) {
-      setImagePreview(initialImage);
-      setIsUsingUrl(initialImage.startsWith('http'));
-      if (initialImage.startsWith('http')) {
-        setImageUrl(initialImage);
-      }
-      setHasErrored(false); // Reset error state when initialImage changes
+      setImage(initialImage);
+      setImageSource('url');
+      setImageError(false);
+    } else {
+      setImage(defaultImage);
+      setImageSource('default');
+      setImageError(false);
     }
-  }, [initialImage]);
-
+  }, [initialImage, defaultImage]);
+  
   // Handle file input change
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    if (!file) return;
-
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      setErrorMessage('Please select a valid image file (JPEG, PNG, GIF, WEBP)');
-      return;
-    }
-
-    // Validate file size (max 2MB)
-    const maxSize = 2 * 1024 * 1024; // 2MB in bytes
-    if (file.size > maxSize) {
-      setErrorMessage('Image size should be less than 2MB');
-      return;
-    }
-
-    setErrorMessage('');
-    setHasErrored(false);
-
-    // Create a preview URL for the selected file
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const previewUrl = reader.result;
-      setImagePreview(previewUrl);
-      onImageChange({ file, type: 'file', dataUrl: previewUrl });
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Handle URL input change
-  const handleUrlChange = (event) => {
-    const url = event.target.value.trim();
-    setImageUrl(url);
-    setErrorMessage('');
-
-    if (url) {
-      // Basic URL validation
-      try {
-        new URL(url);
-        setImagePreview(url);
-        setHasErrored(false);
-        onImageChange({ url, type: 'url' });
-      } catch (e) {
-        setErrorMessage('Please enter a valid URL');
-        setImagePreview(defaultImage);
-        onImageChange({ url: '', type: 'url' });
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setImageError('Please upload a valid image file (JPEG, PNG, GIF, WEBP)');
+        return;
       }
-    } else {
-      setImagePreview(defaultImage);
-      setHasErrored(false);
-      onImageChange({ url: '', type: 'url' });
+      
+      // Validate file size (limit to 2MB)
+      if (file.size > 2 * 1024 * 1024) {
+        setImageError('Image must be smaller than 2MB');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImage(reader.result);
+        setImageSource('file');
+        setImageError(false);
+        
+        // Pass the image data to the parent component
+        onImageChange && onImageChange({
+          type: 'file',
+          file: file,
+          dataUrl: reader.result
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
-
-  // Toggle between file upload and URL input
-  const toggleInputType = () => {
-    setIsUsingUrl(!isUsingUrl);
-    if (isUsingUrl) {
-      // Switching to file upload - clear the URL
-      setImageUrl('');
-      setImagePreview(defaultImage);
-      setHasErrored(false);
-      onImageChange({ type: 'reset' });
-    } else {
-      // Switching to URL input - clear the file
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      setImagePreview(imageUrl || defaultImage);
-      setHasErrored(false);
-      onImageChange({ url: imageUrl, type: 'url' });
+  
+  // Handle drag events
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        setImageError('Please upload a valid image file (JPEG, PNG, GIF, WEBP)');
+        return;
+      }
+      
+      if (file.size > 2 * 1024 * 1024) {
+        setImageError('Image must be smaller than 2MB');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = () => {
+        setImage(reader.result);
+        setImageSource('file');
+        setImageError(false);
+        
+        // Pass the image data to the parent component
+        onImageChange && onImageChange({
+          type: 'file',
+          file: file,
+          dataUrl: reader.result
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
-
-  // Provide a reliable fallback image for preview
-  const inlineSVGFallback = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e0e0e0'/%3E%3Ccircle cx='50' cy='40' r='20' fill='%23c0c0c0'/%3E%3Cpath d='M30,80 Q50,60 70,80' fill='%23c0c0c0'/%3E%3C/svg%3E`;
-
+  
+  // Handle image URL input
+  const handleUrlChange = (e) => {
+    const url = e.target.value;
+    if (url) {
+      setImage(url);
+      setImageSource('url');
+      setImageError(false);
+      
+      // Pass the image data to the parent component
+      onImageChange && onImageChange({
+        type: 'url',
+        url: url
+      });
+    } else {
+      setImage(defaultImage);
+      setImageSource('default');
+      
+      // Pass null to the parent component
+      onImageChange && onImageChange(null);
+    }
+  };
+  
+  // Handle image input method toggle
+  const handleMethodChange = (method) => {
+    if (method === imageSource) return;
+    
+    if (method === 'file') {
+      fileInputRef.current?.click();
+      return;
+    }
+    
+    if (method === 'url') {
+      setImageSource('url');
+      return;
+    }
+    
+    if (method === 'default') {
+      setImage(defaultImage);
+      setImageSource('default');
+      setImageError(false);
+      
+      // Pass null to the parent component
+      onImageChange && onImageChange(null);
+    }
+  };
+  
+  // Handle image error
   const handleImageError = () => {
-    if (!hasErrored) {
-      setHasErrored(true);
-      setImagePreview(inlineSVGFallback);
-      setErrorMessage('Failed to load image. Please try another one.');
-    }
+    setImageError('Failed to load image. Please check the URL or try another image.');
+    setImage(defaultImage);
   };
-
+  
   return (
-    <div className="image-uploader">
+    <div className="flex flex-col items-center max-w-md mx-auto">
       {/* Image preview */}
-      <div className="mb-4 flex justify-center">
-        <div className="relative w-32 h-32 rounded-full overflow-hidden border-2 border-gray-200">
-          <img
-            src={imagePreview}
-            alt="Profile preview"
-            className="w-full h-full object-cover"
-            onError={handleImageError}
-          />
+      <div 
+        className={`relative w-36 h-36 rounded-full overflow-hidden mb-4 border-4 ${
+          isDragging ? 'border-blue-400' : (imageSource === 'default' ? 'border-gray-200' : 'border-gray-300')
+        } ${imageError ? 'border-red-400' : ''} cursor-pointer transition-all duration-200`}
+        onMouseEnter={() => setIsHovering(true)}
+        onMouseLeave={() => setIsHovering(false)}
+        onClick={() => fileInputRef.current?.click()}
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+      >
+        <img 
+          src={image} 
+          alt="Profile" 
+          className="w-full h-full object-cover"
+          onError={handleImageError}
+        />
+        
+        {/* Hover overlay */}
+        <div 
+          className={`absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center transition-opacity duration-200 ${
+            isHovering || isDragging ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <div className="text-white text-center">
+            <i className="fas fa-camera text-2xl"></i>
+            <p className="text-sm mt-1">{isDragging ? 'Drop image' : 'Change'}</p>
+          </div>
         </div>
       </div>
-
-      {/* Toggle between file and URL input */}
-      <div className="flex justify-center mb-4">
-        <div className="inline-flex rounded-md shadow-sm" role="group">
+      
+      {/* Error message */}
+      {imageError && (
+        <div className="text-red-500 text-sm mb-3 text-center">
+          {imageError}
+        </div>
+      )}
+      
+      {/* File input (hidden) */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        className="hidden"
+        accept="image/jpeg, image/png, image/gif, image/webp"
+        onChange={handleFileChange}
+      />
+      
+      {/* Image source options */}
+      <div className="flex flex-col items-center space-y-3 w-full max-w-md">
+        <div className="flex space-x-2 mb-2">
           <button
             type="button"
-            className={`py-2 px-4 text-sm font-medium rounded-l-lg ${
-              !isUsingUrl
-                ? 'bg-primary-red text-white'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            onClick={() => handleMethodChange('file')}
+            className={`px-3 py-1.5 rounded-md text-sm ${
+              imageSource === 'file' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
-            onClick={() => isUsingUrl && toggleInputType()}
           >
-            File Upload
+            <i className="fas fa-upload mr-1"></i> Upload
           </button>
+          
           <button
             type="button"
-            className={`py-2 px-4 text-sm font-medium rounded-r-lg ${
-              isUsingUrl
-                ? 'bg-primary-red text-white'
-                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            onClick={() => handleMethodChange('url')}
+            className={`px-3 py-1.5 rounded-md text-sm ${
+              imageSource === 'url' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
-            onClick={() => !isUsingUrl && toggleInputType()}
           >
-            Image URL
+            <i className="fas fa-link mr-1"></i> URL
+          </button>
+          
+          <button
+            type="button"
+            onClick={() => handleMethodChange('default')}
+            className={`px-3 py-1.5 rounded-md text-sm ${
+              imageSource === 'default' 
+                ? 'bg-blue-500 text-white' 
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            <i className="fas fa-user-circle mr-1"></i> Default
           </button>
         </div>
-      </div>
-
-      {/* Input fields */}
-      <div>
-        {isUsingUrl ? (
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+        
+        {/* URL input */}
+        {imageSource === 'url' && (
+          <div className="w-full">
             <input
-              type="url"
-              value={imageUrl}
+              type="text"
+              placeholder="Enter image URL..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+              value={image !== defaultImage ? image : ''}
               onChange={handleUrlChange}
-              placeholder="https://example.com/image.jpg"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red"
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Enter a direct link to an image (must start with http:// or https://)
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Enter the URL of an image (JPEG, PNG, GIF, WEBP)</p>
           </div>
-        ) : (
-          <div className="mb-3">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Upload Image</label>
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept="image/jpeg, image/png, image/gif, image/webp"
-              className="w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-red file:text-white hover:file:bg-secondary-red"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Maximum file size: 2MB. Supported formats: JPEG, PNG, GIF, WEBP
-            </p>
-          </div>
-        )}
-
-        {/* Error message */}
-        {errorMessage && (
-          <div className="text-red-500 text-sm mt-1">{errorMessage}</div>
         )}
       </div>
     </div>

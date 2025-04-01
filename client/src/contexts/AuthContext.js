@@ -146,6 +146,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Delete faculty (Admin only)
+  const deleteFaculty = async (facultyId) => {
+    setLoading(true);
+    try {
+      const res = await api.delete(`/api/faculty/${facultyId}`);
+      setLoading(false);
+      return { 
+        success: true, 
+        message: res.data?.message || 'Faculty member successfully deleted' 
+      };
+    } catch (error) {
+      setLoading(false);
+      setError(error.response?.data?.message || 'Failed to delete faculty member');
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to delete faculty member' 
+      };
+    }
+  };
+
   // Forgot password
   const forgotPassword = async (email) => {
     setLoading(true);
@@ -203,6 +223,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     createUser,
+    deleteFaculty, // Add the new method to the context
     forgotPassword,
     resetPassword,
     hasRole,

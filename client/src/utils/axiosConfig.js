@@ -1,55 +1,69 @@
 import axios from 'axios';
 
-// Set the base URL for API requests - more robust handling for production
-let baseURL;
+// Determine the base URL for the API based on environment
+const getBaseURL = () => {
+  // In development, use localhost
+  if (process.env.NODE_ENV === 'development') {
+    return process.env.REACT_APP_API_URL || 'http://localhost:5000';
+  }
+  
+  // In production, use the deployed URL or relative path
+  return process.env.REACT_APP_API_URL || '';
+};
 
-// In production, use the same domain (no need for explicit URL)
-if (process.env.NODE_ENV === 'production') {
-  baseURL = ''; // Empty string means use the same domain as the client
-} else {
-  // In development, use localhost or the environment variable
-  baseURL = process.env.REACT_APP_API_URL || 'http://localhost:9000';
-}
-
-// Create an Axios instance with the base URL
+// Create an axios instance with custom configuration
 const api = axios.create({
-  baseURL,
+  baseURL: getBaseURL(),
   headers: {
     'Content-Type': 'application/json'
   },
-  withCredentials: true // Important for cookies if you use them
+  timeout: 30000 // 30 second timeout
 });
 
-// Request interceptor to add auth token to requests
+// Add a request interceptor to include auth token in requests
 api.interceptors.request.use(
-  (config) => {
+  config => {
     const token = localStorage.getItem('token');
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
+  error => {
     return Promise.reject(error);
   }
 );
 
-// Add response interceptor for better error handling
+// Add a response interceptor to handle common errors
 api.interceptors.response.use(
-  (response) => {
+  response => {
     return response;
   },
-  (error) => {
-    // Log details about the error in production for debugging
-    if (process.env.NODE_ENV === 'production') {
-      console.error('API Error:', {
-        url: error.config?.url,
-        method: error.config?.method,
-        status: error.response?.status,
-        message: error.message,
-        details: error.response?.data
-      });
+  error => {
+    // Handle session expirations
+    if (error.response && error.response.status === 401) {
+      // If on a protected route, logout user by clearing token
+      if (window.location.pathname !== '/login' && 
+          window.location.pathname !== '/register' &&
+          !window.location.pathname.startsWith('/reset-password') &&
+          window.location.pathname !== '/forgot-password') {
+        localStorage.removeItem('token');
+        
+        // Optionally redirect to login page with a message
+        window.location.replace('/login?message=session_expired');
+      }
     }
+    
+    // Network errors handling
+    if (error.message === 'Network Error') {
+      console.error('API Network Error: Unable to connect to server');
+    }
+    
+    // Log API errors in development
+    if (process.env.NODE_ENV === 'development') {
+      console.error('API Error:', error.response || error.message || error);
+    }
+    
     return Promise.reject(error);
   }
 );

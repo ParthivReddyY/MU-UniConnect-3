@@ -402,145 +402,310 @@ const Faculty = () => {
 
         <section className="py-10 bg-slate-100">
           <div className="container max-w-7xl mx-auto px-5">
-            {/* Active filters area */}
+            {/* Active filters area - redesigned for better UX */}
             <div className="flex flex-wrap gap-2.5 mb-5" id="active-filters">
-              {filters.searchQuery && (
-                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center">
-                  <span>Search: {filters.searchQuery}</span>
-                  <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('search')}></i>
+              {(filters.searchQuery || filters.schools.length > 0 || filters.designations.length > 0 || filters.researchAreas.length > 0) && (
+                <div className="w-full flex flex-wrap items-center gap-2.5 bg-white p-3 rounded-lg shadow-sm mb-2">
+                  <span className="text-sm font-medium text-gray-600 mr-1">Active filters:</span>
+                  
+                  {filters.searchQuery && (
+                    <div className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-all hover:bg-blue-100">
+                      <i className="fas fa-search text-xs"></i>
+                      <span>{filters.searchQuery}</span>
+                      <button 
+                        onClick={() => removeFilter('search')}
+                        className="ml-1.5 w-5 h-5 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center hover:bg-blue-300"
+                      >
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  )}
+                  
+                  {filters.schools.map((school, index) => (
+                    <div 
+                      className="bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-all hover:bg-purple-100" 
+                      key={`school-${index}`}
+                    >
+                      <i className="fas fa-university text-xs"></i>
+                      <span>{school}</span>
+                      <button 
+                        onClick={() => removeFilter('school', school)}
+                        className="ml-1.5 w-5 h-5 rounded-full bg-purple-200 text-purple-800 flex items-center justify-center hover:bg-purple-300"
+                      >
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {filters.designations.map((designation, index) => (
+                    <div 
+                      className="bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-all hover:bg-green-100" 
+                      key={`designation-${index}`}
+                    >
+                      <i className="fas fa-user-tie text-xs"></i>
+                      <span>{designation}</span>
+                      <button 
+                        onClick={() => removeFilter('designation', designation)}
+                        className="ml-1.5 w-5 h-5 rounded-full bg-green-200 text-green-800 flex items-center justify-center hover:bg-green-300"
+                      >
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  {filters.researchAreas.map((area, index) => (
+                    <div 
+                      className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-all hover:bg-amber-100" 
+                      key={`area-${index}`}
+                    >
+                      <i className="fas fa-flask text-xs"></i>
+                      <span>{area}</span>
+                      <button 
+                        onClick={() => removeFilter('research', area)}
+                        className="ml-1.5 w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center hover:bg-amber-300"
+                      >
+                        <i className="fas fa-times text-xs"></i>
+                      </button>
+                    </div>
+                  ))}
+                  
+                  <button 
+                    onClick={resetFilters}
+                    className="ml-auto px-3 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 flex items-center gap-1.5"
+                  >
+                    <i className="fas fa-broom"></i> Clear all
+                  </button>
                 </div>
               )}
-              
-              {filters.schools.map((school, index) => (
-                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`school-${index}`}>
-                  <span>School: {school}</span>
-                  <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('school', school)}></i>
-                </div>
-              ))}
-              
-              {filters.designations.map((designation, index) => (
-                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`designation-${index}`}>
-                  <span>Designation: {designation}</span>
-                  <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('designation', designation)}></i>
-                </div>
-              ))}
-              
-              {filters.researchAreas.map((area, index) => (
-                <div className="bg-red-50 bg-opacity-10 text-primary-red px-3 py-1.5 rounded-full text-sm flex items-center" key={`area-${index}`}>
-                  <span>Research: {area}</span>
-                  <i className="fas fa-times ml-2 cursor-pointer" onClick={() => removeFilter('research', area)}></i>
-                </div>
-              ))}
             </div>
             
-            {/* Results count and sort options */}
-            <div className="flex items-center justify-between gap-2.5 mb-4">
-              <div className="text-gray-500">
-                <span className="font-semibold text-primary-red">{filteredFacultyData.length}</span> faculty members found
+            {/* Results count and sort options - enhanced UI */}
+            <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-6">
+              <div className="bg-white py-2 px-4 rounded-lg shadow-sm text-gray-500 flex items-center">
+                <span className="font-semibold text-primary-red">{filteredFacultyData.length}</span>
+                <span className="ml-1.5">faculty members found</span>
+                {isLoading && <div className="ml-3 w-4 h-4 border-2 border-primary-red border-t-transparent rounded-full animate-spin"></div>}
               </div>
               
-              <div className="flex items-center">
-                <label htmlFor="sort-faculty" className="text-gray-500 mr-2">Sort by:</label>
-                <select 
-                  id="sort-faculty" 
-                  onChange={handleSortChange}
-                  className="px-3 py-2 rounded border border-gray-300 bg-gray-50 text-gray-500"
-                >
-                  <option value="name-asc">Name (A-Z)</option>
-                  <option value="name-desc">Name (Z-A)</option>
-                  <option value="department">Department</option>
-                  <option value="designation">Designation</option>
-                </select>
+              <div className="flex items-center bg-white py-2 px-4 rounded-lg shadow-sm">
+                <label htmlFor="sort-faculty" className="text-gray-500 mr-3 whitespace-nowrap">Sort by:</label>
+                <div className="relative">
+                  <select 
+                    id="sort-faculty" 
+                    onChange={handleSortChange}
+                    className="pl-3 pr-8 py-1.5 rounded border border-gray-200 bg-gray-50 text-gray-600 appearance-none focus:ring-2 focus:ring-primary-red/25 focus:outline-none"
+                  >
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="department">Department</option>
+                    <option value="designation">Designation</option>
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <i className="fas fa-chevron-down text-xs"></i>
+                  </div>
+                </div>
               </div>
             </div>
             
-            {/* Faculty grid - converted to use Tailwind where possible */}
-            <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="faculty-grid">
+            {/* Faculty grid - modernized card design */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="faculty-grid">
               {isLoading ? (
-                <div className="col-span-full flex flex-col items-center justify-center py-10">
-                  <div className="w-[50px] h-[50px] border-4 border-[rgba(195,55,55,0.1)] border-l-[#c33737] rounded-full animate-spin mb-4"></div>
-                  <p className="mt-4 text-gray-500">Loading faculty profiles...</p>
+                <div className="col-span-full flex flex-col items-center justify-center py-16">
+                  <div className="w-16 h-16 relative">
+                    <div className="absolute inset-0 rounded-full border-4 border-gray-200"></div>
+                    <div className="absolute inset-0 rounded-full border-4 border-primary-red border-t-transparent animate-spin"></div>
+                  </div>
+                  <p className="mt-6 text-gray-500 font-medium">Loading faculty profiles...</p>
                 </div>
               ) : currentPageData.length === 0 ? (
-                <div className="col-span-full flex flex-col items-center justify-center py-10 text-gray-500">
-                  <i className="fas fa-search text-5xl text-[#D32F2F] opacity-50 mb-4"></i>
-                  <h3 className="text-xl mb-2.5">No faculty members found</h3>
-                  <p>Try adjusting your filters or search query</p>
+                <div className="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                  <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-5">
+                    <i className="fas fa-user-slash text-3xl text-gray-400"></i>
+                  </div>
+                  <h3 className="text-xl font-bold mb-2.5 text-gray-700">No faculty members found</h3>
+                  <p className="text-gray-500 max-w-md">We couldn't find any faculty members matching your criteria. Try adjusting your filters or search query.</p>
+                  <button 
+                    onClick={resetFilters}
+                    className="mt-5 px-5 py-2 bg-primary-red text-white font-medium rounded-md hover:bg-red-700 transition-colors flex items-center gap-2"
+                  >
+                    <i className="fas fa-sync-alt"></i> Reset filters
+                  </button>
                 </div>
               ) : (
                 currentPageData.map((faculty, index) => (
                   <div 
-                    key={index} 
-                    className="relative overflow-hidden bg-gray-100 rounded-xl shadow-md border border-gray-200 transition-all duration-300 hover:-translate-y-2 hover:shadow-lg"
+                    key={faculty._id || index} 
+                    className="group bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative faculty-card animate-fadeIn"
+                    style={{animationDelay: `${index * 50}ms`}}
                   >
-                    {/* Department indicator */}
-                    <div className="absolute top-3 right-3 px-3 py-1 text-xs font-semibold uppercase tracking-wider rounded-full bg-white bg-opacity-85 shadow-sm z-10 backdrop-blur-sm" 
-                      style={{ 
-                        color: faculty.department === 'ECSE' ? '#1e3a8a' : 
-                              faculty.department === 'SOM' ? '#047857' : 
-                              faculty.department === 'SOL' ? '#7e22ce' :
-                              faculty.department === 'IMSOE' ? '#0369a1' :
-                              '#be123c'
-                      }}>
-                      {faculty.department}
+                    {/* Department badge - styled by department */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <span 
+                        className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-full backdrop-blur-md shadow-sm"
+                        style={{ 
+                          color: faculty.department === 'ECSE' ? '#1e3a8a' : 
+                                faculty.department === 'SOM' ? '#047857' : 
+                                faculty.department === 'SOL' ? '#7e22ce' :
+                                faculty.department === 'IMSOE' ? '#0369a1' :
+                                '#be123c',
+                          backgroundColor: faculty.department === 'ECSE' ? 'rgba(30, 58, 138, 0.08)' : 
+                                        faculty.department === 'SOM' ? 'rgba(4, 120, 87, 0.08)' : 
+                                        faculty.department === 'SOL' ? 'rgba(126, 34, 206, 0.08)' :
+                                        faculty.department === 'IMSOE' ? 'rgba(3, 105, 161, 0.08)' :
+                                        'rgba(190, 18, 60, 0.08)',
+                          borderColor: faculty.department === 'ECSE' ? 'rgba(30, 58, 138, 0.2)' : 
+                                      faculty.department === 'SOM' ? 'rgba(4, 120, 87, 0.2)' : 
+                                      faculty.department === 'SOL' ? 'rgba(126, 34, 206, 0.2)' :
+                                      faculty.department === 'IMSOE' ? 'rgba(3, 105, 161, 0.2)' :
+                                      'rgba(190, 18, 60, 0.2)',
+                          border: '1px solid'
+                        }}
+                      >
+                        {faculty.department}
+                      </span>
                     </div>
                     
-                    {/* Image header */}
-                    <div className="relative h-[180px] overflow-hidden">
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-[1]"></div>
+                    {/* Enhanced Image Section with modern design */}
+                    <div className="relative h-[220px] overflow-hidden faculty-image-container">
+                      {/* Stylish overlay gradient with department color accent - Reduced opacity */}
+                      <div 
+                        className="absolute inset-0 z-[1] opacity-100 group-hover:opacity-80 transition-opacity duration-500"
+                        style={{ 
+                          background: `linear-gradient(180deg, 
+                            rgba(0,0,0,0.01) 0%, 
+                            rgba(0,0,0,0.35) 90%),
+                            linear-gradient(120deg, 
+                            ${faculty.department === 'ECSE' ? 'rgba(30, 58, 138, 0.10)' : 
+                              faculty.department === 'SOM' ? 'rgba(4, 120, 87, 0.10)' : 
+                              faculty.department === 'SOL' ? 'rgba(126, 34, 206, 0.10)' :
+                              faculty.department === 'IMSOE' ? 'rgba(3, 105, 161, 0.10)' :
+                              'rgba(190, 18, 60, 0.10)'} 0%, 
+                            transparent 80%)`
+                        }}
+                      ></div>
+                      
+                      {/* Loading skeleton placeholder - Updated to disappear when image loads */}
+                      <div 
+                        className="absolute inset-0 bg-gradient-to-br from-gray-100 to-gray-200 animate-pulse skeleton-loader"
+                        id={`skeleton-${faculty._id || index}`}
+                      >
+                        <div className="flex items-center justify-center h-full">
+                          <svg className="w-12 h-12 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      {/* Actual faculty image with enhanced transitions */}
                       <img 
                         src={faculty.image || "/img/default-faculty.png"}
                         alt={faculty.name}
-                        className="w-full h-full object-cover transition-transform duration-500 hover:scale-110"
+                        className="w-full h-full object-cover transition-all duration-700 ease-in-out group-hover:scale-105 opacity-0"
+                        onLoad={(e) => {
+                          // Fade in image after loading
+                          e.target.classList.remove('opacity-0');
+                          e.target.classList.add('opacity-100');
+                          
+                          // Hide the loading skeleton
+                          const skeletonId = `skeleton-${faculty._id || index}`;
+                          const skeletonEl = document.getElementById(skeletonId);
+                          if (skeletonEl) {
+                            skeletonEl.style.opacity = '0';
+                            setTimeout(() => {
+                              skeletonEl.style.display = 'none';
+                            }, 300);
+                          }
+                        }}
                         onError={(e) => {
-                          e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='50' fill='%23e0e0e0'/%3E%3Ccircle cx='50' cy='40' r='20' fill='%23c0c0c0'/%3E%3Cpath d='M30,80 Q50,60 70,80' fill='%23c0c0c0'/%3E%3C/svg%3E`;
+                          // Show fallback image with department color
+                          const deptColor = faculty.department === 'ECSE' ? '1e3a8a' : 
+                                           faculty.department === 'SOM' ? '047857' : 
+                                           faculty.department === 'SOL' ? '7e22ce' :
+                                           faculty.department === 'IMSOE' ? '0369a1' : 'be123c';
+                          
+                          e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%23f3f4f6'/%3E%3Ccircle cx='50' cy='35' r='20' fill='%23${deptColor}' opacity='0.2'/%3E%3Ccircle cx='50' cy='35' r='15' fill='%23${deptColor}' opacity='0.4'/%3E%3Ccircle cx='50' cy='35' r='10' fill='%23${deptColor}' opacity='0.7'/%3E%3Crect x='25' y='65' width='50' height='25' rx='10' fill='%23${deptColor}' opacity='0.2'/%3E%3C/svg%3E`;
+                          
+                          // Hide loading state
+                          e.target.classList.remove('opacity-0');
+                          e.target.classList.add('opacity-100');
+                          
+                          // Hide the loading skeleton
+                          const skeletonId = `skeleton-${faculty._id || index}`;
+                          const skeletonEl = document.getElementById(skeletonId);
+                          if (skeletonEl) {
+                            skeletonEl.style.opacity = '0';
+                            setTimeout(() => {
+                              skeletonEl.style.display = 'none';
+                            }, 300);
+                          }
                         }}
                       />
+                      
+                      {/* Enhanced name overlay with subtle backdrop blur */}
+                      <div className="absolute bottom-0 left-0 w-full p-4 z-[2] transform translate-y-0 transition-transform duration-500 group-hover:translate-y-0">
+                        <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-md p-2 inline-block">
+                          <h3 className="text-white text-lg font-bold tracking-tight leading-tight">{faculty.name}</h3>
+                        </div>
+                      </div>
+                      
+                      {/* White divider line */}
+                      <div className="absolute bottom-0 left-0 w-full h-[1px] bg-white opacity-20"></div>
+                      
+                      {/* Interactive overlay with hover reveal - With reduced opacity */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-[3]">
+                        {/* Empty div - no icon */}
+                      </div>
                     </div>
                     
                     {/* Content */}
-                    <div className="p-5">
-                      <h3 className="text-lg font-bold text-gray-800 mb-1 font-['Montserrat']">{faculty.name}</h3>
-                      <p className="text-[#D32F2F] font-semibold text-sm mb-1">{faculty.designation}</p>
-                      <p className="text-gray-500 text-xs flex items-center mb-3">
-                        <i className="fas fa-university mr-1.5 opacity-70"></i> {faculty.department}
-                      </p>
+                    <div className="p-4">
+                      <div className="flex flex-col">
+                        <p className="text-primary-red font-semibold text-sm">{faculty.designation}</p>
+                        <p className="text-gray-500 text-xs flex items-center mt-1 mb-3">
+                          <i className="fas fa-university mr-1.5"></i> {faculty.department}
+                        </p>
+                      </div>
                       
-                      {/* Research interests */}
+                      {/* Research interests - with animated reveal */}
                       {faculty.research && (
-                        <div className="text-xs text-gray-600 italic border-t border-gray-100 pt-3 mt-2 line-clamp-2">
-                          <i className="fas fa-flask mr-1.5"></i> {faculty.research.substring(0, 80)}...
+                        <div className="text-xs text-gray-600 border-t border-gray-100 pt-3 mt-1 max-h-[48px] overflow-hidden relative">
+                          <div className="flex items-start">
+                            <i className="fas fa-flask mr-1.5 mt-0.5 text-primary-red/70"></i>
+                            <p className="line-clamp-2">{faculty.research}</p>
+                          </div>
                         </div>
                       )}
                     </div>
                     
                     {/* Footer with actions */}
-                    <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100 bg-gray-50">
-                      <div className="flex space-x-3">
+                    <div className="flex items-center justify-between p-4 border-t border-gray-100 bg-gray-50">
+                      <div className="flex space-x-2">
                         {faculty.email && (
                           <a 
                             href={`mailto:${faculty.email}`} 
-                            className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-gray-200 text-gray-600 hover:bg-[#D32F2F] hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md"
+                            className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
                             title={`Email ${faculty.name}`}
                           >
-                            <i className="fas fa-envelope"></i>
+                            <i className="fas fa-envelope text-xs"></i>
                           </a>
                         )}
                         {faculty.mobileNumber && (
                           <a 
                             href={`tel:${faculty.mobileNumber}`} 
-                            className="w-9 h-9 rounded-full bg-white flex items-center justify-center border border-gray-200 text-gray-600 hover:bg-[#D32F2F] hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md"
+                            className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
                             title={`Call ${faculty.name}`}
                           >
-                            <i className="fas fa-phone"></i>
+                            <i className="fas fa-phone-alt text-xs"></i>
                           </a>
                         )}
                       </div>
                       <Link 
                         to={`/faculty-detail/${faculty._id}`} 
-                        className="px-4 py-2 rounded-full text-sm font-medium bg-[#D32F2F]/10 text-[#D32F2F] border border-[#D32F2F]/20 hover:bg-[#D32F2F] hover:text-white hover:shadow-md transition-all"
+                        className="relative overflow-hidden px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 border border-gray-200 group-hover:bg-primary-red group-hover:text-white group-hover:border-primary-red transition-all duration-300 flex items-center gap-1.5"
                       >
-                        <i className="fas fa-user-circle mr-1.5"></i> View Profile
+                        <i className="fas fa-user-circle"></i> 
+                        <span>View Profile</span>
                       </Link>
                     </div>
                   </div>
@@ -548,69 +713,102 @@ const Faculty = () => {
               )}
             </div>
             
-            {/* Pagination */}
+            {/* Pagination - Enhanced with modern design */}
             {!isLoading && totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 my-8" id="faculty-pagination">
-                <button 
-                  className="min-w-[40px] h-10 rounded border border-gray-300 bg-white flex items-center justify-center px-4 transition-all hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                >
-                  <i className="fas fa-chevron-left mr-1"></i> Prev
-                </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1)
-                  .filter(page => {
-                    const maxVisiblePages = 5;
-                    const halfVisible = Math.floor(maxVisiblePages / 2);
-                    return (
-                      page === 1 || 
-                      page === totalPages || 
-                      (page >= currentPage - halfVisible && 
-                       page <= currentPage + halfVisible)
-                    );
-                  })
-                  .map((page, index, array) => {
-                    if (index > 0 && array[index - 1] !== page - 1) {
-                      return (
-                        <React.Fragment key={`ellipsis-${page}`}>
-                          <span className="mx-1">...</span>
+              <div className="flex flex-col items-center justify-center mt-12 mb-6">
+                <div className="bg-white shadow-sm rounded-lg p-3 flex items-center">
+                  <button 
+                    className="h-10 px-3 rounded-l-md border border-gray-200 bg-white flex items-center justify-center transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(1)}
+                    title="First page"
+                  >
+                    <i className="fas fa-angle-double-left text-gray-400"></i>
+                  </button>
+                  
+                  <button 
+                    className="h-10 px-4 border-t border-b border-gray-200 bg-white flex items-center justify-center gap-1 transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  >
+                    <i className="fas fa-chevron-left text-sm"></i>
+                    <span className="hidden sm:inline text-sm font-medium">Previous</span>
+                  </button>
+                  
+                  <div className="hidden sm:flex">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1)
+                      .filter(page => {
+                        const maxVisiblePages = 5;
+                        const halfVisible = Math.floor(maxVisiblePages / 2);
+                        return (
+                          page === 1 || 
+                          page === totalPages || 
+                          (page >= currentPage - halfVisible && 
+                          page <= currentPage + halfVisible)
+                        );
+                      })
+                      .map((page, index, array) => {
+                        if (index > 0 && array[index - 1] !== page - 1) {
+                          return (
+                            <React.Fragment key={`ellipsis-${page}`}>
+                              <span className="h-10 w-10 flex items-center justify-center text-gray-400">...</span>
+                              <button 
+                                key={page} 
+                                className={`h-10 w-10 flex items-center justify-center transition-all border-t border-b border-gray-200 ${
+                                  currentPage === page 
+                                    ? 'bg-primary-red text-white font-medium' 
+                                    : 'bg-white text-gray-700 hover:bg-gray-50'
+                                }`}
+                                onClick={() => setCurrentPage(page)}
+                              >
+                                {page}
+                              </button>
+                            </React.Fragment>
+                          );
+                        }
+                        return (
                           <button 
                             key={page} 
-                            className={`min-w-[40px] h-10 rounded border flex items-center justify-center transition-all ${
+                            className={`h-10 w-10 flex items-center justify-center transition-all border-t border-b border-gray-200 ${
                               currentPage === page 
-                                ? 'bg-primary-red text-white border-primary-red' 
-                                : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
+                                ? 'bg-primary-red text-white font-medium' 
+                                : 'bg-white text-gray-700 hover:bg-gray-50'
                             }`}
                             onClick={() => setCurrentPage(page)}
                           >
                             {page}
                           </button>
-                        </React.Fragment>
-                      );
-                    }
-                    return (
-                      <button 
-                        key={page} 
-                        className={`min-w-[40px] h-10 rounded border flex items-center justify-center transition-all ${
-                          currentPage === page 
-                            ? 'bg-primary-red text-white border-primary-red' 
-                            : 'bg-white text-gray-800 border-gray-300 hover:bg-gray-100'
-                        }`}
-                        onClick={() => setCurrentPage(page)}
-                      >
-                        {page}
-                      </button>
-                    );
-                  })}
+                        );
+                      })}
+                  </div>
+                  
+                  {/* Mobile page indicator */}
+                  <div className="flex sm:hidden h-10 px-4 border-t border-b border-gray-200 bg-white items-center">
+                    <span className="text-sm font-medium">{currentPage} <span className="text-gray-400">of</span> {totalPages}</span>
+                  </div>
+                  
+                  <button 
+                    className="h-10 px-4 border-t border-b border-gray-200 bg-white flex items-center justify-center gap-1 transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  >
+                    <span className="hidden sm:inline text-sm font-medium">Next</span>
+                    <i className="fas fa-chevron-right text-sm"></i>
+                  </button>
+                  
+                  <button 
+                    className="h-10 px-3 rounded-r-md border border-gray-200 bg-white flex items-center justify-center transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(totalPages)}
+                    title="Last page"
+                  >
+                    <i className="fas fa-angle-double-right text-gray-400"></i>
+                  </button>
+                </div>
                 
-                <button 
-                  className="min-w-[40px] h-10 rounded border border-gray-300 bg-white flex items-center justify-center px-4 transition-all hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                >
-                  Next <i className="fas fa-chevron-right ml-1"></i>
-                </button>
+                <div className="mt-3 text-sm text-gray-500">
+                  Showing <span className="font-medium text-gray-700">{startIndex + 1}-{endIndex}</span> of <span className="font-medium text-gray-700">{filteredFacultyData.length}</span> faculty members
+                </div>
               </div>
             )}
           </div>

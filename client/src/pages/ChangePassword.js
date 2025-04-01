@@ -11,7 +11,7 @@ const ChangePassword = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const { currentUser, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   // Removed forcePasswordChange redirect check to allow password changes for all users

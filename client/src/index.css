@@ -40,7 +40,6 @@ html, body {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
   overflow-x: hidden;
-  scroll-behavior: smooth;
 }
 
 /* Better mobile link/button tap targets */
@@ -139,10 +138,6 @@ html {
     @apply w-full file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-primary-red file:text-white hover:file:bg-secondary-red;
 }
 
-/* Additional responsive utilities */
-/* Additional responsive utilities */
-/* Additional responsive utilities */
-/* Additional responsive utilities */
 .min-h-screen-safe {
     min-height: calc(var(--vh, 1vh) * 100);
 }
