@@ -1,12 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/axiosConfig';
-import QuillEditor from '../components/QuillEditor'; // Import our custom QuillEditor component
-import FacultyView from '../components/FacultyView'; // Import the new component
-import ImageUploader from '../components/ImageUploader'; // Import the new component
-import 'react-quill/dist/quill.snow.css'; // Still need the CSS
+import FacultyView from '../components/FacultyView';
+import ImageUploader from '../components/ImageUploader';
+import RichTextEditor from '../components/RichTextEditor';
 
 const FacultyDetail = () => {
   const { id } = useParams();
@@ -26,21 +25,6 @@ const FacultyDetail = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
-  // Create refs for QuillEditor components
-  const overviewEditorRef = useRef(null);
-  const educationEditorRef = useRef(null);
-  const workExperienceEditorRef = useRef(null);
-  const publicationsEditorRef = useRef(null);
-  const researchEditorRef = useRef(null);
-  
-  // Custom styles for editors
-  const quillStyle = {
-    backgroundColor: '#f8f9fa',
-    border: '1px solid #e2e8f0',
-    borderRadius: '0.375rem',
-    marginBottom: '1rem'
-  };
-
   // Form handling
   const { register, control, handleSubmit, reset, formState: { errors } } = useForm();
   
@@ -247,82 +231,20 @@ const FacultyDetail = () => {
     );
   }
 
-  // Replace all ReactQuill render functions with our new QuillEditor
-  const renderOverviewEditor = ({ field }) => {
+  // Remove the simple textarea render function and replace it with a rich text render function
+  const renderRichTextArea = ({ field }, placeholder) => {
     const { onChange, value } = field;
     return (
-      <QuillEditor 
-        ref={overviewEditorRef}
-        value={value}
+      <RichTextEditor
+        value={value || ''}
         onChange={onChange}
         readOnly={!isEditing}
-        style={quillStyle}
-        className="bg-blue-50 rounded-md"
-        placeholder="Enter an overview of your background, expertise, and research interests"
+        placeholder={placeholder}
+        height={350}
       />
     );
   };
-  
-  const renderEducationEditor = ({ field }) => {
-    const { onChange, value } = field;
-    return (
-      <QuillEditor 
-        ref={educationEditorRef}
-        value={value}
-        onChange={onChange}
-        placeholder="Enter your education details (degrees, institutions, years, etc.)"
-        readOnly={!isEditing}
-        style={quillStyle}
-        className="bg-green-50 rounded-md"
-      />
-    );
-  };
-  
-  const renderWorkExperienceEditor = ({ field }) => {
-    const { onChange, value } = field;
-    return (
-      <QuillEditor 
-        ref={workExperienceEditorRef}
-        value={value}
-        onChange={onChange}
-        placeholder="Enter your work experience details (positions, organizations, durations, responsibilities, etc.)"
-        readOnly={!isEditing}
-        style={quillStyle}
-        className="bg-yellow-50 rounded-md"
-      />
-    );
-  };
-  
-  const renderPublicationsEditor = ({ field }) => {
-    const { onChange, value } = field;
-    return (
-      <QuillEditor 
-        ref={publicationsEditorRef}
-        value={value}
-        onChange={onChange}
-        placeholder="Enter your publications (journal articles, conference papers, books, etc.)"
-        readOnly={!isEditing}
-        style={quillStyle}
-        className="bg-purple-50 rounded-md"
-      />
-    );
-  };
-  
-  const renderResearchEditor = ({ field }) => {
-    const { onChange, value } = field;
-    return (
-      <QuillEditor 
-        ref={researchEditorRef}
-        value={value}
-        onChange={onChange}
-        placeholder="Describe your current research interests, areas of focus, and any ongoing research projects"
-        readOnly={!isEditing}
-        style={quillStyle}
-        className="bg-pink-50 rounded-md"
-      />
-    );
-  };
-  
+
   return (
     <div className="w-full">
       {/* Use higher top padding to avoid navbar overlap */}
@@ -371,7 +293,7 @@ const FacultyDetail = () => {
           {/* View/Edit Mode Toggle */}
           {isEditing ? (
             <form onSubmit={handleSubmit(onSubmit)} className="bg-gray-100 rounded-lg shadow-lg p-6 mb-8 border border-gray-200 mx-auto">
-              {/* Tab navigation */}
+              {/* Tab navigation - hide unnecessary tabs for new faculty */}
               <div className="flex flex-wrap border-b border-gray-300 mb-6 overflow-x-auto whitespace-nowrap">
                 <button
                   type="button"
@@ -500,7 +422,7 @@ const FacultyDetail = () => {
                       name="overview"
                       control={control}
                       defaultValue=""
-                      render={renderOverviewEditor}
+                      render={(field) => renderRichTextArea(field, "Enter an overview of your background, expertise, and research interests")}
                     />
                   </div>
                 </div>
@@ -520,7 +442,7 @@ const FacultyDetail = () => {
                         name="education"
                         control={control}
                         defaultValue=""
-                        render={renderEducationEditor}
+                        render={(field) => renderRichTextArea(field, "Enter your education details (degrees, institutions, years, etc.)")}
                       />
                     </div>
                   </div>
@@ -536,7 +458,7 @@ const FacultyDetail = () => {
                         name="workExperience"
                         control={control}
                         defaultValue=""
-                        render={renderWorkExperienceEditor}
+                        render={(field) => renderRichTextArea(field, "Enter your work experience details (positions, organizations, durations, responsibilities, etc.)")}
                       />
                     </div>
                   </div>
@@ -557,7 +479,7 @@ const FacultyDetail = () => {
                         name="publications"
                         control={control}
                         defaultValue=""
-                        render={renderPublicationsEditor}
+                        render={(field) => renderRichTextArea(field, "Enter your publications (journal articles, conference papers, books, etc.)")}
                       />
                     </div>
                   </div>
@@ -573,7 +495,7 @@ const FacultyDetail = () => {
                         name="research"
                         control={control}
                         defaultValue=""
-                        render={renderResearchEditor}
+                        render={(field) => renderRichTextArea(field, "Describe your current research interests, areas of focus, and any ongoing research projects")}
                       />
                     </div>
                   </div>

@@ -384,7 +384,7 @@ const FacultyView = ({ faculty }) => {
                       <i className="fas fa-user-circle text-primary-red mr-3"></i>
                       Faculty Overview
                     </h2>
-                    <div className={`section-content prose max-w-none ${visibleSections.overview ? 'animate-fadeIn' : ''}`} 
+                    <div className={`section-content prose max-w-none ql-content ${visibleSections.overview ? 'animate-fadeIn' : ''}`} 
                       dangerouslySetInnerHTML={renderHTML(faculty.overview)}>
                     </div>
                   </section>
@@ -401,7 +401,7 @@ const FacultyView = ({ faculty }) => {
                       <i className="fas fa-graduation-cap text-primary-red mr-3"></i>
                       Education
                     </h2>
-                    <div className={`section-content prose max-w-none ${visibleSections.education ? 'animate-fadeIn' : ''}`}
+                    <div className={`section-content prose max-w-none ql-content ${visibleSections.education ? 'animate-fadeIn' : ''}`}
                       dangerouslySetInnerHTML={renderHTML(faculty.education)}>
                     </div>
                   </section>
@@ -418,7 +418,7 @@ const FacultyView = ({ faculty }) => {
                       <i className="fas fa-briefcase text-primary-red mr-3"></i>
                       Work Experience
                     </h2>
-                    <div className={`section-content prose max-w-none ${visibleSections.workExperience ? 'animate-fadeIn' : ''}`}
+                    <div className={`section-content prose max-w-none ql-content ${visibleSections.workExperience ? 'animate-fadeIn' : ''}`}
                       dangerouslySetInnerHTML={renderHTML(faculty.workExperience)}>
                     </div>
                   </section>
@@ -435,7 +435,7 @@ const FacultyView = ({ faculty }) => {
                       <i className="fas fa-scroll text-primary-red mr-3"></i>
                       Academic Publications
                     </h2>
-                    <div className={`section-content prose max-w-none ${visibleSections.publications ? 'animate-fadeIn' : ''}`}
+                    <div className={`section-content prose max-w-none ql-content ${visibleSections.publications ? 'animate-fadeIn' : ''}`}
                       dangerouslySetInnerHTML={renderHTML(faculty.publications)}>
                     </div>
                   </section>
@@ -452,7 +452,7 @@ const FacultyView = ({ faculty }) => {
                       <i className="fas fa-flask text-primary-red mr-3"></i>
                       Research Interests
                     </h2>
-                    <div className={`section-content prose max-w-none ${visibleSections.research ? 'animate-fadeIn' : ''}`}
+                    <div className={`section-content prose max-w-none ql-content ${visibleSections.research ? 'animate-fadeIn' : ''}`}
                       dangerouslySetInnerHTML={renderHTML(faculty.research)}>
                     </div>
                   </section>

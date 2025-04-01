@@ -1,15 +1,43 @@
-/**
- * Utility functions for handling editor content
- */
+import DOMPurify from 'dompurify';
 
-// Safely render HTML content with proper sanitization
 export const renderHTML = (htmlContent) => {
   if (!htmlContent) return { __html: '' };
   
-  // Basic XSS protection can be added here if needed
-  // For production, consider using a library like DOMPurify
+  // Add preservation for Quill specific classes
+  DOMPurify.addHook('beforeSanitizeAttributes', function(node) {
+    // Check if the node is an Element node before trying to access attributes
+    if (node.nodeType === 1 && node.hasAttribute && node.hasAttribute('class')) {
+      const classAttr = node.getAttribute('class');
+      if (classAttr && (classAttr.includes('ql-') || classAttr.includes('quill'))) {
+        node.setAttribute('data-keep-class', classAttr);
+      }
+    }
+  });
   
-  return { __html: htmlContent };
+  DOMPurify.addHook('afterSanitizeAttributes', function(node) {
+    // Check if the node is an Element node before trying to access attributes
+    if (node.nodeType === 1 && node.hasAttribute && node.hasAttribute('data-keep-class')) {
+      node.setAttribute('class', node.getAttribute('data-keep-class'));
+      node.removeAttribute('data-keep-class');
+    }
+  });
+  
+  // Use DOMPurify to sanitize HTML content and prevent XSS attacks
+  const sanitizedContent = DOMPurify.sanitize(htmlContent, {
+    USE_PROFILES: { html: true },
+    ALLOWED_TAGS: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'p', 'a', 'ul', 'ol', 
+      'li', 'b', 'i', 'strong', 'em', 'strike', 'code', 'hr', 'br', 'div',
+      'table', 'thead', 'caption', 'tbody', 'tr', 'th', 'td', 'pre', 'span', 'img'
+    ],
+    ALLOWED_ATTR: [
+      'href', 'name', 'target', 'src', 'alt', 'class', 'id', 'style', 'rel',
+      'data-keep-class'
+    ],
+    ADD_ATTR: ['target'],  // Allow target="_blank" for links
+  });
+  
+  return { __html: sanitizedContent };
 };
 
 // Function to extract plain text from HTML content
