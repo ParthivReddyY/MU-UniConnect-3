@@ -8,14 +8,12 @@ const Faculty = () => {
   // State variables
   const [allFacultyData, setAllFacultyData] = useState([]);
   const [filteredFacultyData, setFilteredFacultyData] = useState([]);
-  const [uniqueResearchAreas, setUniqueResearchAreas] = useState(new Set());
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     schools: [],
     designations: [],
-    researchAreas: [],
     searchQuery: ''
   });
   
@@ -37,19 +35,6 @@ const Faculty = () => {
         const data = response.data;
         setAllFacultyData(data);
         setFilteredFacultyData(data);
-        
-        // Extract unique research areas
-        const areas = new Set();
-        data.forEach(faculty => {
-          if (faculty.research) {
-            faculty.research
-              .split(/[,;\n]/)
-              .map(area => area.trim())
-              .filter(area => area.length > 0)
-              .forEach(area => areas.add(area));
-          }
-        });
-        setUniqueResearchAreas(areas);
       } catch (error) {
         console.error('Error fetching faculty data:', error);
         showError('Failed to load faculty data. Please try again later.');
@@ -86,15 +71,6 @@ const Faculty = () => {
       );
     }
     
-    // Apply research area filters
-    if (filters.researchAreas.length > 0) {
-      filtered = filtered.filter(faculty => 
-        filters.researchAreas.some(area => 
-          faculty.research && faculty.research.includes(area)
-        )
-      );
-    }
-    
     // Apply search query
     if (filters.searchQuery) {
       const query = filters.searchQuery.toLowerCase();
@@ -102,10 +78,9 @@ const Faculty = () => {
         const nameMatch = faculty.name && faculty.name.toLowerCase().includes(query);
         const departmentMatch = faculty.department && faculty.department.toLowerCase().includes(query);
         const designationMatch = faculty.designation && faculty.designation.toLowerCase().includes(query);
-        const researchMatch = faculty.research && faculty.research.toLowerCase().includes(query);
         const overviewMatch = faculty.overview && faculty.overview.toLowerCase().includes(query);
         
-        return nameMatch || departmentMatch || designationMatch || researchMatch || overviewMatch;
+        return nameMatch || departmentMatch || designationMatch || overviewMatch;
       });
     }
     
@@ -136,13 +111,11 @@ const Faculty = () => {
   const collectFilters = () => {
     const schoolCheckboxes = document.querySelectorAll('.school-filter:checked');
     const designationCheckboxes = document.querySelectorAll('.designation-filter:checked');
-    const researchCheckboxes = document.querySelectorAll('.research-filter:checked');
     
     setFilters({
       ...filters,
       schools: Array.from(schoolCheckboxes).map(checkbox => checkbox.value),
-      designations: Array.from(designationCheckboxes).map(checkbox => checkbox.value),
-      researchAreas: Array.from(researchCheckboxes).map(checkbox => checkbox.value)
+      designations: Array.from(designationCheckboxes).map(checkbox => checkbox.value)
     });
     
     setCurrentPage(1);
@@ -151,7 +124,7 @@ const Faculty = () => {
 
   // Reset all filters
   const resetFilters = () => {
-    document.querySelectorAll('.school-filter, .designation-filter, .research-filter')
+    document.querySelectorAll('.school-filter, .designation-filter')
       .forEach(checkbox => checkbox.checked = false);
     
     document.getElementById('faculty-search').value = '';
@@ -159,7 +132,6 @@ const Faculty = () => {
     setFilters({
       schools: [],
       designations: [],
-      researchAreas: [],
       searchQuery: ''
     });
     
@@ -184,11 +156,6 @@ const Faculty = () => {
         newFilters.designations = filters.designations.filter(d => d !== value);
         const designationCheckbox = document.querySelector(`.designation-filter[value="${value}"]`);
         if (designationCheckbox) designationCheckbox.checked = false;
-        break;
-      case 'research':
-        newFilters.researchAreas = filters.researchAreas.filter(area => area !== value);
-        const researchCheckbox = document.querySelector(`.research-filter[value="${value}"]`);
-        if (researchCheckbox) researchCheckbox.checked = false;
         break;
       default:
         console.warn(`Unknown filter type: ${type}`);
@@ -375,15 +342,6 @@ const Faculty = () => {
                 </div>
               </div>
               
-              <div className="mb-5">
-                <h3 className="text-lg font-semibold mb-3 text-gray-800">Research Areas</h3>
-                <div className="flex flex-wrap gap-2.5">
-                  {Array.from(uniqueResearchAreas).sort().map((area, index) => (
-                    <label key={index} className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value={area} className="research-filter mr-2" /> {area}</label>
-                  ))}
-                </div>
-              </div>
-              
               <div className="flex gap-3 mt-5">
                 <button 
                   id="apply-filters" 
@@ -404,7 +362,7 @@ const Faculty = () => {
           <div className="container max-w-7xl mx-auto px-5">
             {/* Active filters area - redesigned for better UX */}
             <div className="flex flex-wrap gap-2.5 mb-5" id="active-filters">
-              {(filters.searchQuery || filters.schools.length > 0 || filters.designations.length > 0 || filters.researchAreas.length > 0) && (
+              {(filters.searchQuery || filters.schools.length > 0 || filters.designations.length > 0) && (
                 <div className="w-full flex flex-wrap items-center gap-2.5 bg-white p-3 rounded-lg shadow-sm mb-2">
                   <span className="text-sm font-medium text-gray-600 mr-1">Active filters:</span>
                   
@@ -447,22 +405,6 @@ const Faculty = () => {
                       <button 
                         onClick={() => removeFilter('designation', designation)}
                         className="ml-1.5 w-5 h-5 rounded-full bg-green-200 text-green-800 flex items-center justify-center hover:bg-green-300"
-                      >
-                        <i className="fas fa-times text-xs"></i>
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {filters.researchAreas.map((area, index) => (
-                    <div 
-                      className="bg-amber-50 text-amber-700 px-3 py-1.5 rounded-full text-sm flex items-center gap-1.5 transition-all hover:bg-amber-100" 
-                      key={`area-${index}`}
-                    >
-                      <i className="fas fa-flask text-xs"></i>
-                      <span>{area}</span>
-                      <button 
-                        onClick={() => removeFilter('research', area)}
-                        className="ml-1.5 w-5 h-5 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center hover:bg-amber-300"
                       >
                         <i className="fas fa-times text-xs"></i>
                       </button>
@@ -666,16 +608,6 @@ const Faculty = () => {
                           <i className="fas fa-university mr-1.5"></i> {faculty.department}
                         </p>
                       </div>
-                      
-                      {/* Research interests - with animated reveal */}
-                      {faculty.research && (
-                        <div className="text-xs text-gray-600 border-t border-gray-100 pt-3 mt-1 max-h-[48px] overflow-hidden relative">
-                          <div className="flex items-start">
-                            <i className="fas fa-flask mr-1.5 mt-0.5 text-primary-red/70"></i>
-                            <p className="line-clamp-2">{faculty.research}</p>
-                          </div>
-                        </div>
-                      )}
                     </div>
                     
                     {/* Footer with actions */}

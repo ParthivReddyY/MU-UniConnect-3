@@ -154,6 +154,53 @@
   list-style-type: decimal !important;
 }
 
+/* Special styling for faculty cards rich content */
+.faculty-card-content.ql-content {
+  font-size: inherit;
+  line-height: 1.5;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+/* Handle lists in card previews better */
+.faculty-card-content.ql-content p {
+  margin: 0;
+}
+
+.faculty-card-content.ql-content ul,
+.faculty-card-content.ql-content ol {
+  margin: 0;
+  padding-left: 1em;
+}
+
+.faculty-card-content.ql-content li {
+  margin-bottom: 0;
+}
+
+/* Strip headings to normal text in card preview */
+.faculty-card-content.ql-content h1,
+.faculty-card-content.ql-content h2,
+.faculty-card-content.ql-content h3,
+.faculty-card-content.ql-content h4,
+.faculty-card-content.ql-content h5,
+.faculty-card-content.ql-content h6 {
+  font-size: inherit;
+  font-weight: inherit;
+  margin: 0;
+  display: inline;
+}
+
+/* Fix inline elements display in truncated content */
+.faculty-card-content.ql-content * {
+  display: inline;
+}
+
+/* Except for block-level containers */
+.faculty-card-content.ql-content div,
+.faculty-card-content.ql-content p {
+  display: block;
+}
+
 /* Fix Tailwind prose class overriding Quill styles */
 .prose ul > li::before,
 .prose ol > li::before {
