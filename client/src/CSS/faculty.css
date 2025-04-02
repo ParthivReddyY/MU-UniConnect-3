@@ -215,7 +215,7 @@
   right: 12px;
   padding: 5px 12px;
   border-radius: 20px;
-  font-size: 10px;
+  font-size: 0.67rem; /* Use rem instead of px for consistent scaling */
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;

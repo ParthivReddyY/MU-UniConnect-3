@@ -53,8 +53,10 @@ function NavbarWrapper() {
 // Standard container wrapper to ensure consistent sizing across pages
 function PageContainer({ children, fullWidth = false }) {
   return (
-    <main className={`flex-1 w-full mt-16 md:mt-20 ${!fullWidth ? 'px-4 md:px-6' : ''}`}>
-      {children}
+    <main className={`flex-1 w-full mt-16 md:mt-20`}>
+      <div className={fullWidth ? 'w-full' : 'std-container'}>
+        {children}
+      </div>
     </main>
   );
 }
