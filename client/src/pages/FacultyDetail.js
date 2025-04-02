@@ -248,7 +248,7 @@ const FacultyDetail = () => {
   return (
     <div className="w-full">
       {/* Use higher top padding to avoid navbar overlap */}
-      <div className="pt-28">
+      <div className="pt-20">
         {/* Page content container */}
         <div className="max-w-full px-4 md:px-8 mx-auto">
           {/* Back button and actions row */}

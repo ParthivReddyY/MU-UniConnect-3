@@ -1,19 +1,6 @@
 /* Faculty Page Styles - Keeping only what Tailwind doesn't cover */
 
-/* CSS Variables - Used in custom animations and complex styles */
-:root {
-  --primary-red: #D32F2F;
-  --primary-red-dark: #B71C1C;
-  --resolution-blue: #1e3a8a;
-  --primary-teal: #26a69a;
-  --black: #111111;
-  --white: #ffffff;
-  /* Glass card variables with gray shades */
-  --card-bg: linear-gradient(135deg, rgba(248, 249, 250, 0.85), rgba(240, 242, 245, 0.9));
-  --card-border: rgba(210, 214, 220, 0.4);
-  --card-shadow: rgba(15, 23, 42, 0.08);
-  --hover-bg: linear-gradient(135deg, rgba(250, 250, 250, 0.95), rgba(243, 244, 246, 0.97));
-}
+/* Removed CSS Variables in favor of direct values */
 
 /* Hero Section - Custom Background Pattern */
 .hero-section {
@@ -75,7 +62,7 @@
   height: 200px;
   top: -50px;
   right: 10%;
-  background: linear-gradient(135deg, var(--resolution-blue), var(--primary-teal));
+  background: linear-gradient(135deg, #1e3a8a, #26a69a);
   opacity: 0.3;
   animation: float 15s ease-in-out infinite;
 }
@@ -85,7 +72,7 @@
   height: 300px;
   bottom: -80px;
   left: 5%;
-  background: linear-gradient(135deg, var(--primary-red), var(--primary-red-dark));
+  background: linear-gradient(135deg, #D32F2F, #B71C1C);
   opacity: 0.2;
   filter: blur(90px);
   animation: float 20s ease-in-out infinite alternate;
@@ -116,21 +103,21 @@
 }
 
 .btn-hero.primary {
-  background-color: var(--primary-red);
+  background-color: #D32F2F;
   color: white;
   box-shadow: 0 4px 15px rgba(211, 47, 47, 0.3);
 }
 
 .btn-hero.primary:hover {
-  background-color: var(--primary-red-dark);
+  background-color: #B71C1C;
   transform: translateY(-3px);
   box-shadow: 0 8px 20px rgba(211, 47, 47, 0.4);
 }
 
 .btn-hero.secondary {
   background-color: transparent;
-  color: var(--white);
-  border: 2px solid var(--white);
+  color: #ffffff;
+  border: 2px solid #ffffff;
 }
 
 .btn-hero.secondary:hover {
@@ -140,7 +127,7 @@
 
 /* Stat value gradient styles that aren't well supported in Tailwind */
 .stat-value {
-  background: linear-gradient(90deg, #fff, var(--primary-red));
+  background: linear-gradient(90deg, #fff, #D32F2F);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -156,11 +143,11 @@
 
 /* Faculty card glassmorphism styles - too complex for Tailwind */
 .glass-card {
-  background: var(--card-bg);
+  background: linear-gradient(135deg, rgba(248, 249, 250, 0.85), rgba(240, 242, 245, 0.9));
   -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
-  border: 1px solid var(--card-border);
-  box-shadow: 0 10px 30px 0 var(--card-shadow);
+  border: 1px solid rgba(210, 214, 220, 0.4);
+  box-shadow: 0 10px 30px 0 rgba(15, 23, 42, 0.08);
   transition: all 0.3s ease;
   overflow: hidden;
   position: relative;
@@ -169,7 +156,7 @@
 .glass-card:hover {
   transform: translateY(-5px);
   box-shadow: 0 15px 35px rgba(15, 23, 42, 0.1);
-  background: var(--hover-bg);
+  background: linear-gradient(135deg, rgba(250, 250, 250, 0.95), rgba(243, 244, 246, 0.97));
   border-color: rgba(210, 214, 220, 0.6);
 }
 
@@ -247,7 +234,7 @@
 }
 
 .glass-btn:hover {
-  background: var(--primary-red);
+  background: #D32F2F;
   color: white;
   transform: translateY(-3px);
   box-shadow: 0 5px 15px rgba(211, 47, 47, 0.3);
@@ -376,7 +363,7 @@
 }
 
 .faculty-section-header:hover {
-  color: var(--primary-red);
+  color: #D32F2F;
 }
 
 /* Enhance scrolling experience */
@@ -388,7 +375,7 @@ html {
 
 /* Style anchors in Quill content */
 .section-content .ql-editor a:hover {
-  color: var(--primary-red);
+  color: #D32F2F;
 }
 
 /* Ensure tables are responsive on small screens */
@@ -396,5 +383,192 @@ html {
   .section-content .ql-editor table {
     display: block;
     overflow-x: auto;
+  }
+}
+
+/* Additional animations for faculty view */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInRight {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Faculty view specific styling */
+.faculty-hero-pattern {
+  background-size: 60px 60px;
+  background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.4'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+}
+
+.faculty-section-content {
+  opacity: 0;
+  transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+  transform: translateY(20px);
+}
+
+.faculty-section-content.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Enhanced scrollbar for faculty view */
+.faculty-view-container ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.faculty-view-container ::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.faculty-view-container ::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+.faculty-view-container ::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* Enhanced prose content styling */
+.ql-content h1 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+  color: #111827;
+}
+
+.ql-content h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
+}
+
+.ql-content h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.75rem;
+  color: #374151;
+}
+
+.ql-content p {
+  margin-bottom: 1rem;
+  line-height: 1.7;
+}
+
+.ql-content ul, .ql-content ol {
+  margin-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.ql-content ul li {
+  list-style-type: disc;
+  margin-bottom: 0.5rem;
+}
+
+.ql-content ol li {
+  list-style-type: decimal;
+  margin-bottom: 0.5rem;
+}
+
+.ql-content a {
+  color: #d32f2f;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.ql-content a:hover {
+  text-decoration: underline;
+}
+
+.ql-content blockquote {
+  border-left: 4px solid #d32f2f;
+  padding-left: 1rem;
+  font-style: italic;
+  margin: 1.5rem 0;
+  color: #4b5563;
+}
+
+.ql-content pre {
+  background-color: #1f2937;
+  color: #f9fafb;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.ql-content code {
+  font-family: monospace;
+  padding: 0.1rem 0.3rem;
+  background-color: #f3f4f6;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+}
+
+/* Additional glassmorphism styles for faculty view */
+.glass-section {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6), rgba(255, 255, 255, 0.4));
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  transition: all 0.3s ease;
+}
+
+.glass-section:hover {
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  transform: translateY(-5px);
+}
+
+/* Enhance text content inside glass containers */
+.glass-section .ql-content {
+  color: rgba(17, 24, 39, 0.9);
+}
+
+.glass-section .ql-content h1,
+.glass-section .ql-content h2,
+.glass-section .ql-content h3 {
+  color: rgba(17, 24, 39, 1);
+  font-weight: 700;
+}
+
+/* Glass card hover effect */
+.glass-card-hover {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-card-hover:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+}
+
+/* Enhance glassmorphism on smaller screens */
+@media (max-width: 640px) {
+  .glass-section {
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.5));
   }
 }
