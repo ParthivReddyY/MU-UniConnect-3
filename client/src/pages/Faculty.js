@@ -208,9 +208,9 @@ const Faculty = () => {
   return (
     <div className="text-gray-800 font-sans">
       <main className="w-full">
-        <section className="hero-section relative min-h-[620px] py-20 bg-black overflow-hidden w-full">
+        <section className="hero-section relative min-h-[580px] py-16 bg-black overflow-hidden w-full">
           <div className="hero-overlay absolute inset-0 z-[1]"></div>
-          <div className="container w-full max-w-7xl mx-auto px-5 relative z-10">
+          <div className="container max-w-standard mx-auto px-4 md:px-6 relative z-10">
             <div className="flex flex-wrap items-center justify-between gap-12 md:gap-15">
               <div className="hero-text-area flex-1 min-w-[300px] max-w-[45%] flex flex-col justify-center items-start">
                 <h1 className="hero-title text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight text-white relative mb-6">
@@ -268,8 +268,8 @@ const Faculty = () => {
         </section>
         
         {/* Search and filter section */}
-        <section className="bg-gray-50 py-8 shadow-sm">
-          <div className="container max-w-7xl mx-auto px-5">
+        <section className="bg-gray-50 py-6 shadow-sm">
+          <div className="container max-w-standard mx-auto px-4 md:px-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4 mb-5">
               <div className="search-box w-full md:w-2/5 h-[50px] rounded-full bg-white shadow-md transition-all hover:shadow-lg relative overflow-hidden">
                 <input 
@@ -358,8 +358,8 @@ const Faculty = () => {
           </div>
         </section>
 
-        <section className="py-10 bg-slate-100">
-          <div className="container max-w-7xl mx-auto px-5">
+        <section className="py-6 bg-slate-100">
+          <div className="container max-w-standard mx-auto px-4 md:px-6">
             {/* Active filters area - redesigned for better UX */}
             <div className="flex flex-wrap gap-2.5 mb-5" id="active-filters">
               {(filters.searchQuery || filters.schools.length > 0 || filters.designations.length > 0) && (
@@ -450,7 +450,7 @@ const Faculty = () => {
             </div>
             
             {/* Faculty grid - modernized card design */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" id="faculty-grid">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3" id="faculty-grid">
               {isLoading ? (
                 <div className="col-span-full flex flex-col items-center justify-center py-16">
                   <div className="w-16 h-16 relative">
@@ -477,13 +477,13 @@ const Faculty = () => {
                 currentPageData.map((faculty, index) => (
                   <div 
                     key={faculty._id || index} 
-                    className="group bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative faculty-card animate-fadeIn"
+                    className="group bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative faculty-card animate-fadeIn"
                     style={{animationDelay: `${index * 50}ms`}}
                   >
                     {/* Department badge - styled by department */}
-                    <div className="absolute top-3 right-3 z-10">
+                    <div className="absolute top-2 right-2 z-10">
                       <span 
-                        className="px-2.5 py-1 text-xs font-bold uppercase tracking-wider rounded-full backdrop-blur-md shadow-sm"
+                        className="px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded-full backdrop-blur-md shadow-sm"
                         style={{ 
                           color: faculty.department === 'ECSE' ? '#1e3a8a' : 
                                 faculty.department === 'SOM' ? '#047857' : 
@@ -508,7 +508,7 @@ const Faculty = () => {
                     </div>
                     
                     {/* Enhanced Image Section with modern design */}
-                    <div className="relative h-[220px] overflow-hidden faculty-image-container">
+                    <div className="relative h-[180px] overflow-hidden faculty-image-container">
                       {/* Stylish overlay gradient with department color accent - Reduced opacity */}
                       <div 
                         className="absolute inset-0 z-[1] opacity-100 group-hover:opacity-80 transition-opacity duration-500"
@@ -585,9 +585,9 @@ const Faculty = () => {
                       />
                       
                       {/* Enhanced name overlay with subtle backdrop blur */}
-                      <div className="absolute bottom-0 left-0 w-full p-4 z-[2] transform translate-y-0 transition-transform duration-500 group-hover:translate-y-0">
-                        <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-md p-2 inline-block">
-                          <h3 className="text-white text-lg font-bold tracking-tight leading-tight">{faculty.name}</h3>
+                      <div className="absolute bottom-0 left-0 w-full p-3 z-[2] transform translate-y-0 transition-transform duration-500 group-hover:translate-y-0">
+                        <div className="bg-black bg-opacity-40 backdrop-blur-sm rounded-md p-1.5 inline-block">
+                          <h3 className="text-white text-sm font-bold tracking-tight leading-tight">{faculty.name}</h3>
                         </div>
                       </div>
                       
@@ -601,22 +601,22 @@ const Faculty = () => {
                     </div>
                     
                     {/* Content */}
-                    <div className="p-4">
+                    <div className="p-3">
                       <div className="flex flex-col">
-                        <p className="text-primary-red font-semibold text-sm">{faculty.designation}</p>
-                        <p className="text-gray-500 text-xs flex items-center mt-1 mb-3">
+                        <p className="text-primary-red font-semibold text-xs">{faculty.designation}</p>
+                        <p className="text-gray-500 text-xs flex items-center mt-0.5 mb-2">
                           <i className="fas fa-university mr-1.5"></i> {faculty.department}
                         </p>
                       </div>
                     </div>
                     
                     {/* Footer with actions */}
-                    <div className="flex items-center justify-between p-4 border-t border-gray-100 bg-gray-50">
-                      <div className="flex space-x-2">
+                    <div className="flex items-center justify-between p-3 border-t border-gray-100 bg-gray-50">
+                      <div className="flex space-x-1.5">
                         {faculty.email && (
                           <a 
                             href={`mailto:${faculty.email}`} 
-                            className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
+                            className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
                             title={`Email ${faculty.name}`}
                           >
                             <i className="fas fa-envelope text-xs"></i>
@@ -625,7 +625,7 @@ const Faculty = () => {
                         {faculty.mobileNumber && (
                           <a 
                             href={`tel:${faculty.mobileNumber}`} 
-                            className="w-8 h-8 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
+                            className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
                             title={`Call ${faculty.name}`}
                           >
                             <i className="fas fa-phone-alt text-xs"></i>
@@ -634,7 +634,7 @@ const Faculty = () => {
                       </div>
                       <Link 
                         to={`/faculty-detail/${faculty._id}`} 
-                        className="relative overflow-hidden px-4 py-2 rounded-full text-sm font-medium bg-gray-100 text-gray-700 border border-gray-200 group-hover:bg-primary-red group-hover:text-white group-hover:border-primary-red transition-all duration-300 flex items-center gap-1.5"
+                        className="relative overflow-hidden px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 group-hover:bg-primary-red group-hover:text-white group-hover:border-primary-red transition-all duration-300 flex items-center gap-1.5"
                       >
                         <i className="fas fa-user-circle"></i> 
                         <span>View Profile</span>
@@ -647,10 +647,10 @@ const Faculty = () => {
             
             {/* Pagination - Enhanced with modern design */}
             {!isLoading && totalPages > 1 && (
-              <div className="flex flex-col items-center justify-center mt-12 mb-6">
-                <div className="bg-white shadow-sm rounded-lg p-3 flex items-center">
+              <div className="flex flex-col items-center justify-center mt-8 mb-6">
+                <div className="bg-white shadow-sm rounded-lg p-2 flex items-center">
                   <button 
-                    className="h-10 px-3 rounded-l-md border border-gray-200 bg-white flex items-center justify-center transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    className="h-8 px-2 rounded-l-md border border-gray-200 bg-white flex items-center justify-center transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(1)}
                     title="First page"
@@ -659,12 +659,12 @@ const Faculty = () => {
                   </button>
                   
                   <button 
-                    className="h-10 px-4 border-t border-b border-gray-200 bg-white flex items-center justify-center gap-1 transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    className="h-8 px-3 border-t border-b border-gray-200 bg-white flex items-center justify-center gap-1 transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
                     disabled={currentPage === 1}
                     onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                   >
-                    <i className="fas fa-chevron-left text-sm"></i>
-                    <span className="hidden sm:inline text-sm font-medium">Previous</span>
+                    <i className="fas fa-chevron-left text-xs"></i>
+                    <span className="hidden sm:inline text-xs font-medium">Previous</span>
                   </button>
                   
                   <div className="hidden sm:flex">
@@ -683,10 +683,10 @@ const Faculty = () => {
                         if (index > 0 && array[index - 1] !== page - 1) {
                           return (
                             <React.Fragment key={`ellipsis-${page}`}>
-                              <span className="h-10 w-10 flex items-center justify-center text-gray-400">...</span>
+                              <span className="h-8 w-8 flex items-center justify-center text-gray-400">...</span>
                               <button 
                                 key={page} 
-                                className={`h-10 w-10 flex items-center justify-center transition-all border-t border-b border-gray-200 ${
+                                className={`h-8 w-8 flex items-center justify-center transition-all border-t border-b border-gray-200 ${
                                   currentPage === page 
                                     ? 'bg-primary-red text-white font-medium' 
                                     : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -701,7 +701,7 @@ const Faculty = () => {
                         return (
                           <button 
                             key={page} 
-                            className={`h-10 w-10 flex items-center justify-center transition-all border-t border-b border-gray-200 ${
+                            className={`h-8 w-8 flex items-center justify-center transition-all border-t border-b border-gray-200 ${
                               currentPage === page 
                                 ? 'bg-primary-red text-white font-medium' 
                                 : 'bg-white text-gray-700 hover:bg-gray-50'
@@ -715,21 +715,21 @@ const Faculty = () => {
                   </div>
                   
                   {/* Mobile page indicator */}
-                  <div className="flex sm:hidden h-10 px-4 border-t border-b border-gray-200 bg-white items-center">
-                    <span className="text-sm font-medium">{currentPage} <span className="text-gray-400">of</span> {totalPages}</span>
+                  <div className="flex sm:hidden h-8 px-3 border-t border-b border-gray-200 bg-white items-center">
+                    <span className="text-xs font-medium">{currentPage} <span className="text-gray-400">of</span> {totalPages}</span>
                   </div>
                   
                   <button 
-                    className="h-10 px-4 border-t border-b border-gray-200 bg-white flex items-center justify-center gap-1 transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    className="h-8 px-3 border-t border-b border-gray-200 bg-white flex items-center justify-center gap-1 transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                   >
-                    <span className="hidden sm:inline text-sm font-medium">Next</span>
-                    <i className="fas fa-chevron-right text-sm"></i>
+                    <span className="hidden sm:inline text-xs font-medium">Next</span>
+                    <i className="fas fa-chevron-right text-xs"></i>
                   </button>
                   
                   <button 
-                    className="h-10 px-3 rounded-r-md border border-gray-200 bg-white flex items-center justify-center transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
+                    className="h-8 px-2 rounded-r-md border border-gray-200 bg-white flex items-center justify-center transition-all hover:bg-gray-50 disabled:opacity-50 disabled:pointer-events-none"
                     disabled={currentPage === totalPages}
                     onClick={() => setCurrentPage(totalPages)}
                     title="Last page"
@@ -738,7 +738,7 @@ const Faculty = () => {
                   </button>
                 </div>
                 
-                <div className="mt-3 text-sm text-gray-500">
+                <div className="mt-2 text-xs text-gray-500">
                   Showing <span className="font-medium text-gray-700">{startIndex + 1}-{endIndex}</span> of <span className="font-medium text-gray-700">{filteredFacultyData.length}</span> faculty members
                 </div>
               </div>

@@ -60,6 +60,28 @@ module.exports = {
           '50%': { transform: 'translateY(-20px) rotate(5deg)' },
         },
       },
+      // Define standardized container sizes
+      maxWidth: {
+        'standard': '1120px', // Standard container width for consistency
+      },
+      fontSize: {
+        // Slightly reduce the base font sizes
+        xs: ['0.75rem', { lineHeight: '1rem' }],
+        sm: ['0.8125rem', { lineHeight: '1.25rem' }],
+        base: ['0.9375rem', { lineHeight: '1.5rem' }],
+        lg: ['1.0625rem', { lineHeight: '1.75rem' }],
+        xl: ['1.125rem', { lineHeight: '1.75rem' }],
+        '2xl': ['1.375rem', { lineHeight: '2rem' }],
+      },
+    },
+    // Make container class consistent across the site
+    container: {
+      center: true,
+      padding: {
+        DEFAULT: '1rem',
+        sm: '1.5rem',
+        lg: '2rem',
+      },
     },
   },
   plugins: [],

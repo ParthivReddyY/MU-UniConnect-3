@@ -50,6 +50,15 @@ function NavbarWrapper() {
   return hideNavbar ? null : <Navbar />;
 }
 
+// Standard container wrapper to ensure consistent sizing across pages
+function PageContainer({ children, fullWidth = false }) {
+  return (
+    <main className={`flex-1 w-full mt-16 md:mt-20 ${!fullWidth ? 'px-4 md:px-6' : ''}`}>
+      {children}
+    </main>
+  );
+}
+
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   
@@ -93,72 +102,72 @@ function App() {
               <Routes>
                 {/* Public routes */}
                 <Route path="/" element={
-                  <main className="flex-1 w-full mt-16 md:mt-20">
+                  <PageContainer fullWidth>
                     <Home />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/login" element={
-                  <main className="flex-1 w-full">
+                  <PageContainer fullWidth>
                     <Login />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/signup" element={
-                  <main className="flex-1 w-full">
+                  <PageContainer fullWidth>
                     <SignUp />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/forgot-password" element={
-                  <main className="flex-1 w-full">
+                  <PageContainer fullWidth>
                     <ForgotPassword />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/reset-password/:token" element={
-                  <main className="flex-1 w-full">
+                  <PageContainer fullWidth>
                     <ResetPassword />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/unauthorized" element={
-                  <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                  <PageContainer>
                     <Unauthorized />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 {/* Semi-public routes */}
                 <Route path="/clubs-events" element={
-                  <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                  <PageContainer>
                     <ClubsEvents />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/faculty" element={
-                  <main className="flex-1 w-full mt-8 md:mt-10">
+                  <PageContainer fullWidth>
                     <Faculty />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/faculty-detail/:id" element={
-                  <main className="flex-1 w-full">
+                  <PageContainer fullWidth>
                     <FacultyDetail />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 <Route path="/college" element={
-                  <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                  <PageContainer>
                     <College />
-                  </main>
+                  </PageContainer>
                 } />
                 
                 {/* Protected routes */}
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
-                    <main className="flex-1 mt-16 md:mt-20 w-full">
+                    <PageContainer fullWidth>
                       <Dashboard />
-                    </main>
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
@@ -171,59 +180,59 @@ function App() {
                 {/* Admin routes */}
                 <Route path="/admin/*" element={
                   <ProtectedRoute allowedRoles={['admin']}>
-                    <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                    <PageContainer>
                       <h1>Admin Panel (To be implemented)</h1>
-                    </main>
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
                 {/* Faculty routes */}
                 <Route path="/faculty-portal/*" element={
                   <ProtectedRoute allowedRoles={['faculty', 'admin']}>
-                    <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                    <PageContainer>
                       <h1>Faculty Portal (To be implemented)</h1>
-                    </main>
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
                 {/* Club head routes */}
                 <Route path="/club/*" element={
                   <ProtectedRoute allowedRoles={['clubHead', 'admin']}>
-                    <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                    <PageContainer>
                       <h1>Club Management (To be implemented)</h1>
-                    </main>
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
                 {/* Student routes */}
                 <Route path="/student/*" element={
                   <ProtectedRoute allowedRoles={['student', 'admin']}>
-                    <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                    <PageContainer>
                       <h1>Student Portal (To be implemented)</h1>
-                    </main>
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
                 {/* Profile page - accessible to all logged in users */}
                 <Route path="/profile" element={
                   <ProtectedRoute>
-                    <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full">
+                    <PageContainer>
                       <h1>User Profile (To be implemented)</h1>
-                    </main>
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
                 {/* 404 route */}
                 <Route path="*" element={
-                  <main className="flex-1 p-4 md:p-5 max-w-6xl mx-auto mt-16 md:mt-20 w-full text-center">
-                    <div className="py-12">
+                  <PageContainer>
+                    <div className="py-12 text-center">
                       <h2 className="text-2xl text-primary-red font-bold mb-4">Page Not Found</h2>
                       <p className="mb-6">The page you're looking for doesn't exist or has been moved.</p>
                       <a href="/" className="bg-primary-red text-white font-medium px-6 py-2 rounded hover:bg-secondary-red transition-colors">
                         Return Home
                       </a>
                     </div>
-                  </main>
+                  </PageContainer>
                 } />
               </Routes>
               

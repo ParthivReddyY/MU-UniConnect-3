@@ -50,6 +50,12 @@ a, button {
 /* Fix scrollbar jumping issue */
 html {
   overflow-y: scroll;
+  font-size: 15px; /* Slightly reduced from default 16px */
+}
+
+/* Ensure proper box model */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
 /* Tailwind component extensions */
