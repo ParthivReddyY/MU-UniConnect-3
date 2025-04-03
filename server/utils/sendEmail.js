@@ -2,14 +2,17 @@ const axios = require('axios');
 
 // Define Brevo template IDs
 const TEMPLATES = {
-  // Template for OTP verification - from URL: https://my.brevo.com/template/_ZLk6muEQma83k4dDiO4_jy25Z_cWuOL8D6j2YELPOCeTOu0iMEmGUSm
-  OTP_VERIFICATION: 1, 
+  // Template for OTP verification 
+  OTP_VERIFICATION: 1,
   
-  // Template for welcome message - from URL: https://my.brevo.com/template/1LhcL8z8AAOok7cCzTL7_nHkWFnaEcwTV_0ZqM1j2WW2oXl06rfy3BiD
+  // Template for welcome message 
   WELCOME: 2,
   
   // Template for password reset
-  PASSWORD_RESET: 3,
+  PASSWORD_RESET: 1,
+  
+  // Template for password reset OTP
+  PASSWORD_RESET_OTP: 1
 };
 
 /**

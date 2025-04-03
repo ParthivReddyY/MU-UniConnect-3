@@ -6,7 +6,9 @@ const {
   login,
   verifyEmail,
   forgotPassword,
+  verifyResetOTP,
   resetPassword,
+  requestPasswordChangeOTP,
   getCurrentUser,
   checkEmail,
   changePassword
@@ -14,21 +16,24 @@ const {
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
 // Public routes
-router.post('/register', register); // Student registration only
+router.post('/register', register);
 router.post('/login', login);
-// Change the verify-email route to accept POST requests with email and OTP
 router.post('/verify-email', verifyEmail);
+router.post('/check-email', checkEmail);
+
+// Password reset flow (OTP-based)
 router.post('/forgot-password', forgotPassword);
-router.post('/reset-password/:token', resetPassword);
-router.post('/check-email', checkEmail); // New endpoint for checking if email exists
+router.post('/verify-reset-otp', verifyResetOTP);
+router.post('/reset-password', resetPassword);
+
+// Password change flow (OTP-based, for logged-in users)
+router.post('/request-password-change-otp', authenticateUser, requestPasswordChangeOTP);
+router.post('/change-password', authenticateUser, changePassword);
 
 // Protected routes
 router.get('/me', authenticateUser, getCurrentUser);
 
 // Admin-only routes
 router.post('/create-user', authenticateUser, isAdmin, createUser);
-
-// Fix the route to use the correctly imported authenticateUser middleware
-router.post('/change-password', authenticateUser, changePassword);
 
 module.exports = router;

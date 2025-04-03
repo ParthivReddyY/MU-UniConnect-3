@@ -291,7 +291,7 @@ const login = async (req, res) => {
   }
 };
 
-// Forgot password
+// Forgot password - sends OTP instead of reset link
 const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -301,33 +301,31 @@ const forgotPassword = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Generate reset token
-    const resetToken = crypto.randomBytes(32).toString('hex');
+    // Generate reset OTP (6 digits)
+    const resetOTP = Math.floor(100000 + Math.random() * 900000).toString();
     user.resetPasswordToken = crypto
       .createHash('sha256')
-      .update(resetToken)
+      .update(resetOTP)
       .digest('hex');
     
     user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
     await user.save();
     
-    // Create reset URL
-    const resetUrl = `${req.protocol}://${req.get('host')}/reset-password/${resetToken}`;
-    
     try {
       await sendEmail({
         email: user.email,
-        templateId: TEMPLATES.PASSWORD_RESET,
+        templateId: TEMPLATES.PASSWORD_RESET_OTP,
         params: {
           name: user.name,
-          resetLink: resetUrl,
+          otp: resetOTP,
           expiryTime: '10 minutes'
         }
       });
       
       res.status(200).json({ 
         success: true, 
-        message: 'Password reset email sent' 
+        message: 'Password reset code sent to your email',
+        email: user.email // Return email for OTP verification step
       });
     } catch (error) {
       user.resetPasswordToken = undefined;
@@ -342,25 +340,68 @@ const forgotPassword = async (req, res) => {
   }
 };
 
-// Reset password
-const resetPassword = async (req, res) => {
+// Verify OTP before password reset
+const verifyResetOTP = async (req, res) => {
   try {
-    const { token } = req.params;
-    const { password } = req.body;
+    const { email, otp } = req.body;
     
-    // Hash the token for comparison
-    const resetPasswordToken = crypto
+    if (!email || !otp) {
+      return res.status(400).json({ message: 'Email and verification code are required' });
+    }
+    
+    // Hash the provided OTP for comparison
+    const hashedOTP = crypto
       .createHash('sha256')
-      .update(token)
+      .update(otp)
       .digest('hex');
     
-    const user = await User.findOne({
-      resetPasswordToken,
+    const user = await User.findOne({ 
+      email,
+      resetPasswordToken: hashedOTP,
       resetPasswordExpires: { $gt: Date.now() }
     });
     
     if (!user) {
-      return res.status(400).json({ message: 'Invalid or expired token' });
+      return res.status(400).json({ message: 'Invalid or expired verification code' });
+    }
+    
+    // OTP is valid, return success
+    res.status(200).json({ 
+      success: true, 
+      message: 'Code verified successfully. You can now set a new password.',
+      email: user.email
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Reset password with OTP verification
+const resetPassword = async (req, res) => {
+  try {
+    const { email, otp, password } = req.body;
+    
+    if (!email || !password || !otp) {
+      return res.status(400).json({ 
+        message: 'Email, password, and verification code are required' 
+      });
+    }
+    
+    // Hash the OTP for comparison
+    const hashedOTP = crypto
+      .createHash('sha256')
+      .update(otp)
+      .digest('hex');
+    
+    const user = await User.findOne({
+      email,
+      resetPasswordToken: hashedOTP,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid or expired verification code' });
     }
     
     // Set new password
@@ -438,14 +479,74 @@ const checkEmail = async (req, res) => {
   }
 };
 
-// Add this new function
+// Request OTP for password change (for logged-in users)
+const requestPasswordChangeOTP = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Generate OTP (6 digits)
+    const changePasswordOTP = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store hashed OTP in user document
+    user.resetPasswordToken = crypto
+      .createHash('sha256')
+      .update(changePasswordOTP)
+      .digest('hex');
+    
+    user.resetPasswordExpires = Date.now() + 10 * 60 * 1000; // 10 minutes
+    await user.save();
+    
+    try {
+      await sendEmail({
+        email: user.email,
+        templateId: TEMPLATES.PASSWORD_RESET_OTP,
+        params: {
+          name: user.name,
+          otp: changePasswordOTP,
+          expiryTime: '10 minutes'
+        }
+      });
+      
+      res.status(200).json({ 
+        success: true, 
+        message: 'Verification code sent to your email',
+        email: user.email
+      });
+    } catch (error) {
+      user.resetPasswordToken = undefined;
+      user.resetPasswordExpires = undefined;
+      await user.save();
+      
+      return res.status(500).json({ 
+        success: false,
+        message: 'Email could not be sent' 
+      });
+    }
+  } catch (error) {
+    console.error('Error sending password change OTP:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while sending verification code'
+    });
+  }
+};
+
+// Change password with OTP verification
 const changePassword = async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
+    const { otp, newPassword } = req.body;
     const userId = req.user.userId;
 
-    // Get user with password
-    const user = await User.findById(userId).select('+password');
+    // Get user
+    const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({
         success: false,
@@ -453,17 +554,24 @@ const changePassword = async (req, res) => {
       });
     }
 
-    // Verify current password
-    const isPasswordCorrect = await user.comparePassword(currentPassword);
-    if (!isPasswordCorrect) {
+    // Hash the OTP for comparison
+    const hashedOTP = crypto
+      .createHash('sha256')
+      .update(otp)
+      .digest('hex');
+    
+    // Verify OTP
+    if (user.resetPasswordToken !== hashedOTP || user.resetPasswordExpires < Date.now()) {
       return res.status(401).json({
         success: false,
-        message: 'Current password is incorrect'
+        message: 'Invalid or expired verification code'
       });
     }
 
-    // Update password only, forcePasswordChange flag removed
+    // Update password
     user.password = newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
     await user.save();
 
     res.status(200).json({
@@ -485,8 +593,10 @@ module.exports = {
   login,
   verifyEmail,
   forgotPassword,
+  verifyResetOTP,
   resetPassword,
   getCurrentUser,
   checkEmail,
+  requestPasswordChangeOTP,
   changePassword
 };

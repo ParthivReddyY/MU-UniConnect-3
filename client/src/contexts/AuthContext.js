@@ -166,31 +166,106 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Forgot password
+  // Request password reset OTP (renamed from forgotPassword)
   const forgotPassword = async (email) => {
     setLoading(true);
     try {
       const res = await api.post('/api/auth/forgot-password', { email });
       setLoading(false);
-      return { success: true, message: res.data.message };
+      return { 
+        success: true, 
+        message: res.data.message,
+        email: res.data.email
+      };
     } catch (error) {
       setLoading(false);
       setError(error.response?.data?.message || 'Failed to process request');
-      return { success: false, message: error.response?.data?.message || 'Failed to process request' };
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to process request' 
+      };
     }
   };
 
-  // Reset password
-  const resetPassword = async (token, password) => {
+  // Verify password reset OTP
+  const verifyResetOTP = async (email, otp) => {
     setLoading(true);
     try {
-      const res = await api.post(`/api/auth/reset-password/${token}`, { password });
+      const res = await api.post('/api/auth/verify-reset-otp', { email, otp });
       setLoading(false);
-      return { success: true, message: res.data.message };
+      return { 
+        success: true, 
+        message: res.data.message,
+        email: res.data.email
+      };
+    } catch (error) {
+      setLoading(false);
+      setError(error.response?.data?.message || 'Failed to verify code');
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to verify code' 
+      };
+    }
+  };
+
+  // Reset password with OTP
+  const resetPassword = async (email, otp, password) => {
+    setLoading(true);
+    try {
+      const res = await api.post('/api/auth/reset-password', { email, otp, password });
+      setLoading(false);
+      return { 
+        success: true, 
+        message: res.data.message 
+      };
     } catch (error) {
       setLoading(false);
       setError(error.response?.data?.message || 'Failed to reset password');
-      return { success: false, message: error.response?.data?.message || 'Failed to reset password' };
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to reset password' 
+      };
+    }
+  };
+
+  // Request password change OTP (for logged in users)
+  const requestPasswordChangeOTP = async () => {
+    setLoading(true);
+    try {
+      const res = await api.post('/api/auth/request-password-change-otp');
+      setLoading(false);
+      return { 
+        success: true, 
+        message: res.data.message,
+        email: res.data.email
+      };
+    } catch (error) {
+      setLoading(false);
+      setError(error.response?.data?.message || 'Failed to send verification code');
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to send verification code' 
+      };
+    }
+  };
+
+  // Change password with OTP verification
+  const changePasswordWithOTP = async (otp, newPassword) => {
+    setLoading(true);
+    try {
+      const res = await api.post('/api/auth/change-password', { otp, newPassword });
+      setLoading(false);
+      return { 
+        success: true, 
+        message: res.data.message 
+      };
+    } catch (error) {
+      setLoading(false);
+      setError(error.response?.data?.message || 'Failed to change password');
+      return { 
+        success: false, 
+        message: error.response?.data?.message || 'Failed to change password' 
+      };
     }
   };
 
@@ -225,7 +300,10 @@ export const AuthProvider = ({ children }) => {
     createUser,
     deleteFaculty, // Add the new method to the context
     forgotPassword,
+    verifyResetOTP,
     resetPassword,
+    requestPasswordChangeOTP,
+    changePasswordWithOTP,
     hasRole,
     isAdmin,
     isFaculty,
