@@ -367,15 +367,15 @@ const FacultyView = ({ faculty }) => {
             </svg>
             
             {/* White base to ensure clean transition */}
-            <div className="absolute bottom-0 left-0 right-0 h-2 bg-white" style={{ marginBottom: "-1px" }}></div>
+            <div 
+              className="absolute bottom-0 left-0 right-0 h-2 bg-white" 
+              style={{ 
+                marginBottom: "-1px",
+                zIndex: 15 // Ensure this is above other elements
+              }}
+            ></div>
           </div>
         </section>
-
-        {/* Simple, clean straight-edge transition instead of wave */}
-        <div 
-          className="absolute bottom-0 left-0 right-0 h-2 bg-white"
-          style={{ marginBottom: "-1px" }}
-        ></div>
 
         {/* Section Navigation - Updated with glassmorphism */}
         <div 
