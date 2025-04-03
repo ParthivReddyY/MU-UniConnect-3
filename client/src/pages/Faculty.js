@@ -208,10 +208,10 @@ const Faculty = () => {
   return (
     <div className="text-gray-800 font-sans">
       <main className="w-full">
-        <section className="hero-section relative min-h-[580px] py-16 bg-black overflow-hidden w-full">
+        <section className="hero-section relative min-h-[493px] py-14 bg-black overflow-hidden w-full">
           <div className="hero-overlay absolute inset-0 z-[1]"></div>
           <div className="std-container relative z-10">
-            <div className="flex flex-wrap items-center justify-between gap-12 md:gap-15">
+            <div className="flex flex-wrap items-center justify-between gap-10 md:gap-12">
               <div className="hero-text-area flex-1 min-w-[300px] max-w-[45%] flex flex-col justify-center items-start">
                 <h1 className="hero-title text-4xl md:text-5xl lg:text-6xl font-extrabold uppercase tracking-tight text-white relative mb-6">
                   FACULTY <span className="text-[#D32F2F]">DIRECTORY</span>

@@ -12,7 +12,6 @@ const ChangePassword = () => {
   
   // Step states
   const [isRequestingOTP, setIsRequestingOTP] = useState(true);
-  const [isVerifying, setIsVerifying] = useState(false);
   
   // Form states
   const [otpCode, setOtpCode] = useState('');
@@ -34,12 +33,10 @@ const ChangePassword = () => {
       const result = await requestPasswordChangeOTP();
       
       if (result.success) {
-        setIsVerifying(true);
         setIsRequestingOTP(false);
         setMessage(result.message || 'Verification code sent to your email. Please check your inbox.');
         setMessageType('success');
       } else {
-        setMessage(result.message || 'Failed to send verification code. Please try again.');
         setMessageType('error');
       }
     } catch (error) {
@@ -274,25 +271,22 @@ const ChangePassword = () => {
               </button>
             </div>
             
-            <div className="mt-4 text-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsVerifying(false);
-                  setIsRequestingOTP(true);
-                  setOtpCode('');
-                  setNewPassword('');
-                  setConfirmPassword('');
-                  setOtpError('');
-                  setPasswordError('');
-                }}
-                className="text-gray-400 hover:text-white transition-colors"
-              >
-                <i className="fas fa-arrow-left mr-1"></i>
-                Back to Request Code
-              </button>
-            </div>
-          </form>
+              <div className="mt-4 text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRequestingOTP(true);
+                    setOtpCode('');
+                    setOtpError('');
+                    setPasswordError('');
+                  }}
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  <i className="fas fa-arrow-left mr-1"></i>
+                  Back to Request Code
+                </button>
+              </div>
+            </form>
         </div>
       </div>
     );
