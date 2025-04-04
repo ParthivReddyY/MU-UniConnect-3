@@ -8,6 +8,8 @@ const FacultyView = ({ faculty }) => {
   const [scrollPosition, setScrollPosition] = useState(0);
   const [activeTab, setActiveTab] = useState('overview');
   const [showMobileNav, setShowMobileNav] = useState(false);
+  // Add new state for project tabs
+  const [projectTab, setProjectTab] = useState('ongoing');
   
   // Create individual refs
   const overviewRef = useRef(null);
@@ -568,74 +570,282 @@ const FacultyView = ({ faculty }) => {
               </section>
             )}
             
-            {/* Projects Section - Glassmorphism design */}
+            {/* Projects Section - Modified to use full-width vertical layout */}
             {faculty.projects && faculty.projects.length > 0 && (
               <section 
                 id="section-projects" 
                 ref={sectionRefs.projects}
-                className="mb-16 scroll-mt-24 py-12 w-full"
+                className="mb-16 scroll-mt-24 w-full"
               >
-                <div className="w-full">
-                  <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center flex flex-col items-center">
-                    <div className="w-16 h-16 rounded-full bg-white/80 backdrop-blur-md shadow-md flex items-center justify-center mb-4" style={{ color: RED }}>
-                      <i className="fas fa-project-diagram text-xl"></i>
-                    </div>
-                    Research Projects
-                  </h2>
-                  
-                  {/* Changed from grid to flex column layout for vertical projects */}
-                  <div className="flex flex-col space-y-6 mt-8">
-                    {faculty.projects.map((project, index) => (
-                      <div 
-                        key={index} 
-                        className={`backdrop-blur-xl bg-white/70 rounded-xl overflow-hidden shadow-lg border border-white/30 transition-all relative group ${visibleSections.projects ? 'animate-fadeIn' : ''} hover:shadow-xl hover:-translate-y-1`}
-                        style={{ animationDelay: `${index * 150}ms` }}
-                      >
-                        {/* Project header - Improved for better vertical layout */}
-                        <div className="p-6 border-b border-gray-100/50">
-                          <div className="flex justify-between items-start">
-                            <h3 className="text-2xl font-bold mb-2">{project.title}</h3>
-                            
-                            {/* Status indicator with updated color scheme to match the page theme */}
-                            <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium backdrop-blur-sm ${
-                              project.status === 'Completed' ? 'bg-red-50/70 text-red-700' :
-                              project.status === 'In Progress' ? 'bg-blue-50/70 text-blue-700' :
-                              project.status === 'On Hold' ? 'bg-amber-50/70 text-amber-700' :
-                              'bg-gray-50/70 text-gray-700'
-                            }`}>
-                              {project.status === 'Completed' && <i className="fas fa-check-circle mr-1"></i>}
-                              {project.status === 'In Progress' && <i className="fas fa-spinner fa-spin mr-1"></i>}
-                              {project.status === 'On Hold' && <i className="fas fa-pause-circle mr-1"></i>}
-                              {project.status === 'Planning' && <i className="fas fa-lightbulb mr-1"></i>}
-                              {project.status}
-                            </span>
-                          </div>
-                          
-                          {/* Timeline displayed more prominently */}
-                          {project.timeline && (
-                            <div className="text-sm text-gray-500 flex items-center mt-2">
-                              <i className="far fa-calendar-alt mr-2"></i>
-                              <span className="font-medium">{project.timeline}</span>
-                            </div>
-                          )}
-                        </div>
-                        
-                        {/* Project content with more space */}
-                        <div className="p-6">
-                          <p className="text-gray-600 text-lg leading-relaxed">{project.description || 'No description provided.'}</p>
-                        </div>
-                        
-                        {/* Project left border indicators - Force red color */}
-                        <div className="absolute left-0 top-0 w-1.5 h-full" 
-                          style={{
-                            backgroundColor: project.status === 'Completed' ? '#D32F2F' :  // Direct red hex
-                              project.status === 'In Progress' ? '#2563eb' :  
-                              project.status === 'On Hold' ? '#d97706' :
-                              '#6b7280'
-                          }}
-                        ></div>
+                <div className="relative w-full bg-gradient-to-b from-gray-50 to-white rounded-2xl shadow-lg overflow-hidden">
+                  {/* Decorative background pattern */}
+                  <div className="absolute inset-0 opacity-5">
+                    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                      <defs>
+                        <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+                          <path d="M 0 10 L 40 10 M 10 0 L 10 40" stroke="currentColor" strokeWidth="1" fill="none" />
+                        </pattern>
+                      </defs>
+                      <rect width="100%" height="100%" fill="url(#grid)" />
+                    </svg>
+                  </div>
+
+                  {/* Main content container */}
+                  <div className="relative p-8 md:p-12">
+                    {/* Section header with new styling */}
+                    <div className="text-center mb-12">
+                      <div className="inline-flex items-center justify-center px-4 py-1 bg-red-50 text-red-600 rounded-full text-sm font-semibold mb-4">
+                        <i className="fas fa-project-diagram mr-2"></i>
+                        Faculty Projects
                       </div>
-                    ))}
+                      <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-gray-800 to-gray-600">
+                        Current Working Projects
+                      </h2>
+                      <div className="w-24 h-1 bg-gradient-to-r from-red-500 to-red-300 rounded-full mx-auto mt-4"></div>
+                    </div>
+
+                    {/* Project type selector with new pill design */}
+                    <div className="flex justify-center mb-12">
+                      <div className="inline-flex p-1 bg-white rounded-xl shadow-md">
+                        <button 
+                          onClick={() => setProjectTab('ongoing')}
+                          className={`relative px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+                            projectTab === 'ongoing' 
+                              ? 'text-white' 
+                              : 'text-gray-700 hover:text-gray-900'
+                          }`}
+                        >
+                          {projectTab === 'ongoing' && (
+                            <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-500 rounded-lg shadow-md animate-fadeIn"></span>
+                          )}
+                          <span className="relative flex items-center">
+                            Ongoing
+                          </span>
+                        </button>
+                        <button 
+                          onClick={() => setProjectTab('completed')}
+                          className={`relative px-5 py-2.5 rounded-lg text-sm font-medium transition-all duration-300 ${
+                            projectTab === 'completed' 
+                              ? 'text-white' 
+                              : 'text-gray-700 hover:text-gray-900'
+                          }`}
+                        >
+                          {projectTab === 'completed' && (
+                            <span className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-500 rounded-lg shadow-md animate-fadeIn"></span>
+                          )}
+                          <span className="relative flex items-center">
+                            <i className="fas fa-check-circle mr-2"></i>
+                            Completed
+                          </span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Vertical stack layout for projects - CHANGED FROM HORIZONTAL TO VERTICAL */}
+                    <div className="space-y-8">
+                      {faculty.projects
+                        .filter(project => {
+                          if (projectTab === 'ongoing') {
+                            return ['In Progress', 'On Hold', 'Planning'].includes(project.status);
+                          } else {
+                            return project.status === 'Completed';
+                          }
+                        })
+                        .map((project, index) => (
+                          <div 
+                            key={index} 
+                            className={`w-full bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transform transition-all duration-300 hover:-translate-y-2 ${
+                              visibleSections.projects ? 'animate-fadeIn' : 'opacity-0'
+                            }`}
+                            style={{ 
+                              animationDelay: `${index * 150}ms`,
+                              boxShadow: '0 10px 40px -10px rgba(0,0,0,0.1)' 
+                            }}
+                          >
+                            <div className="flex flex-col lg:flex-row">
+                              {/* Left side colored status indicator */}
+                              <div className={`
+                                w-full h-2 lg:h-auto lg:w-2
+                                ${project.status === 'Completed' ? 'bg-gradient-to-r lg:bg-gradient-to-b from-green-500 to-green-400' : 
+                                  project.status === 'In Progress' ? 'bg-gradient-to-r lg:bg-gradient-to-b from-blue-500 to-blue-400' : 
+                                  project.status === 'On Hold' ? 'bg-gradient-to-r lg:bg-gradient-to-b from-amber-500 to-amber-400' :
+                                  'bg-gradient-to-r lg:bg-gradient-to-b from-gray-400 to-gray-300'}
+                              `}></div>
+                              
+                              {/* Main content area */}
+                              <div className="p-6 flex-1">
+                                <div className="flex flex-col lg:flex-row lg:items-start justify-between mb-4">
+                                  <div>
+                                    <h3 className="text-2xl font-bold text-gray-800 mb-2 hover:text-red-600 transition-colors">
+                                      {project.title}
+                                    </h3>
+                                    {project.timeline && (
+                                      <div className="text-sm text-gray-500 flex items-center mb-4">
+                                        <i className="far fa-calendar-alt mr-2"></i>
+                                        <span className="font-medium">{project.timeline}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                  
+                                  <div className={`
+                                    flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center mt-2 lg:mt-0
+                                    ${project.status === 'Completed' ? 'bg-green-100' : 
+                                      project.status === 'In Progress' ? 'bg-blue-100' : 
+                                      project.status === 'On Hold' ? 'bg-amber-100' :
+                                      'bg-gray-100'}
+                                  `}>
+                                    <i className={`
+                                      text-lg 
+                                      ${project.status === 'Completed' ? 'fas fa-check text-green-500' : 
+                                        project.status === 'In Progress' ? 'fas fa-cog fa-spin text-blue-500' : 
+                                        project.status === 'On Hold' ? 'fas fa-pause text-amber-500' :
+                                        'fas fa-lightbulb text-gray-500'}
+                                    `}></i>
+                                  </div>
+                                </div>
+                                
+                                {/* Project description */}
+                                <div className="prose prose-lg max-w-none mb-6 text-gray-600">
+                                  <p className="leading-relaxed">{project.description || 'No description provided.'}</p>
+                                </div>
+                                
+                                {/* Project footer */}
+                                <div className="flex items-center justify-between border-t border-gray-100 pt-4">
+                                  <span className={`
+                                    inline-flex items-center px-3 py-1 rounded-full text-xs font-medium
+                                    ${project.status === 'Completed' ? 'bg-green-50 text-green-700' : 
+                                      project.status === 'In Progress' ? 'bg-blue-50 text-blue-700' : 
+                                      project.status === 'On Hold' ? 'bg-amber-50 text-amber-700' :
+                                      'bg-gray-50 text-gray-700'}
+                                  `}>
+                                    <i className={`mr-1
+                                      ${project.status === 'Completed' ? 'fas fa-flag-checkered' : 
+                                        project.status === 'In Progress' ? 'fas fa-spinner fa-spin' : 
+                                        project.status === 'On Hold' ? 'fas fa-hand-paper' :
+                                        'fas fa-lightbulb'}
+                                    `}></i>
+                                    {project.status}
+                                  </span>
+                                  
+                                  {/* Progress indicator removed */}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                    
+                    {/* No projects message when filtered results are empty */}
+                    {faculty.projects.filter(p => 
+                      projectTab === 'ongoing' 
+                        ? ['In Progress', 'On Hold', 'Planning'].includes(p.status)
+                        : p.status === 'Completed'
+                    ).length === 0 && (
+                      <div className="flex flex-col items-center justify-center py-12 text-center">
+                        <div className="w-24 h-24 bg-gray-50 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                          <i className="fas fa-folder-open text-gray-300 text-3xl"></i>
+                        </div>
+                        <h3 className="text-xl font-bold text-gray-700 mb-2">No {projectTab === 'ongoing' ? 'ongoing' : 'completed'} projects</h3>
+                        <p className="text-gray-500 max-w-md mx-auto">
+                          {projectTab === 'ongoing' 
+                            ? 'There are currently no ongoing or on hold projects. Check back later for updates.'
+                            : 'No completed projects found. Ongoing projects will appear here once completed.'}
+                        </p>
+                        <button 
+                          onClick={() => setProjectTab(projectTab === 'ongoing' ? 'completed' : 'ongoing')}
+                          className="mt-6 px-5 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-full transition-colors flex items-center"
+                        >
+                          <i className="fas fa-exchange-alt mr-2"></i>
+                          View {projectTab === 'ongoing' ? 'completed' : 'ongoing'} projects instead
+                        </button>
+                      </div>
+                    )}
+                    
+                    {/* Contact call-to-action section remains unchanged */}
+                    <div className="relative mt-16 bg-gradient-to-br from-red-50 via-white to-red-50 rounded-lg overflow-hidden">
+                      {/* Decorative background elements */}
+                      <div className="absolute top-0 left-0 w-full h-full">
+                        <div className="absolute -top-20 -left-20 w-40 h-40 rounded-full bg-red-100 opacity-50"></div>
+                        <div className="absolute -bottom-20 -right-20 w-40 h-40 rounded-full bg-red-100 opacity-50"></div>
+                        <div className="absolute top-1/4 right-1/4 w-20 h-20 rounded-full bg-red-100 opacity-30"></div>
+                      </div>
+                      
+                      <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center md:items-stretch gap-8">
+                        <div className="w-full md:w-1/3 flex flex-col items-center md:items-start md:border-r border-gray-100 pr-8">
+                          <div className="bg-white w-20 h-20 flex items-center justify-center rounded-xl shadow-lg mb-5 transform rotate-6">
+                            <i className="fas fa-lightbulb text-red-500 text-3xl"></i>
+                          </div>
+                          <h3 className="text-2xl font-bold text-gray-800 mb-3 text-center md:text-left">Collaborate on Research</h3>
+                          <p className="text-gray-600 text-center md:text-left">
+                            Join {faculty.name}'s research team and contribute to groundbreaking projects in your field of interest.
+                          </p>
+                        </div>
+                        
+                        <div className="flex-1 space-y-6">
+                          <h4 className="font-medium text-gray-800 border-b border-gray-100 pb-2 mb-4">How to get involved:</h4>
+                          
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                            {faculty.email && (
+                              <a href={`mailto:${faculty.email}`} className="flex items-center p-4 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                <div className="bg-red-50 w-12 h-12 rounded-lg flex items-center justify-center mr-4 group-hover:bg-red-100 transition-colors">
+                                  <i className="fas fa-envelope text-red-500"></i>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-gray-800 mb-1">Contact via Email</h5>
+                                  <span className="text-sm text-gray-500">{faculty.email}</span>
+                                </div>
+                                <i className="fas fa-chevron-right ml-auto opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all text-red-400"></i>
+                              </a>
+                            )}
+                            
+                            {faculty.mobileNumber && (
+                              <a href={`tel:${faculty.mobileNumber}`} className="flex items-center p-4 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                <div className="bg-blue-50 w-12 h-12 rounded-lg flex items-center justify-center mr-4 group-hover:bg-blue-100 transition-colors">
+                                  <i className="fas fa-phone-alt text-blue-500"></i>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-gray-800 mb-1">Call Directly</h5>
+                                  <span className="text-sm text-gray-500">{faculty.mobileNumber}</span>
+                                </div>
+                                <i className="fas fa-chevron-right ml-auto opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all text-blue-400"></i>
+                              </a>
+                            )}
+                            
+                            {faculty.cabinLocation && (
+                              <a href="#faculty-hero" onClick={(e) => {
+                                e.preventDefault();
+                                document.getElementById('faculty-hero').scrollIntoView({behavior: 'smooth'});
+                              }} className="flex items-center p-4 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                <div className="bg-green-50 w-12 h-12 rounded-lg flex items-center justify-center mr-4 group-hover:bg-green-100 transition-colors">
+                                  <i className="fas fa-map-marker-alt text-green-500"></i>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-gray-800 mb-1">Office Location</h5>
+                                  <span className="text-sm text-gray-500">{faculty.cabinLocation}</span>
+                                </div>
+                                <i className="fas fa-chevron-right ml-auto opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all text-green-400"></i>
+                              </a>
+                            )}
+                            
+                            {faculty.freeTimings && (
+                              <a href="#faculty-hero" onClick={(e) => {
+                                e.preventDefault();
+                                document.getElementById('faculty-hero').scrollIntoView({behavior: 'smooth'});
+                              }} className="flex items-center p-4 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md transition-all group">
+                                <div className="bg-purple-50 w-12 h-12 rounded-lg flex items-center justify-center mr-4 group-hover:bg-purple-100 transition-colors">
+                                  <i className="fas fa-clock text-purple-500"></i>
+                                </div>
+                                <div>
+                                  <h5 className="font-medium text-gray-800 mb-1">Office Hours</h5>
+                                  <span className="text-sm text-gray-500">{faculty.freeTimings}</span>
+                                </div>
+                                <i className="fas fa-chevron-right ml-auto opacity-0 group-hover:opacity-100 transform translate-x-0 group-hover:translate-x-1 transition-all text-purple-400"></i>
+                              </a>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </section>
@@ -709,6 +919,32 @@ const FacultyView = ({ faculty }) => {
           -webkit-backdrop-filter: blur(10px);
           border: 1px solid rgba(255, 255, 255, 0.2);
           box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        /* Hide scrollbar for clean UI */
+        .hide-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        
+        .hide-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        
+        /* New pulse animation for icons */
+        @keyframes pulse-gentle {
+          0% { transform: scale(1); }
+          50% { transform: scale(1.05); }
+          100% { transform: scale(1); }
+        }
+        
+        .pulse-animation {
+          animation: pulse-gentle 2s infinite ease-in-out;
         }
       `}</style>
     </>
