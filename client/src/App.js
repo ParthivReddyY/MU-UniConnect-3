@@ -159,7 +159,7 @@ function App() {
                 } />
                 
                 <Route path="/college" element={
-                  <PageContainer>
+                  <PageContainer fullWidth>
                     <College />
                   </PageContainer>
                 } />
