@@ -27,6 +27,7 @@ const CollegeTabs = ({ activeTab, setActiveTab }) => {
             }}
             style={{
               width: `calc(100% / ${tabs.length} - 8px)`,
+              maxWidth: "180px" // Add maxWidth to prevent the indicator from getting too wide
             }}
             initial={false}
             animate={{
