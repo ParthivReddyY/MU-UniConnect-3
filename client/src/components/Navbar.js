@@ -37,6 +37,20 @@ function Navbar() {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (showProfileMenu && !event.target.closest('.auth-section')) {
+        setShowProfileMenu(false);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showProfileMenu]);
+
   // Attach scroll listener with performance optimization
   useEffect(() => {
     window.addEventListener('scroll', handleScroll, { passive: true });
@@ -76,23 +90,55 @@ function Navbar() {
   return (
     <header className={`header ${scrolled ? 'scrolled' : ''}`} role="banner">
       <div className={`header-container ${menuOpen ? 'menu-open' : ''}`}>
-        {/* Top section with mobile menu button */}
+        {/* Top section with logo and mobile controls */}
         <div className="header-top">
-          {/* Mobile menu button */}
-          <button 
-            className="mobile-menu-button"
-            onClick={toggleMenu} 
-            aria-expanded={menuOpen}
-            aria-controls="navigation"
-            aria-label={menuOpen ? "Close menu" : "Open menu"}
-            title={menuOpen ? "Close menu" : "Open menu"}
-          >
-            <i className={`fas ${menuOpen ? 'fa-times' : 'fa-bars'}`} aria-hidden="true"></i>
-          </button>
+          {/* Logo/Brand */}
+          <div className="logo">
+            <Link to="/">UniConnect</Link>
+          </div>
+          
+          {/* Right side controls - visible on mobile */}
+          <div className="mobile-controls">
+            {/* Auth button on mobile */}
+            <div className="auth-section-mobile">
+              <button 
+                className="auth-icon-btn relative mr-4"
+                onClick={handleAuthClick}
+                title={currentUser ? "Account menu" : "Login"}
+              >
+                {currentUser ? (
+                  <span className="flex items-center justify-center overflow-hidden">
+                    {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
+                      <img
+                        className="h-7 w-7 rounded-full object-cover"
+                        src={currentUser.profileImage} 
+                        alt={`${currentUser.name}'s profile`}
+                      />
+                    ) : (
+                      <i className="fas fa-user"></i>
+                    )}
+                  </span>
+                ) : (
+                  <i className="fas fa-user"></i>
+                )}
+              </button>
+            </div>
+            
+            {/* Mobile menu button - now positioned to the right */}
+            <button 
+              className="mobile-menu-button"
+              onClick={toggleMenu} 
+              aria-expanded={menuOpen}
+              aria-controls="navigation"
+              aria-label={menuOpen ? "Close menu" : "Open menu"}
+            >
+              <i className={`fas ${menuOpen ? 'fa-times' : 'fa-bars'}`} aria-hidden="true"></i>
+            </button>
+          </div>
         </div>
 
         {/* Bottom section with navigation and auth button */}
-        <div className="header-bottom" id="navigation">
+        <div className={`header-bottom ${menuOpen ? 'show' : ''}`} id="navigation">
           {/* Navigation Links */}
           <nav className="nav-links" aria-label="Main navigation">
             <NavLink to="/" isActive={isActive('/')}>Home</NavLink>
@@ -101,8 +147,8 @@ function Navbar() {
             <NavLink to="/college" isActive={isActive('/college')}>College</NavLink>
           </nav>
 
-          {/* Auth Button fixed position */}
-          <div className="auth-section">
+          {/* Auth Button - desktop version */}
+          <div className="auth-section desktop-only">
             <button 
               id="auth-button" 
               className="auth-icon-btn relative group" 
@@ -128,56 +174,56 @@ function Navbar() {
                 {currentUser ? 'Profile' : 'Log In'}
               </span>
             </button>
-            
-            {/* User profile dropdown menu */}
-            {showProfileMenu && currentUser && (
-              <div className="absolute top-14 right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-1 border border-light-gray">
-                <div className="px-4 py-2 border-b border-light-gray">
-                  <p className="text-dark-gray font-semibold truncate">{currentUser.name}</p>
-                  <p className="text-medium-gray text-sm truncate">{currentUser.email}</p>
-                </div>
-                
-                <div className="px-4 py-2 border-b border-light-gray">
-                  <p className="text-xs text-medium-gray uppercase">Role</p>
-                  <p className="text-sm text-dark-gray capitalize">{currentUser.role}</p>
-                </div>
-                
-                <Link 
-                  to="/dashboard" 
-                  className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
-                  onClick={() => setShowProfileMenu(false)}
-                >
-                  <i className="fas fa-tachometer-alt mr-2"></i> Dashboard
-                </Link>
-                
-                <Link 
-                  to="/profile" 
-                  className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
-                  onClick={() => setShowProfileMenu(false)}
-                >
-                  <i className="fas fa-user-circle mr-2"></i> My Profile
-                </Link>
-                
-                {currentUser.role === 'admin' && (
-                  <Link 
-                    to="/admin/dashboard" 
-                    className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
-                    onClick={() => setShowProfileMenu(false)}
-                  >
-                    <i className="fas fa-shield-alt mr-2"></i> Admin Panel
-                  </Link>
-                )}
-                
-                <button
-                  className="w-full text-left block px-4 py-2 text-sm text-primary-red hover:bg-red-light"
-                  onClick={handleLogout}
-                >
-                  <i className="fas fa-sign-out-alt mr-2"></i> Sign out
-                </button>
-              </div>
-            )}
           </div>
         </div>
+        
+        {/* Profile dropdown menu - positioned appropriately */}
+        {showProfileMenu && currentUser && (
+          <div className="profile-dropdown">
+            <div className="px-4 py-2 border-b border-light-gray">
+              <p className="text-dark-gray font-semibold truncate">{currentUser.name}</p>
+              <p className="text-medium-gray text-sm truncate">{currentUser.email}</p>
+            </div>
+            
+            <div className="px-4 py-2 border-b border-light-gray">
+              <p className="text-xs text-medium-gray uppercase">Role</p>
+              <p className="text-sm text-dark-gray capitalize">{currentUser.role}</p>
+            </div>
+            
+            <Link 
+              to="/dashboard" 
+              className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
+              onClick={() => setShowProfileMenu(false)}
+            >
+              <i className="fas fa-tachometer-alt mr-2"></i> Dashboard
+            </Link>
+            
+            <Link 
+              to="/profile" 
+              className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
+              onClick={() => setShowProfileMenu(false)}
+            >
+              <i className="fas fa-user-circle mr-2"></i> My Profile
+            </Link>
+            
+            {currentUser.role === 'admin' && (
+              <Link 
+                to="/admin/dashboard" 
+                className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
+                onClick={() => setShowProfileMenu(false)}
+              >
+                <i className="fas fa-shield-alt mr-2"></i> Admin Panel
+              </Link>
+            )}
+            
+            <button
+              className="w-full text-left block px-4 py-2 text-sm text-primary-red hover:bg-red-light"
+              onClick={handleLogout}
+            >
+              <i className="fas fa-sign-out-alt mr-2"></i> Sign out
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

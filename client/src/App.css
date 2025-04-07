@@ -88,6 +88,28 @@
   transition: all 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
   will-change: transform, padding;
   transform-origin: center;
+  flex-direction: column;
+}
+
+/* Header top section with logo and mobile controls */
+.header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  width: 100%;
+}
+
+/* Logo styling */
+.logo {
+  font-weight: bold;
+  font-size: 1.25rem;
+}
+
+/* Mobile controls container */
+.mobile-controls {
+  display: flex;
+  align-items: center;
 }
 
 .header.scrolled .header-container {
@@ -107,6 +129,7 @@
   flex-direction: row;
   justify-content: space-between;
   align-items: center;
+  padding: 0.5rem 1rem;
 }
 
 /* Navigation links styles with optimized transitions */
@@ -178,6 +201,11 @@
   justify-content: center;
   flex-shrink: 0;
   margin-left: 16px;
+  position: relative;
+}
+
+.auth-section, .auth-section-mobile {
+  position: relative;
 }
 
 /* Auth button styling - improved positioning with consistent size */
@@ -196,6 +224,14 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   box-shadow: 0 0 10px rgba(211, 47, 47, 0.3);
   outline: none;
+  background: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
 }
 
 .auth-icon-btn i {
@@ -241,6 +277,10 @@
   align-items: center;
   justify-content: center;
   transition: background-color 0.3s ease;
+  display: block;
+  font-size: 1.5rem;
+  padding: 0.25rem;
+  color: #333;
 }
 
 .mobile-menu-button:hover,
@@ -288,6 +328,9 @@
     opacity: 0;
     transform: translateY(-10px);
     transition: opacity 0.3s ease, transform 0.3s ease;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0;
   }
 
   .header-container.menu-open .header-bottom {
@@ -322,6 +365,9 @@
     font-size: 18px;
     width: 80%;
     margin: 0 auto;
+    padding: 0.75rem 1rem;
+    width: 100%;
+    border-bottom: 1px solid #eee;
   }
 
   .auth-section {
@@ -337,6 +383,33 @@
   
   .auth-icon-btn i {
     font-size: 20px;
+  }
+
+  .desktop-only {
+    display: none;
+  }
+  
+  .mobile-menu-button {
+    display: block;
+  }
+  
+  .header-bottom.show {
+    display: flex;
+  }
+  
+  /* Adjust profile dropdown on mobile */
+  .profile-dropdown {
+    top: 60px;
+    right: 0;
+    width: 100%;
+    position: fixed;
+  }
+}
+
+/* Hide auth-section-mobile on desktop */
+@media (min-width: 769px) {
+  .auth-section-mobile {
+    display: none;
   }
 }
 
@@ -371,3 +444,33 @@
 .bg-teal-light { background-color: var(--teal-light); }
 .bg-gold-light { background-color: var(--gold-light); }
 .bg-accent-gold { background-color: var(--accent-gold); }
+
+/* Container styles */
+.std-container {
+  width: 100%;
+  max-width: 1280px;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.full-width-container {
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Dashboard and Profile specific styles */
+.dashboard-page,
+.profile-page {
+  min-height: calc(100vh - 64px - 40px); /* Account for navbar and footer */
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .dashboard-page,
+  .profile-page {
+    min-height: calc(100vh - 56px - 40px); /* Smaller navbar on mobile */
+  }
+}

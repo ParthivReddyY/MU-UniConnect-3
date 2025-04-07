@@ -16,6 +16,7 @@ import Dashboard from './pages/Dashboard';
 import Unauthorized from './pages/Unauthorized';
 import FacultyDetail from './pages/FacultyDetail';
 import ChangePassword from './pages/ChangePassword';
+import Profile from './pages/Profile'; // Import the new Profile page
 
 // Import components
 import Navbar from './components/Navbar';
@@ -53,8 +54,8 @@ function NavbarWrapper() {
 // Standard container wrapper to ensure consistent sizing across pages
 function PageContainer({ children, fullWidth = false }) {
   return (
-    <main className={`flex-1 w-full mt-16 md:mt-20`}>
-      <div className={fullWidth ? 'w-full' : 'std-container'}>
+    <main className={`flex-1 w-full mt-16 md:mt-20 ${fullWidth ? 'full-width-container' : 'std-container'}`}>
+      <div className="w-full">
         {children}
       </div>
     </main>
@@ -141,7 +142,7 @@ function App() {
                 
                 {/* Semi-public routes */}
                 <Route path="/clubs-events" element={
-                  <PageContainer>
+                  <PageContainer fullWidth>
                     <ClubsEvents />
                   </PageContainer>
                 } />
@@ -175,7 +176,9 @@ function App() {
                 
                 <Route path="/change-password" element={
                   <ProtectedRoute>
-                    <ChangePassword />
+                    <PageContainer fullWidth>
+                      <ChangePassword />
+                    </PageContainer>
                   </ProtectedRoute>
                 } />
                 
@@ -218,8 +221,8 @@ function App() {
                 {/* Profile page - accessible to all logged in users */}
                 <Route path="/profile" element={
                   <ProtectedRoute>
-                    <PageContainer>
-                      <h1>User Profile (To be implemented)</h1>
+                    <PageContainer fullWidth>
+                      <Profile />
                     </PageContainer>
                   </ProtectedRoute>
                 } />
