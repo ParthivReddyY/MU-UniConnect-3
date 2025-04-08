@@ -89,6 +89,13 @@ function Navbar() {
     navigate('/');
   };
 
+  // Get role-specific class for badge
+  const getRoleBadgeClass = (role) => {
+    if (role === 'admin') return 'admin';
+    if (role === 'faculty') return 'faculty';
+    return '';
+  };
+
   return (
     <header className={`header ${scrolled ? 'scrolled' : ''}`} role="banner">
       <div className={`header-container ${menuOpen ? 'menu-open' : ''}`}>
@@ -125,9 +132,55 @@ function Navbar() {
                   <i className="fas fa-user text-white"></i>
                 )}
               </button>
+              
+              {/* Mobile profile dropdown - positioned within mobile auth section */}
+              {showProfileMenu && currentUser && (
+                <div className="profile-dropdown">
+                  <div className="profile-dropdown-header">
+                    <p className="name truncate">{currentUser.name}</p>
+                    <p className="email truncate">{currentUser.email}</p>
+                    <div className={`role-badge ${getRoleBadgeClass(currentUser.role)}`}>
+                      {currentUser.role}
+                    </div>
+                  </div>
+                  
+                  <Link 
+                    to="/dashboard" 
+                    className="block text-sm menu-item-dashboard"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    <i className="fas fa-tachometer-alt"></i> Dashboard
+                  </Link>
+                  
+                  <Link 
+                    to="/profile" 
+                    className="block text-sm menu-item-profile"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    <i className="fas fa-user-circle"></i> My Profile
+                  </Link>
+                  
+                  {currentUser.role === 'admin' && (
+                    <Link 
+                      to="/admin/dashboard" 
+                      className="block text-sm menu-item-admin"
+                      onClick={() => setShowProfileMenu(false)}
+                    >
+                      <i className="fas fa-shield-alt"></i> Admin Panel
+                    </Link>
+                  )}
+                  
+                  <button
+                    className="w-full text-left block text-sm sign-out-btn"
+                    onClick={handleLogout}
+                  >
+                    <i className="fas fa-sign-out-alt"></i> Sign out
+                  </button>
+                </div>
+              )}
             </div>
             
-            {/* Mobile menu button - now positioned to the right */}
+            {/* Mobile menu button */}
             <button 
               className="mobile-menu-button"
               onClick={toggleMenu} 
@@ -178,56 +231,54 @@ function Navbar() {
                 {currentUser ? 'Profile' : 'Log In'}
               </span>
             </button>
+            
+            {/* Desktop profile dropdown */}
+            {showProfileMenu && currentUser && (
+              <div className="profile-dropdown">
+                <div className="profile-dropdown-header">
+                  <p className="name truncate">{currentUser.name}</p>
+                  <p className="email truncate">{currentUser.email}</p>
+                  <div className={`role-badge ${getRoleBadgeClass(currentUser.role)}`}>
+                    {currentUser.role}
+                  </div>
+                </div>
+                
+                <Link 
+                  to="/dashboard" 
+                  className="block text-sm menu-item-dashboard"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <i className="fas fa-tachometer-alt"></i> Dashboard
+                </Link>
+                
+                <Link 
+                  to="/profile" 
+                  className="block text-sm menu-item-profile"
+                  onClick={() => setShowProfileMenu(false)}
+                >
+                  <i className="fas fa-user-circle"></i> My Profile
+                </Link>
+                
+                {currentUser.role === 'admin' && (
+                  <Link 
+                    to="/admin/dashboard" 
+                    className="block text-sm menu-item-admin"
+                    onClick={() => setShowProfileMenu(false)}
+                  >
+                    <i className="fas fa-shield-alt"></i> Admin Panel
+                  </Link>
+                )}
+                
+                <button
+                  className="w-full text-left block text-sm sign-out-btn"
+                  onClick={handleLogout}
+                >
+                  <i className="fas fa-sign-out-alt"></i> Sign out
+                </button>
+              </div>
+            )}
           </div>
         </div>
-        
-        {/* Profile dropdown menu - positioned appropriately */}
-        {showProfileMenu && currentUser && (
-          <div className="profile-dropdown">
-            <div className="px-4 py-2 border-b border-light-gray">
-              <p className="text-dark-gray font-semibold truncate">{currentUser.name}</p>
-              <p className="text-medium-gray text-sm truncate">{currentUser.email}</p>
-            </div>
-            
-            <div className="px-4 py-2 border-b border-light-gray">
-              <p className="text-xs text-medium-gray uppercase">Role</p>
-              <p className="text-sm text-dark-gray capitalize">{currentUser.role}</p>
-            </div>
-            
-            <Link 
-              to="/dashboard" 
-              className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
-              onClick={() => setShowProfileMenu(false)}
-            >
-              <i className="fas fa-tachometer-alt mr-2"></i> Dashboard
-            </Link>
-            
-            <Link 
-              to="/profile" 
-              className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
-              onClick={() => setShowProfileMenu(false)}
-            >
-              <i className="fas fa-user-circle mr-2"></i> My Profile
-            </Link>
-            
-            {currentUser.role === 'admin' && (
-              <Link 
-                to="/admin/dashboard" 
-                className="block px-4 py-2 text-sm text-dark-gray hover:bg-red-light"
-                onClick={() => setShowProfileMenu(false)}
-              >
-                <i className="fas fa-shield-alt mr-2"></i> Admin Panel
-              </Link>
-            )}
-            
-            <button
-              className="w-full text-left block px-4 py-2 text-sm text-primary-red hover:bg-red-light"
-              onClick={handleLogout}
-            >
-              <i className="fas fa-sign-out-alt mr-2"></i> Sign out
-            </button>
-          </div>
-        )}
       </div>
     </header>
   );

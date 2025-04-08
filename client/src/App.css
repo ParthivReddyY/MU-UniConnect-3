@@ -281,6 +281,216 @@
   outline: none;
 }
 
+/* Profile dropdown styling */
+.profile-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 240px;
+  background-color: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  z-index: 1100;
+  overflow: hidden;
+  animation: fadeInDown 0.3s ease-out forwards;
+  border: 1px solid rgba(224, 224, 224, 0.5);
+}
+
+/* Colored header for dropdown - using gradient teal for variety */
+.profile-dropdown-header {
+  background: var(--gradient-teal);
+  color: var(--white);
+  padding: 14px 16px;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  position: relative;
+}
+
+.profile-dropdown-header::after {
+  content: "";
+  position: absolute;
+  bottom: -8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: linear-gradient(to bottom, rgba(30, 58, 138, 0.15), transparent);
+}
+
+.profile-dropdown-header .name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+  margin-bottom: 3px;
+}
+
+.profile-dropdown-header .email {
+  font-size: 0.85rem;
+  opacity: 0.9;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* Role badge styling - using accent gold */
+.role-badge {
+  display: inline-block;
+  background-color: var(--accent-gold);
+  color: var(--dark-gray);
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 12px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Admin role badge special styling */
+.role-badge.admin {
+  background-color: var(--primary-red);
+  color: white;
+}
+
+/* Faculty role badge special styling */
+.role-badge.faculty {
+  background-color: var(--primary-teal);
+  color: white;
+}
+
+/* Improve dropdown link styling with vibrant colors */
+.profile-dropdown a, 
+.profile-dropdown button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+  transition: all 0.2s ease;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.profile-dropdown a:hover,
+.profile-dropdown button:hover {
+  background-color: var(--teal-light);
+  border-left: 4px solid var(--primary-teal);
+  color: var(--primary-teal);
+}
+
+.profile-dropdown i {
+  margin-right: 12px;
+  width: 20px;
+  text-align: center;
+  font-size: 1rem;
+  transition: transform 0.2s ease;
+}
+
+/* Color-code menu items */
+.menu-item-dashboard i {
+  color: var(--accent-gold);
+}
+
+.menu-item-dashboard:hover {
+  background-color: var(--gold-light) !important;
+  border-left-color: var(--accent-gold) !important;
+}
+
+.menu-item-profile i {
+  color: var(--primary-teal);
+}
+
+.menu-item-admin i {
+  color: var(--primary-red);
+}
+
+.menu-item-admin:hover {
+  background-color: var(--red-light) !important;
+  border-left-color: var(--primary-red) !important;
+}
+
+/* Sign out button special styling */
+.sign-out-btn {
+  border-top: 1px solid var(--light-gray);
+  margin-top: 4px;
+  color: var(--primary-red);
+  font-weight: 500;
+}
+
+.sign-out-btn:hover {
+  background-color: var(--red-light) !important;
+  border-left-color: var(--primary-red) !important;
+}
+
+.sign-out-btn i {
+  color: var(--primary-red);
+}
+
+/* Add hover effect to icons */
+.profile-dropdown a:hover i,
+.profile-dropdown button:hover i {
+  transform: translateX(2px);
+}
+
+/* Animation for dropdown appearance */
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Improve dropdown link styling */
+.profile-dropdown a, 
+.profile-dropdown button {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+  transition: all 0.2s ease;
+  text-align: left;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.profile-dropdown a:hover,
+.profile-dropdown button:hover {
+  background-color: var(--red-light);
+  border-left: 3px solid var(--primary-red);
+  color: var(--primary-red);
+}
+
+.profile-dropdown i {
+  margin-right: 10px;
+  width: 20px;
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--primary-red);
+}
+
+/* Sign out button special styling */
+.profile-dropdown .sign-out-btn {
+  border-top: 1px solid var(--light-gray);
+  margin-top: 4px;
+  color: var(--primary-red);
+  font-weight: 500;
+}
+
+.profile-dropdown .sign-out-btn:hover {
+  background-color: rgba(211, 47, 47, 0.08);
+}
+
 /* Mobile styles with optimized layout and transitions */
 @media (max-width: 768px) {
   .header {
@@ -391,17 +601,29 @@
   
   /* Adjust profile dropdown on mobile */
   .profile-dropdown {
-    top: 60px;
+    position: absolute;
+    top: calc(100% + 10px);
     right: 0;
-    width: 100%;
-    position: fixed;
+    width: calc(100vw - 30px);
+    max-width: 300px;
+    z-index: 1200;
+    border-radius: 8px;
   }
-}
-
-/* Hide auth-section-mobile on desktop */
-@media (min-width: 769px) {
-  .auth-section-mobile {
-    display: none;
+  
+  /* Handle dropdown positioning specifically for auth-section-mobile */
+  .auth-section-mobile .profile-dropdown {
+    top: calc(100% + 10px);
+    right: -10px;
+  }
+  
+  /* When menu is open, adjust position */
+  .header-container.menu-open .profile-dropdown {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    top: 10px;
+    margin-bottom: 15px;
+    order: 2;
   }
 }
 
