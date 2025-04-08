@@ -40,7 +40,9 @@ function Navbar() {
   // Close profile menu when clicking outside
   useEffect(() => {
     function handleClickOutside(event) {
-      if (showProfileMenu && !event.target.closest('.auth-section')) {
+      if (showProfileMenu && 
+          !event.target.closest('.auth-section') && 
+          !event.target.closest('.auth-section-mobile')) {
         setShowProfileMenu(false);
       }
     }
@@ -105,21 +107,22 @@ function Navbar() {
                 className="auth-icon-btn relative mr-4"
                 onClick={handleAuthClick}
                 title={currentUser ? "Account menu" : "Login"}
+                aria-label={currentUser ? "Account menu" : "Login"}
               >
                 {currentUser ? (
-                  <span className="flex items-center justify-center overflow-hidden">
+                  <span className="flex items-center justify-center w-full h-full overflow-hidden">
                     {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
                       <img
-                        className="h-7 w-7 rounded-full object-cover"
+                        className="h-7 w-7 rounded-full object-cover border-2 border-white"
                         src={currentUser.profileImage} 
                         alt={`${currentUser.name}'s profile`}
                       />
                     ) : (
-                      <i className="fas fa-user"></i>
+                      <i className="fas fa-user text-white"></i>
                     )}
                   </span>
                 ) : (
-                  <i className="fas fa-user"></i>
+                  <i className="fas fa-user text-white"></i>
                 )}
               </button>
             </div>
@@ -154,21 +157,22 @@ function Navbar() {
               className="auth-icon-btn relative group" 
               onClick={handleAuthClick}
               title={currentUser ? "Account menu" : "Login or access account"}
+              aria-label={currentUser ? "Account menu" : "Login or access account"}
             >
               {currentUser ? (
                 <span className="w-full h-full flex items-center justify-center overflow-hidden">
                   {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
                     <img
-                      className="h-8 w-8 rounded-full object-cover"
+                      className="h-8 w-8 rounded-full object-cover border-2 border-white"
                       src={currentUser.profileImage} 
                       alt={`${currentUser.name}'s profile`}
                     />
                   ) : (
-                    <i className="fas fa-user"></i>
+                    <i className="fas fa-user text-white"></i>
                   )}
                 </span>
               ) : (
-                <i className="fas fa-user"></i>
+                <i className="fas fa-user text-white"></i>
               )}
               <span className="absolute hidden group-hover:block bg-gray-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap top-full mt-1 right-0">
                 {currentUser ? 'Profile' : 'Log In'}
