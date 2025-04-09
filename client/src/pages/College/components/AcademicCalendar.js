@@ -305,6 +305,9 @@ function AcademicCalendar() {
   // Reference for the view dropdown menu for detecting outside clicks
   const viewMenuRef = useRef(null);
   
+  // Add this new reference to track if a view change is in progress
+  const viewChangeInProgressRef = useRef(false);
+  
   // Track years we've already loaded
   const loadedYearsRef = useRef(new Set());
 
@@ -321,6 +324,12 @@ function AcademicCalendar() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [viewMenuRef]);
+
+  // Add this new effect to handle view changes
+  useEffect(() => {
+    // Reset the view change flag when view has changed
+    viewChangeInProgressRef.current = false;
+  }, [view]);
 
   // Effect to load events when the year changes
   useEffect(() => {
@@ -498,6 +507,18 @@ function AcademicCalendar() {
     </div>
   );
 
+  // Create a wrapper for setView to prevent multiple rapid view changes
+  const handleViewChange = (newView) => {
+    if (viewChangeInProgressRef.current) return;
+    
+    viewChangeInProgressRef.current = true;
+    setView(newView);
+    
+    // Close any open menus
+    setViewMenuOpen(false);
+    setMobileMenuOpen(false);
+  };
+
   // --- Render Logic ---
   return (
     <div className="lg:flex lg:h-full lg:flex-col font-sans bg-white rounded-lg shadow-md border border-gray-100">
@@ -550,12 +571,12 @@ function AcademicCalendar() {
             </button>
             
             {viewMenuOpen && (
-              <div className="absolute left-0 top-full z-10 mt-1 w-32 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <div className="absolute left-0 top-full z-50 mt-1 w-32 origin-top-left rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
                 <div className="py-1">
                   {['day', 'week', 'month', 'year'].map((viewType) => (
                     <button
                       key={viewType}
-                      onClick={() => { setView(viewType); setViewMenuOpen(false); }}
+                      onClick={() => handleViewChange(viewType)}
                       className={`block w-full px-4 py-2 text-left text-base ${view === viewType ? 'bg-red-50 text-red-600' : 'text-gray-700 hover:bg-red-50 hover:text-red-500'} transition-colors`}
                     >
                       {viewType.charAt(0).toUpperCase() + viewType.slice(1)}
@@ -593,14 +614,14 @@ function AcademicCalendar() {
             <MoreHorizontal className="h-5 w-5" aria-hidden="true" />
           </button>
           {mobileMenuOpen && (
-            <div className="absolute right-0 top-full z-10 mt-2 w-36 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100">
+            <div className="absolute right-0 top-full z-50 mt-2 w-36 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100">
               <div className="py-1">
                 {/* Uniform styling for mobile menu */}
                 <button onClick={handleAddEventClick} className="block w-full px-4 py-2 text-left text-base text-red-600 font-medium hover:bg-red-50 transition-colors">Create event</button>
-                <button onClick={() => { setView('day'); setMobileMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Day</button>
-                <button onClick={() => { setView('week'); setMobileMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Week</button>
-                <button onClick={() => { setView('month'); setMobileMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Month</button>
-                <button onClick={() => { setView('year'); setMobileMenuOpen(false); }} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Year</button>
+                <button onClick={() => handleViewChange('day')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Day</button>
+                <button onClick={() => handleViewChange('week')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Week</button>
+                <button onClick={() => handleViewChange('month')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Month</button>
+                <button onClick={() => handleViewChange('year')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Year</button>
               </div>
             </div>
           )}
@@ -611,26 +632,26 @@ function AcademicCalendar() {
       {error && <ErrorMessage message={error} />}
 
       {/* Calendar Grid Area - Clean white background with hidden scrollbars */}
-      <div className="shadow-sm ring-1 ring-gray-200 lg:flex lg:flex-auto lg:flex-col bg-white mt-2 h-[75vh] overflow-hidden rounded-b-lg relative">
+      <div className="shadow-sm ring-1 ring-gray-200 lg:flex lg:flex-auto lg:flex-col bg-white mt-2 h-[85vh] overflow-hidden rounded-b-lg relative">
         {loading && <LoadingOverlay />}
         
-        {view === 'day' && (
-          <CalendarDayView
-            currentDate={selectedDate}
-            events={allEvents}
-          />
-        )}
-        {view === 'week' && (
-          <CalendarWeekView
-            currentDate={currentDate}
-            selectedDate={selectedDate}
-            events={allEvents}
-            onDateClick={handleDateClick}
-            weekStartsOn={weekStartsOn}
-          />
-        )}
-        {view === 'month' && (
-          <div className="lg:flex-auto">
+        <div key={`view-${view}`} className="flex-auto h-full overflow-auto">
+          {view === 'day' && (
+            <CalendarDayView
+              currentDate={selectedDate}
+              events={allEvents}
+            />
+          )}
+          {view === 'week' && (
+            <CalendarWeekView
+              currentDate={currentDate}
+              selectedDate={selectedDate}
+              events={allEvents}
+              onDateClick={handleDateClick}
+              weekStartsOn={weekStartsOn}
+            />
+          )}
+          {view === 'month' && (
             <CalendarMonthView
               currentMonthDate={currentDate}
               selectedDate={selectedDate}
@@ -638,17 +659,17 @@ function AcademicCalendar() {
               events={allEvents}
               weekStartsOn={weekStartsOn}
             />
-          </div>
-        )}
-        {view === 'year' && (
-          <div className="p-4 md:p-6 overflow-auto scrollbar-hide">
-            <CalendarYearView
-              currentYearDate={currentDate}
-              onMonthClick={handleMonthClick}
-              events={allEvents}
-            />
-          </div>
-        )}
+          )}
+          {view === 'year' && (
+            <div className="p-4 md:p-6">
+              <CalendarYearView
+                currentYearDate={currentDate}
+                onMonthClick={handleMonthClick}
+                events={allEvents}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Event Form Modal */}

@@ -76,14 +76,14 @@ const CalendarDayView = ({ currentDate, events }) => {
         </div>
       </header>
 
-      {/* Main grid */}
-      <div className="flex flex-1 overflow-y-auto scrollbar-hide bg-white">
+      {/* Main grid - Added position relative for proper event positioning */}
+      <div className="flex flex-1 overflow-y-auto scrollbar-hide bg-white relative">
         {/* Time indicators */}
-        <div className="flex-none w-16 bg-white ring-1 ring-gray-100">
-          <div className="sticky top-0 z-10 bg-white text-sm font-medium text-gray-600 text-center py-2 border-b border-gray-100">Hour</div>
-          <div className="grid grid-cols-1 grid-rows-[repeat(auto-fill,minmax(3.5rem,1fr))]">
+        <div className="flex-none w-16 bg-white ring-1 ring-gray-100 z-10">
+          <div className="sticky top-0 z-20 bg-white text-sm font-medium text-gray-600 text-center py-2 border-b border-gray-100">Hour</div>
+          <div className="grid grid-cols-1">
             {hoursOfDay.map((hour) => (
-              <div key={hour.getTime()} className="relative flex flex-col items-center justify-center h-16 border-t border-gray-100">
+              <div key={hour.getTime()} className="h-16 flex items-center justify-center border-t border-gray-100">
                 <span className="text-sm font-medium text-gray-400">
                   {format(hour, 'h a')}
                 </span>
@@ -93,9 +93,9 @@ const CalendarDayView = ({ currentDate, events }) => {
         </div>
 
         {/* Event grid */}
-        <div className="flex-auto grid grid-cols-1 grid-rows-1 overflow-y-auto scrollbar-hide border-l border-gray-100">
+        <div className="flex-auto grid grid-cols-1 grid-rows-1 overflow-y-auto border-l border-gray-100 relative">
           {/* Background grid with half-hour lines */}
-          <div className="col-start-1 col-end-2 row-start-1 row-end-2">
+          <div className="col-start-1 col-end-2 row-start-1 row-end-2 absolute inset-0">
             {hoursOfDay.map((hour) => (
               <div key={hour.getTime()} className="relative h-16">
                 {/* Hour line */}
@@ -113,7 +113,7 @@ const CalendarDayView = ({ currentDate, events }) => {
           </div>
 
           {/* Events */}
-          <ol className="col-start-1 col-end-2 row-start-1 row-end-2 relative z-20 px-2">
+          <ol className="col-start-1 col-end-2 row-start-1 row-end-2 relative z-20 px-2 min-h-full">
             {filteredEvents.map((event) => {
               const { top, height } = getEventStyles(event);
               const category = EVENT_CATEGORIES[event.category || 'DEFAULT'];
@@ -124,7 +124,7 @@ const CalendarDayView = ({ currentDate, events }) => {
                   className="absolute inset-x-2 flex flex-col transition-all duration-300 hover:z-30"
                   style={{ top, height }}
                 >
-                  <div className={`flex-auto rounded-md border-l-4 ${category.borderColor} p-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white ${category.lightBgColor} bg-opacity-40`}>
+                  <div className={`flex-auto rounded-md border-l-4 ${category.borderColor} p-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white ${category.lightBgColor} bg-opacity-70`}>
                     <p className={`text-sm font-semibold ${category.textColor} mb-1`}>
                       {event.title}
                     </p>

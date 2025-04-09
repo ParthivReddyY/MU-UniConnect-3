@@ -65,7 +65,7 @@ const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, week
   };
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full">
       {/* Week day headers */}
       <div className="flex-none border-b border-gray-200">
         <div className="flex bg-white">
@@ -111,11 +111,11 @@ const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, week
       {/* Time grid with events */}
       <div className="flex flex-1 overflow-y-auto scrollbar-hide">
         {/* Hour markers */}
-        <div className="flex-none w-16 bg-white ring-1 ring-gray-100">
+        <div className="flex-none w-16 bg-white ring-1 ring-gray-100 z-10">
           {hoursOfDay.map((hour) => (
             <div 
               key={hour} 
-              className="relative flex flex-col items-center justify-center h-16 border-t border-gray-100"
+              className="h-16 flex items-center justify-center border-t border-gray-100"
             >
               <span className="text-sm font-medium text-gray-400">{format(setHours(new Date(), hour), 'ha')}</span>
             </div>
@@ -123,21 +123,20 @@ const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, week
         </div>
 
         {/* Days columns with events */}
-        <div className="flex-auto grid grid-cols-7 grid-rows-1 overflow-y-auto scrollbar-hide">
+        <div className="flex-auto grid grid-cols-7 grid-rows-1">
           {/* Render columns for each day */}
           {daysOfWeek.map((day, dayIndex) => (
-            <div key={day.toISOString()} className="relative col-span-1">
+            <div key={day.toISOString()} className="relative col-span-1 border-r border-gray-100 min-h-full">
               {/* Hour grid lines */}
               <div className="absolute inset-0">
                 {hoursOfDay.map((hour) => (
-                  <div key={hour} className="relative">
+                  <div key={hour} className="h-16">
                     {/* Hour line */}
                     <div 
                       className={classNames(
-                        "absolute w-full border-t border-gray-100 h-16",
+                        "w-full border-t border-gray-100 h-full",
                         (hour >= 9 && hour <= 17) ? 'bg-white' : 'bg-gray-50/30'
                       )}
-                      style={{ top: `${(hour - startHour) * 64}px` }}
                     />
                     
                     {/* Half hour line */}
@@ -182,7 +181,7 @@ const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, week
                       className="absolute z-10"
                       style={{ top, height, left, width }}
                     >
-                      <div className={`h-full rounded-md border-l-4 ${category.borderColor} p-1 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white ${category.lightBgColor} bg-opacity-40`}>
+                      <div className={`h-full rounded-md border-l-4 ${category.borderColor} p-1 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white ${category.lightBgColor} bg-opacity-70`}>
                         <div className={`text-xs ${category.textColor} font-medium mb-0.5`}>
                           {format(parseDateTime(event.datetime), 'h:mm a')}
                         </div>

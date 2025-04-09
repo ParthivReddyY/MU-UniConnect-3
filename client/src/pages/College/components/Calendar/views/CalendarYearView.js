@@ -29,7 +29,7 @@ const CalendarYearView = ({ currentYearDate, onMonthClick, events }) => {
   });
 
   return (
-    <div className="grid grid-cols-3 lg:grid-cols-4 gap-8">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
       {months.map((month) => {
         const monthIndex = getMonth(month);
         const monthEvents = eventsByMonth[monthIndex];
@@ -51,7 +51,7 @@ const CalendarYearView = ({ currentYearDate, onMonthClick, events }) => {
         return (
           <div 
             key={month.toString()}
-            className="rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white hover:border-red-200"
+            className="rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white hover:border-red-200 h-full"
             onClick={() => onMonthClick(monthIndex)}
           >
             {/* Month Header */}
@@ -63,7 +63,7 @@ const CalendarYearView = ({ currentYearDate, onMonthClick, events }) => {
             </div>
             
             {/* Month Summary */}
-            <div className="p-3 bg-white flex flex-col">
+            <div className="p-3 bg-white flex flex-col h-full">
               {/* Event count badge */}
               <div className="flex justify-between items-center mb-2">
                 <div className="text-base text-gray-500">
@@ -77,7 +77,7 @@ const CalendarYearView = ({ currentYearDate, onMonthClick, events }) => {
               </div>
 
               {/* Calendar mini visualization with colors by category */}
-              <div className="mt-1 space-y-1">
+              <div className="flex-grow">
                 {Object.keys(daysWithEvents).length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {Object.keys(daysWithEvents)
@@ -98,10 +98,9 @@ const CalendarYearView = ({ currentYearDate, onMonthClick, events }) => {
                         return (
                           <div 
                             key={day}
-                            className={`flex items-center justify-center rounded-lg ${category.lightBgColor} ${category.textColor} border ${category.borderColor} w-9 h-9 text-sm font-medium relative`}
+                            className={`flex items-center justify-center rounded-lg ${category.lightBgColor} ${category.textColor} border ${category.borderColor} w-7 h-7 text-xs font-medium relative`}
                             title={`${daysWithEvents[day].length} events on day ${day}`}
                           >
-                            {/* Date number */}
                             {day}
                           </div>
                         );
@@ -115,7 +114,7 @@ const CalendarYearView = ({ currentYearDate, onMonthClick, events }) => {
 
               {/* Notable events preview with category colors */}
               {monthEvents.length > 0 && (
-                <div className="mt-3 text-sm text-gray-700">
+                <div className="mt-2 text-sm text-gray-700">
                   <div className="font-medium mb-1 text-gray-600">Notable:</div>
                   <ul className="space-y-1">
                     {monthEvents.slice(0, 2).map(event => {
