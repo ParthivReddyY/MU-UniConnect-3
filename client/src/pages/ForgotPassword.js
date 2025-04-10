@@ -149,18 +149,25 @@ const ForgotPassword = () => {
   // Render password reset form
   if (isResetting) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
-        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+      <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden"
+           style={{
+             backgroundImage: 'url("/img/login and signup background.jpg")',
+             backgroundSize: 'cover',
+             backgroundPosition: 'center',
+             backgroundRepeat: 'no-repeat',
+             backgroundAttachment: 'fixed'
+           }}>
+        <div className="absolute top-0 right-0 w-full h-full bg-black bg-opacity-50"></div>
         
         <Link 
           to="/" 
-          className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group"
+          className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group z-10"
         >
           <i className="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
           Back to Home
         </Link>
         
-        <div className="w-full max-w-xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-12 backdrop-blur-sm">
+        <div className="w-full max-w-xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-sm">
           <div className="px-10 pt-10 pb-6 text-center">
             <h1 className="text-3xl font-bold text-white mb-3">Reset Your Password</h1>
             <p className="text-gray-400">Create a new password for your account</p>
@@ -286,18 +293,25 @@ const ForgotPassword = () => {
   // Render OTP verification form
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
-        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+      <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden"
+           style={{
+             backgroundImage: 'url("/img/login and signup background.jpg")',
+             backgroundSize: 'cover',
+             backgroundPosition: 'center',
+             backgroundRepeat: 'no-repeat',
+             backgroundAttachment: 'fixed'
+           }}>
+        <div className="absolute top-0 right-0 w-full h-full bg-black bg-opacity-50"></div>
         
         <Link 
           to="/" 
-          className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group"
+          className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group z-10"
         >
           <i className="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
           Back to Home
         </Link>
         
-        <div className="w-full max-w-md bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-12 backdrop-blur-sm">
+        <div className="w-full max-w-md bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-sm">
           <div className="px-10 pt-10 pb-6 text-center">
             <h1 className="text-3xl font-bold text-white mb-3">Verify Your Email</h1>
             <p className="text-gray-400">Enter the verification code sent to {verificationEmail}</p>
@@ -387,18 +401,25 @@ const ForgotPassword = () => {
 
   // Render email form (initial state)
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
-      <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+    <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden"
+         style={{
+           backgroundImage: 'url("/img/login and signup background.jpg")',
+           backgroundSize: 'cover',
+           backgroundPosition: 'center',
+           backgroundRepeat: 'no-repeat',
+           backgroundAttachment: 'fixed'
+         }}>
+      <div className="absolute top-0 right-0 w-full h-full bg-black bg-opacity-50"></div>
       
       <Link 
         to="/" 
-        className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group"
+        className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group z-10"
       >
         <i className="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
         Back to Home
       </Link>
       
-      <div className="w-full max-w-xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-12 backdrop-blur-sm">
+      <div className="w-full max-w-xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-sm">
         <div className="px-10 pt-10 pb-6 text-center sm:text-left">
           <h1 className="text-4xl font-bold text-white mb-3">Forgot Password</h1>
           <p className="text-gray-400">Enter your email to receive a verification code</p>

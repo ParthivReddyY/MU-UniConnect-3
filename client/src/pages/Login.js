@@ -200,9 +200,16 @@ const Login = () => {
   } rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-100 bg-gray-800 bg-opacity-70 transition-all duration-200 shadow-sm`;
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
-      {/* Background gradient overlay */}
-      <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+    <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden" 
+         style={{
+           backgroundImage: 'url("/img/login and signup background.jpg")',
+           backgroundSize: 'cover',
+           backgroundPosition: 'center',
+           backgroundRepeat: 'no-repeat',
+           backgroundAttachment: 'fixed'
+         }}>
+      {/* Dark overlay for text readability */}
+      <div className="absolute top-0 right-0 w-full h-full bg-black bg-opacity-50"></div>
       
       {/* Back to Home Button */}
       <Link 
@@ -214,7 +221,7 @@ const Login = () => {
       </Link>
       
       {/* Main container with increased width */}
-      <div className="w-full max-w-2xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mt-15 backdrop-blur-sm">
+      <div className="w-full max-w-2xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-sm">
         <div className="px-10 pt-10 pb-6 text-center sm:text-left">
           <h1 className="text-4xl font-bold text-white mb-3">Sign In</h1>
           <p className="text-gray-400">Access your MU-UniConnect account</p>

@@ -384,11 +384,18 @@ const SignUp = () => {
   // Create a separate OTP verification form
   if (isVerifying) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
-        {/* Background gradient overlay */}
-        <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+      <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden"
+           style={{
+             backgroundImage: 'url("/img/login and signup background.jpg")',
+             backgroundSize: 'cover',
+             backgroundPosition: 'center',
+             backgroundRepeat: 'no-repeat',
+             backgroundAttachment: 'fixed'
+           }}>
+        {/* Dark overlay for text readability */}
+        <div className="absolute top-0 right-0 w-full h-full bg-black bg-opacity-50"></div>
         
-        <div className="w-full max-w-md bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-12 backdrop-blur-sm">
+        <div className="w-full max-w-md bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-sm">
           <div className="px-10 pt-10 pb-6 text-center">
             <h1 className="text-3xl font-bold text-white mb-3">Verify Your Email</h1>
             <p className="text-gray-400">Enter the verification code sent to {verificationEmail}</p>
@@ -467,21 +474,28 @@ const SignUp = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12 pt-20 bg-gradient-to-r from-red-500 to-indigo-500 relative">
-      {/* Background gradient overlay */}
-      <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_rgba(79,70,229,0.15),transparent_70%)] mix-blend-multiply"></div>
+    <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-8 relative"
+         style={{
+           backgroundImage: 'url("/img/login and signup background.jpg")',
+           backgroundSize: 'cover',
+           backgroundPosition: 'center',
+           backgroundRepeat: 'no-repeat',
+           backgroundAttachment: 'fixed'
+         }}>
+      {/* Fixed position overlay that covers the entire viewport */}
+      <div className="fixed inset-0 bg-black bg-opacity-50 pointer-events-none"></div>
       
-      {/* Back to Home Button */}
+      {/* Back to Home Button - fixed position */}
       <Link 
         to="/" 
-        className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group"
+        className="fixed top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group z-20"
       >
         <i className="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
         Back to Home
       </Link>
       
-      {/* Form container */}
-      <div className="w-full max-w-4xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-12 backdrop-blur-sm">
+      {/* Form container with improved z-index and positioning */}
+      <div className="w-full max-w-4xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-8 backdrop-blur-sm">
         <div className="px-10 pt-10 pb-6 text-center sm:text-left">
           <h1 className="text-4xl font-bold text-white mb-3">Create Account</h1>
           <p className="text-gray-400">Join the Mahindra University community</p>
@@ -505,11 +519,9 @@ const SignUp = () => {
           {/* Personal Information Section */}
           <div className="mb-8 pb-6 border-b border-gray-800">
             <h3 className="text-lg font-semibold text-white mb-5 flex items-center">
-              <div className="bg-gradient-to-br from-red-500 to-red-700 p-3 w-12 h-12 mr-3 shadow-md group-hover:shadow-lg transition-all duration-300 relative overflow-hidden flex items-center justify-center rounded-lg">
-                <i className="fas fa-id-card text-white text-lg relative z-10"></i>
-                <div className="absolute inset-0 bg-gradient-to-tr from-red-600 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-                <div className="absolute -bottom-6 -right-6 w-12 h-12 bg-white opacity-10 transform scale-0 group-hover:scale-100 transition-transform duration-500"></div>
-              </div>
+              <span className="form-section-icon">
+                <i className="fas fa-id-card text-white"></i>
+              </span>
               Personal Information
             </h3>
             <div className="flex flex-wrap -mx-2">
@@ -624,11 +636,9 @@ const SignUp = () => {
           {/* Academic Information Section */}
           <div className="mb-8 pb-6 border-b border-gray-800">
             <h3 className="text-lg font-semibold text-white mb-5 flex items-center">
-              <div className="bg-gradient-to-br from-red-500 to-red-700 p-3 w-12 h-12 mr-3 shadow-md group-hover:shadow-lg transition-all duration-300 relative overflow-hidden flex items-center justify-center rounded-lg">
-                <i className="fas fa-university text-white text-lg relative z-10"></i>
-                <div className="absolute inset-0 bg-gradient-to-tr from-red-600 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-                <div className="absolute -bottom-6 -right-6 w-12 h-12 bg-white opacity-10 transform scale-0 group-hover:scale-100 transition-transform duration-500"></div>
-              </div>
+              <span className="form-section-icon">
+                <i className="fas fa-university text-white"></i>
+              </span>
               Academic Information
             </h3>
             <div className="flex flex-wrap -mx-2">
@@ -805,11 +815,9 @@ const SignUp = () => {
           {/* Account Security Section */}
           <div className="mb-8">
             <h3 className="text-lg font-semibold text-white mb-5 flex items-center">
-              <div className="bg-gradient-to-br from-red-500 to-red-700 p-3 w-12 h-12 mr-3 shadow-md group-hover:shadow-lg transition-all duration-300 relative overflow-hidden flex items-center justify-center rounded-lg">
-                <i className="fas fa-fingerprint text-white text-lg relative z-10"></i>
-                <div className="absolute inset-0 bg-gradient-to-tr from-red-600 to-red-800 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg"></div>
-                <div className="absolute -bottom-6 -right-6 w-12 h-12 bg-white opacity-10 transform scale-0 group-hover:scale-100 transition-transform duration-500"></div>
-              </div>
+              <span className="form-section-icon">
+                <i className="fas fa-fingerprint text-white"></i>
+              </span>
               Account Security
             </h3>
             <div className="flex flex-wrap -mx-2">
