@@ -1,7 +1,9 @@
-import EventBooking from './EventBooking';
-import FacultyAppointment from './FacultyAppointment';
-import PresentationSlot from './PresentationSlot';
-import ProjectSubmission from './ProjectSubmission';
+import { 
+  EventBooking,
+  FacultyAppointment,
+  PresentationSlot,
+  ProjectSubmission
+} from '../../components/Bookings';
 
 export {
   EventBooking,
