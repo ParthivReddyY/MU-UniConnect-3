@@ -22,12 +22,14 @@ import {
   parse,
   isValid
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, MoreHorizontal, X, Loader } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreHorizontal, X, Loader, Calendar, Clock, Tag, Plus, Check } from 'lucide-react';
 import CalendarDayView from './Calendar/views/CalendarDayView';
 import CalendarWeekView from './Calendar/views/CalendarWeekView';
 import CalendarMonthView from './Calendar/views/CalendarMonthView';
 import CalendarYearView from './Calendar/views/CalendarYearView';
 import SelectedEventsList from './Calendar/components/SelectedEventsList';
+import { useAuth } from '../../../contexts/AuthContext';
+
 // --- Configuration ---
 const weekStartsOn = 1; // 1 = Monday
 
@@ -118,18 +120,85 @@ export function classNames(...classes) {
   return classes.filter(Boolean).join(' ');
 }
 
-// Event form component
+// Event form component with Notion-like design
 const EventForm = ({ isOpen, onClose, onSave, initialDate }) => {
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState(format(initialDate, 'yyyy-MM-dd'));
   const [eventTime, setEventTime] = useState('12:00');
   const [eventDuration, setEventDuration] = useState(1);
   const [eventCategory, setEventCategory] = useState('DEFAULT');
+  const [categoryMenuOpen, setCategoryMenuOpen] = useState(false);
+  const categoryRef = useRef(null);
+  
+  // New state variables for additional options
+  const [location, setLocation] = useState('');
+  const [isAllDay, setIsAllDay] = useState(false);
+  const [repeatOption, setRepeatOption] = useState('none');
+  const [description, setDescription] = useState('');
+  const [repeatMenuOpen, setRepeatMenuOpen] = useState(false);
+  
+  const repeatRef = useRef(null);
+  
+  // Repeat options
+  const REPEAT_OPTIONS = {
+    none: { name: 'Does not repeat', value: 'none' },
+    daily: { name: 'Daily', value: 'daily' },
+    weekly: { name: 'Weekly', value: 'weekly' },
+    monthly: { name: 'Monthly', value: 'monthly' },
+    yearly: { name: 'Yearly', value: 'yearly' },
+  };
+  
+  // Reset form values when initialDate changes
+  useEffect(() => {
+    setEventDate(format(initialDate, 'yyyy-MM-dd'));
+  }, [initialDate]);
+  
+  // Close category dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (categoryRef.current && !categoryRef.current.contains(e.target)) {
+        setCategoryMenuOpen(false);
+      }
+      if (repeatRef.current && !repeatRef.current.contains(e.target)) {
+        setRepeatMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [categoryRef, repeatRef]);
+  
+  // Effect to adjust time when all-day is toggled
+  useEffect(() => {
+    if (isAllDay) {
+      setEventTime('00:00');
+      setEventDuration(24);
+    } else if (eventDuration === 24 && eventTime === '00:00') {
+      // Reset to default if turning off all-day
+      setEventTime('12:00');
+      setEventDuration(1);
+    }
+  }, [isAllDay, eventDuration, eventTime]);
+  
+  // Fix for all-day toggle - refactor for better reactivity
+  useEffect(() => {
+    if (isAllDay) {
+      // When all-day is toggled on, set time to start of day and duration to 24 hours
+      if (eventTime !== '00:00' || eventDuration !== 24) {
+        setEventTime('00:00');
+        setEventDuration(24);
+      }
+    } else if (eventTime === '00:00' && eventDuration === 24) {
+      // Only reset if the current values match our all-day defaults
+      setEventTime('12:00');
+      setEventDuration(1);
+    }
+  }, [isAllDay, eventTime, eventDuration]);
   
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    if (eventTitle.trim() && eventDate && eventTime && eventDuration > 0) {
+    if (eventTitle.trim() && eventDate) {
       // Parse time
       const [hours, minutes] = eventTime.split(':').map(Number);
       const selectedDate = parse(eventDate, 'yyyy-MM-dd', new Date());
@@ -143,10 +212,15 @@ const EventForm = ({ isOpen, onClose, onSave, initialDate }) => {
         id: Date.now(),
         title: eventTitle.trim(),
         date: eventDate,
-        time: format(startDateTime, 'h:mma'),
+        time: isAllDay ? 'All day' : format(startDateTime, 'h:mma'),
         datetime: format(startDateTime, "yyyy-MM-dd'T'HH:mm"),
         endDatetime: format(endDateTime, "yyyy-MM-dd'T'HH:mm"),
-        category: eventCategory
+        category: eventCategory,
+        // Add new fields
+        location: location.trim(),
+        isAllDay: isAllDay,
+        repeat: repeatOption,
+        description: description.trim()
       };
       
       onSave(newEvent);
@@ -157,122 +231,265 @@ const EventForm = ({ isOpen, onClose, onSave, initialDate }) => {
   if (!isOpen) return null;
   
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-25 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4">
-        <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-          <h3 className="text-lg font-medium text-gray-900">Add New Event</h3>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-500"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        
-        <form onSubmit={handleSubmit} className="px-6 py-4 space-y-4">
-          {/* Event Title */}
-          <div>
-            <label htmlFor="event-title" className="block text-sm font-medium text-gray-700">
-              Event Title
-            </label>
-            <input
-              type="text"
-              id="event-title"
-              value={eventTitle}
-              onChange={(e) => setEventTitle(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-              placeholder="Enter event title"
-              required
-            />
-          </div>
-          
-          {/* Event Date */}
-          <div>
-            <label htmlFor="event-date" className="block text-sm font-medium text-gray-700">
-              Date
-            </label>
-            <input
-              type="date"
-              id="event-date"
-              value={eventDate}
-              onChange={(e) => setEventDate(e.target.value)}
-              step="0.25"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-              required
-            />
-          </div>
-          
-          {/* Event Time */}
-          <div>
-            <label htmlFor="event-time" className="block text-sm font-medium text-gray-700">
-              Time
-            </label>
-            <input
-              type="time"
-              id="event-time"
-              value={eventTime}
-              onChange={(e) => setEventTime(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-              required
-            />
-          </div>
-          
-          {/* Event Category */}
-          <div>
-            <label htmlFor="event-category" className="block text-sm font-medium text-gray-700">
-              Category
-            </label>
-            <select
-              id="event-category"
-              value={eventCategory}
-              onChange={(e) => setEventCategory(e.target.value)}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-auto overflow-hidden animate-fade-in">
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          {/* Header */}
+          <div className="px-4 pt-3 pb-2 flex items-center justify-between border-b border-gray-100">
+            <h3 className="text-xl font-medium text-gray-900">New Event</h3>
+            <button 
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-1 text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none transition-colors"
             >
-              {Object.entries(EVENT_CATEGORIES).map(([key, category]) => (
-                <option key={key} value={key}>{category.name}</option>
-              ))}
-            </select>
+              <X className="w-5 h-5" />
+            </button>
           </div>
           
-          {/* Event Duration */}
-          <div>
-            <label htmlFor="event-duration" className="block text-sm font-medium text-gray-700">
-              Duration (hours)
-            </label>
-            <input
-              type="number"
-              id="event-duration"
-              value={eventDuration}
-              onChange={(e) => setEventDuration(Math.max(0.25, Number(e.target.value)))}
-              min="0.25"
-              step="0.25"
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-red-500 focus:ring-red-500 sm:text-sm"
-              required
-            />
-          </div>
-          
-          {/* Preview */}
-          <div className="pt-2">
-            <p className="text-sm text-gray-500 mb-2">Event Preview:</p>
-            <div className={`inline-flex items-center rounded-md px-2.5 py-1 text-sm font-medium ${EVENT_CATEGORIES[eventCategory].lightBgColor} ${EVENT_CATEGORIES[eventCategory].textColor} ring-1 ring-inset ${EVENT_CATEGORIES[eventCategory].borderColor}`}>
-              {eventTitle || "Event Title"}
+          <div className="px-4 py-2 overflow-y-auto max-h-[calc(100vh-250px)]">
+            {/* Event Title and All-Day Toggle in one row */}
+            <div className="flex items-center mb-3">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={eventTitle}
+                  onChange={(e) => setEventTitle(e.target.value)}
+                  className="w-full text-xl font-medium placeholder-gray-400 border-0 border-b-2 border-transparent focus:border-red-500 focus:ring-0 px-0 py-1 bg-white"
+                  placeholder="Event title"
+                  required
+                  autoFocus
+                />
+              </div>
+              <div className="ml-4 flex items-center">
+                <span className="text-sm font-medium text-gray-500 mr-2">All day</span>
+                <label htmlFor="all-day-toggle" className="relative inline-block w-10 align-middle select-none cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    id="all-day-toggle"
+                    checked={isAllDay}
+                    onChange={() => setIsAllDay(!isAllDay)}
+                    className="sr-only"
+                  />
+                  <div className={`block h-6 w-10 rounded-full transition-colors ${isAllDay ? 'bg-red-500' : 'bg-gray-200'}`}></div>
+                  <div className={`dot absolute left-1 top-1 h-4 w-4 rounded-full bg-white transition-transform ${isAllDay ? 'transform translate-x-4' : ''}`}></div>
+                </label>
+              </div>
+            </div>
+            
+            {/* Main form grid - 3 columns */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              {/* Date display */}
+              <div className="bg-gray-50 rounded-lg p-2 flex items-center">
+                <div className="w-full">
+                  <p className="text-xs font-medium text-gray-500 mb-1">Date</p>
+                  <div className="flex items-center">
+                    <Calendar className="h-4 w-4 text-gray-400 mr-2" />
+                    <input
+                      type="date"
+                      value={eventDate}
+                      onChange={(e) => setEventDate(e.target.value)}
+                      className="border-0 p-0 text-sm text-gray-800 focus:ring-0 bg-transparent"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Time picker */}
+              <div className={`bg-gray-50 rounded-lg p-2 ${isAllDay ? 'opacity-50' : ''}`}>
+                <label htmlFor="event-time" className="block text-xs font-medium text-gray-500 mb-1">Start Time</label>
+                <div className="flex items-center">
+                  <Clock className="h-4 w-4 text-gray-400 mr-2" />
+                  <input
+                    type="time"
+                    id="event-time"
+                    value={eventTime}
+                    onChange={(e) => setEventTime(e.target.value)}
+                    className="w-full border-0 p-0 text-sm text-gray-800 focus:ring-0 bg-transparent"
+                    required
+                    disabled={isAllDay}
+                  />
+                </div>
+              </div>
+              
+              {/* Duration */}
+              <div className={`bg-gray-50 rounded-lg p-2 ${isAllDay ? 'opacity-50' : ''}`}>
+                <label htmlFor="event-duration" className="block text-xs font-medium text-gray-500 mb-1">Duration (hours)</label>
+                <div className="flex items-center">
+                  <span className="text-gray-400 mr-2">hr</span>
+                  <input
+                    type="number"
+                    id="event-duration"
+                    value={eventDuration}
+                    onChange={(e) => setEventDuration(Math.max(0.25, Number(e.target.value)))}
+                    min="0.25"
+                    step="0.25"
+                    className="w-full border-0 p-0 text-sm text-gray-800 focus:ring-0 bg-transparent"
+                    required
+                    disabled={isAllDay}
+                  />
+                </div>
+              </div>
+            </div>
+            
+            {/* Second row - Location, Repeat, Category */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-3">
+              {/* Location */}
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="flex items-center space-x-1 mb-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  <label htmlFor="event-location" className="text-xs font-medium text-gray-500">Location</label>
+                </div>
+                <input
+                  type="text"
+                  id="event-location"
+                  value={location}
+                  onChange={(e) => setLocation(e.target.value)}
+                  placeholder="Add location"
+                  className="w-full border-0 p-0 text-sm text-gray-800 focus:ring-0 bg-transparent"
+                />
+              </div>
+              
+              {/* Repetition */}
+              <div className="relative bg-gray-50 rounded-lg p-2" ref={repeatRef}>
+                <div 
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setRepeatMenuOpen(!repeatMenuOpen)}
+                >
+                  <div className="flex items-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                    </svg>
+                    <span className="text-xs font-medium text-gray-500">Repeat</span>
+                  </div>
+                  <div className="flex items-center">
+                    <p className="text-sm text-gray-800 mr-1">{REPEAT_OPTIONS[repeatOption].name}</p>
+                    <ChevronRight className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${repeatMenuOpen ? 'rotate-90' : ''}`} />
+                  </div>
+                </div>
+                
+                {repeatMenuOpen && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-40 overflow-auto">
+                    <div className="p-1">
+                      {Object.values(REPEAT_OPTIONS).map((option) => (
+                        <div 
+                          key={option.value} 
+                          className="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer rounded-md"
+                          onClick={() => {
+                            setRepeatOption(option.value);
+                            setRepeatMenuOpen(false);
+                          }}
+                        >
+                          <span className="text-sm text-gray-800">{option.name}</span>
+                          {repeatOption === option.value && (
+                            <Check className="w-4 h-4 text-red-500 ml-auto" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Category dropdown */}
+              <div className="relative bg-gray-50 rounded-lg p-2" ref={categoryRef}>
+                <div 
+                  className="flex items-center justify-between cursor-pointer"
+                  onClick={() => setCategoryMenuOpen(!categoryMenuOpen)}
+                >
+                  <div className="flex items-center space-x-1">
+                    <Tag className="h-3 w-3 text-gray-400" />
+                    <span className="text-xs font-medium text-gray-500">Category</span>
+                  </div>
+                  <div className="flex items-center">
+                    <div className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs ${EVENT_CATEGORIES[eventCategory].lightBgColor} ${EVENT_CATEGORIES[eventCategory].textColor} ring-1 ring-inset ${EVENT_CATEGORIES[eventCategory].borderColor}`}>
+                      {EVENT_CATEGORIES[eventCategory].name}
+                    </div>
+                    <ChevronRight className={`h-4 w-4 text-gray-400 ml-1 transition-transform duration-200 ${categoryMenuOpen ? 'rotate-90' : ''}`} />
+                  </div>
+                </div>
+                
+                {categoryMenuOpen && (
+                  <div className="absolute left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 z-20 max-h-40 overflow-auto">
+                    <div className="grid grid-cols-2 gap-1 p-1">
+                      {Object.entries(EVENT_CATEGORIES).map(([key, category]) => (
+                        <div 
+                          key={key} 
+                          className="flex items-center px-3 py-1.5 hover:bg-gray-50 cursor-pointer rounded-md"
+                          onClick={() => {
+                            setEventCategory(key);
+                            setCategoryMenuOpen(false);
+                          }}
+                        >
+                          <div className={`w-2 h-2 rounded-full ${category.bgColor} mr-2`}></div>
+                          <span className="text-sm text-gray-800">{category.name}</span>
+                          {eventCategory === key && (
+                            <Check className="w-3 h-3 text-red-500 ml-auto" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {/* Description and Preview in one row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+              {/* Description */}
+              <div className="bg-gray-50 rounded-lg p-2">
+                <div className="flex items-center space-x-1 mb-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                  </svg>
+                  <label htmlFor="event-description" className="text-xs font-medium text-gray-500">Description</label>
+                </div>
+                <textarea
+                  id="event-description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Add details about this event..."
+                  rows="2"
+                  className="w-full border-0 p-0 text-sm text-gray-800 focus:ring-0 bg-transparent resize-none"
+                />
+              </div>
+              
+              {/* Event summary/preview */}
+              <div className="bg-gray-50 rounded-lg p-2">
+                <p className="text-xs font-medium text-gray-500 mb-1">Event Preview:</p>
+                <div className="flex items-start gap-2">
+                  <div className={`w-2 h-2 rounded-full ${EVENT_CATEGORIES[eventCategory].bgColor} mt-1 flex-shrink-0`}></div>
+                  <div className="flex-1">
+                    <p className={`font-medium text-sm ${EVENT_CATEGORIES[eventCategory].textColor}`}>
+                      {eventTitle || "Event Title"}
+                    </p>
+                    <div className="mt-0.5 text-xs text-gray-600 space-y-0.5">
+                      <p className="line-clamp-1">{format(parse(eventDate, 'yyyy-MM-dd', new Date()), 'EEE, MMM d')} • {isAllDay ? 'All day' : format(parse(`${eventDate}T${eventTime}`, "yyyy-MM-dd'T'HH:mm", new Date()), 'h:mm a')}</p>
+                      {location && <p className="line-clamp-1">{location}</p>}
+                      {repeatOption !== 'none' && <p className="line-clamp-1">Repeats {REPEAT_OPTIONS[repeatOption].name.toLowerCase()}</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           
-          {/* Buttons */}
-          <div className="pt-4 flex justify-end space-x-3">
+          {/* Footer with buttons */}
+          <div className="px-4 py-2 bg-gray-50 flex justify-end space-x-3 border-t border-gray-100">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-md border border-gray-300 bg-white py-2 px-4 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="px-3 py-1.5 text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 border border-gray-300 rounded-md shadow-sm transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="rounded-md border border-transparent bg-red-600 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              className="px-3 py-1.5 text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 border border-transparent rounded-md shadow-sm transition-colors"
             >
-              Add Event
+              Create Event
             </button>
           </div>
         </form>
@@ -302,13 +519,17 @@ function AcademicCalendar() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // Reference for the view dropdown menu for detecting outside clicks
+  // Get auth context to check user roles
+  const { currentUser, hasRole } = useAuth();
+  
+  // Check if user can add events (admin, faculty, or clubHead)
+  const canAddEvents = () => {
+    return currentUser && hasRole(['admin', 'faculty', 'clubHead']);
+  };
+  
+  // View menu reference and other refs
   const viewMenuRef = useRef(null);
-  
-  // Add this new reference to track if a view change is in progress
   const viewChangeInProgressRef = useRef(false);
-  
-  // Track years we've already loaded
   const loadedYearsRef = useRef(new Set());
 
   // Effect to close the view menu when clicking outside
@@ -431,13 +652,16 @@ function AcademicCalendar() {
 
   const handleDateClick = (day) => {
     setSelectedDate(day);
+    
+    // Adjust current date based on view
     if (view === 'month' && !isSameMonth(day, currentDate)) {
       setCurrentDate(startOfMonth(day));
-    }
-    // When clicking a day header in Week view, switch to Day view for that day
-    if (view === 'week') {
-      setView('day');
-      setCurrentDate(day); // Set Day view's reference date
+    } else if (view === 'week') {
+      setCurrentDate(day);
+      // Optionally switch to day view when clicking in week view
+      // setView('day'); 
+    } else {
+      setCurrentDate(day);
     }
   };
 
@@ -461,12 +685,40 @@ function AcademicCalendar() {
   };
 
   const handleAddEventClick = () => {
-    setShowEventForm(true);
+    // Only show form if user has permission
+    if (canAddEvents()) {
+      // No change needed here - selectedDate is already properly passed to EventForm
+      setShowEventForm(true);
+    } else {
+      setError("You don't have permission to add events. Only faculty, club heads, and administrators can add events.");
+      // Clear error after 5 seconds
+      setTimeout(() => setError(null), 5000);
+    }
   };
 
   const handleSaveEvent = (newEvent) => {
     setUserEvents(prev => [...prev, newEvent]);
     // Add success notification if needed
+  };
+
+  // Add handler for double-click on day
+  const handleDayDoubleClick = (day) => {
+    if (canAddEvents()) {
+      setSelectedDate(day);
+      setShowEventForm(true);
+    }
+  };
+
+  // Double-click handler for events - passing to calendar views
+  const handleEventDoubleClick = (event) => {
+    if (canAddEvents()) {
+      // Use the event date if available
+      const eventDate = parseDateTime(event.datetime || event.date);
+      if (eventDate && isValid(eventDate)) {
+        setSelectedDate(eventDate);
+      }
+      setShowEventForm(true);
+    }
   };
 
   // --- Dynamic Header Title ---
@@ -587,14 +839,21 @@ function AcademicCalendar() {
             )}
           </div>
 
-          {/* Add event button - matched width with other buttons */}
-          <button
-            onClick={handleAddEventClick}
-            type="button"
-            className="h-10 w-24 rounded-md bg-red-600 text-base font-medium text-white shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 transition-colors flex items-center justify-center"
-          >
-            <span className="mr-1">+</span> Add event
-          </button>
+          {/* Add event button - Only shown to authorized users */}
+          {currentUser && (
+            <button
+              onClick={handleAddEventClick}
+              type="button"
+              className={`h-10 px-4 rounded-md text-base font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-red-300 transition-colors flex items-center justify-center ${
+                canAddEvents() 
+                  ? "bg-red-600 text-white hover:bg-red-700" 
+                  : "bg-gray-100 text-gray-400 cursor-not-allowed"
+              }`}
+              title={canAddEvents() ? "Add new event" : "Only faculty, club heads, and administrators can add events"}
+            >
+              <Plus className="w-4 h-4 mr-1" /> Add event
+            </button>
+          )}
         </div>
 
         {/* Mobile Controls - More consistent styling too */}
@@ -616,8 +875,10 @@ function AcademicCalendar() {
           {mobileMenuOpen && (
             <div className="absolute right-0 top-full z-50 mt-2 w-36 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none border border-gray-100">
               <div className="py-1">
-                {/* Uniform styling for mobile menu */}
-                <button onClick={handleAddEventClick} className="block w-full px-4 py-2 text-left text-base text-red-600 font-medium hover:bg-red-50 transition-colors">Create event</button>
+                {/* Only show Create event option to authorized users */}
+                {canAddEvents() && (
+                  <button onClick={handleAddEventClick} className="block w-full px-4 py-2 text-left text-base text-red-600 font-medium hover:bg-red-50 transition-colors">Create event</button>
+                )}
                 <button onClick={() => handleViewChange('day')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Day</button>
                 <button onClick={() => handleViewChange('week')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Week</button>
                 <button onClick={() => handleViewChange('month')} className="block w-full px-4 py-2 text-left text-base text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">Month</button>
@@ -640,6 +901,7 @@ function AcademicCalendar() {
             <CalendarDayView
               currentDate={selectedDate}
               events={allEvents}
+              onEventDoubleClick={handleEventDoubleClick}
             />
           )}
           {view === 'week' && (
@@ -648,6 +910,7 @@ function AcademicCalendar() {
               selectedDate={selectedDate}
               events={allEvents}
               onDateClick={handleDateClick}
+              onEventDoubleClick={handleEventDoubleClick}
               weekStartsOn={weekStartsOn}
             />
           )}
@@ -656,8 +919,10 @@ function AcademicCalendar() {
               currentMonthDate={currentDate}
               selectedDate={selectedDate}
               onDateClick={handleDateClick}
+              onEventDoubleClick={handleEventDoubleClick}
               events={allEvents}
               weekStartsOn={weekStartsOn}
+              onDayDoubleClick={handleDayDoubleClick}
             />
           )}
           {view === 'year' && (
@@ -672,13 +937,15 @@ function AcademicCalendar() {
         </div>
       </div>
 
-      {/* Event Form Modal */}
-      <EventForm 
-        isOpen={showEventForm}
-        onClose={() => setShowEventForm(false)}
-        onSave={handleSaveEvent}
-        initialDate={selectedDate}
-      />
+      {/* Event Form Modal - Ensure selectedDate is passed */}
+      {canAddEvents() && (
+        <EventForm 
+          isOpen={showEventForm}
+          onClose={() => setShowEventForm(false)}
+          onSave={handleSaveEvent}
+          initialDate={selectedDate}
+        />
+      )}
 
       {/* Selected Day Events Section - Clean white styling */}
       {view === 'month' && eventsForDate(selectedDate).length > 0 && (

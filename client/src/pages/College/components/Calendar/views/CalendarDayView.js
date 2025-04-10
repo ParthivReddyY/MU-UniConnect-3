@@ -2,7 +2,7 @@ import React from 'react';
 import { format, addHours, isValid } from 'date-fns';
 import { classNames, parseDateTime, EVENT_CATEGORIES } from '../../AcademicCalendar';
 
-const CalendarDayView = ({ currentDate, events }) => {
+const CalendarDayView = ({ currentDate, events, onEventDoubleClick }) => {
   // Get events for the current day
   const filteredEvents = events.filter(event => {
     const eventDate = parseDateTime(event.datetime);
@@ -123,8 +123,9 @@ const CalendarDayView = ({ currentDate, events }) => {
                   key={event.id}
                   className="absolute inset-x-2 flex flex-col transition-all duration-300 hover:z-30"
                   style={{ top, height }}
+                  onDoubleClick={() => onEventDoubleClick && onEventDoubleClick(event)}
                 >
-                  <div className={`flex-auto rounded-md border-l-4 ${category.borderColor} p-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white ${category.lightBgColor} bg-opacity-70`}>
+                  <div className={`flex-auto rounded-md border-l-4 ${category.borderColor} p-2 overflow-hidden shadow-sm hover:shadow-md transition-shadow bg-white ${category.lightBgColor} bg-opacity-70 cursor-pointer`}>
                     <p className={`text-sm font-semibold ${category.textColor} mb-1`}>
                       {event.title}
                     </p>

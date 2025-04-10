@@ -12,7 +12,7 @@ import {
 } from 'date-fns';
 import { classNames, parseDateTime, EVENT_CATEGORIES } from '../../AcademicCalendar';
 
-const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, weekStartsOn = 1 }) => {
+const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, onEventDoubleClick, weekStartsOn = 1 }) => {
   // Generate days of the week
   const startDate = startOfWeek(currentDate, { weekStartsOn });
   const endDate = endOfWeek(currentDate, { weekStartsOn });
@@ -180,6 +180,7 @@ const CalendarWeekView = ({ currentDate, selectedDate, events, onDateClick, week
                       key={event.id}
                       className="absolute z-10"
                       style={{ top, height, left, width }}
+                      onDoubleClick={() => onEventDoubleClick && onEventDoubleClick(event)}
                     >
                       <div className={`h-full rounded-md border-l-4 ${category.borderColor} p-1 overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-pointer bg-white ${category.lightBgColor} bg-opacity-70`}>
                         <div className={`text-xs ${category.textColor} font-medium mb-0.5`}>

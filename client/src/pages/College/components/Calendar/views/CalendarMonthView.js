@@ -13,7 +13,7 @@ import {
 } from 'date-fns';
 import { classNames, parseDateTime, EVENT_CATEGORIES } from '../../AcademicCalendar';
 
-const CalendarMonthView = ({ currentMonthDate, selectedDate, onDateClick, events, weekStartsOn = 1 }) => {
+const CalendarMonthView = ({ currentMonthDate, selectedDate, onDateClick, onEventDoubleClick, events, weekStartsOn = 1, onDayDoubleClick }) => {
   // Create date range for the month grid
   const monthStart = startOfMonth(currentMonthDate);
   const monthEnd = endOfMonth(currentMonthDate);
@@ -78,6 +78,7 @@ const CalendarMonthView = ({ currentMonthDate, selectedDate, onDateClick, events
                     'border border-gray-100'
                   )}
                   onClick={() => onDateClick(day)}
+                  onDoubleClick={() => onDayDoubleClick && onDayDoubleClick(day)}
                 >
                   {/* Day number */}
                   <time
@@ -96,8 +97,14 @@ const CalendarMonthView = ({ currentMonthDate, selectedDate, onDateClick, events
                     {visibleEvents.map((event) => {
                       const category = EVENT_CATEGORIES[event.category || 'DEFAULT'];
                       return (
-                        <li key={event.id}>
-                          <div className={`flex items-center rounded-md px-2 py-0.5 ${category.lightBgColor} ${category.textColor} border-l-[3px] ${category.borderColor} shadow-sm transition-all hover:shadow-md`}>
+                        <li 
+                          key={event.id} 
+                          onDoubleClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering the day's double click
+                            onEventDoubleClick && onEventDoubleClick(event);
+                          }}
+                        >
+                          <div className={`flex items-center rounded-md px-2 py-0.5 ${category.lightBgColor} ${category.textColor} border-l-[3px] ${category.borderColor} shadow-sm transition-all hover:shadow-md cursor-pointer`}>
                             <p className="truncate text-xs font-medium flex-grow" title={event.title}>
                               {event.title}
                             </p>

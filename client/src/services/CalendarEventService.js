@@ -6,7 +6,7 @@ const eventsCache = {};
  * @param {number} year - The year to fetch holidays for
  * @returns {Promise<Array>} - Array of holiday events
  */
-const fetchPublicHolidays = async (year) => {
+export const fetchPublicHolidays = async (year) => {
   try {
     const response = await fetch(`https://date.nager.at/api/v3/publicholidays/${year}/IN`);
     
@@ -37,7 +37,7 @@ const fetchPublicHolidays = async (year) => {
  * @param {number} year - The year to fetch festivals for
  * @returns {Promise<Array>} - Array of festival events
  */
-const fetchHinduFestivals = async (year) => {
+export const fetchHinduFestivals = async (year) => {
   // Try using a free API for Hindu festivals - Holiday API with a free tier
   try {
     // Using public proxy to avoid CORS issues with the free API
