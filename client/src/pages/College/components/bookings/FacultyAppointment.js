@@ -634,30 +634,78 @@ const FacultyAppointmentComponent = () => {
     }, 300);
   };
 
+  // Function to create appointment
+  const createAppointment = async (data) => {
+    try {
+      console.log('Sending appointment data to server:', JSON.stringify(data, null, 2));
+      const response = await api.post('/api/appointments', data);
+      console.log('Server response:', response.data);
+      return {
+        success: response.status === 201 || response.status === 200,
+        message: response.data.message,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('Error creating appointment:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to create appointment';
+      const errorDetails = error.response?.data?.error || error.message;
+      console.error('Error details:', errorDetails);
+      return {
+        success: false,
+        message: errorMessage,
+        error: errorDetails
+      };
+    }
+  };
+
   // Handle form submission
   const handleSubmit = () => {
     setIsSubmitting(true);
     
     // Create submission data with student info and faculty info
     const submissionData = {
-      ...formData,
-      studentInfo: {
-        ...studentInfo,
-        userId: currentUser._id
+      facultyInfo: {
+        _id: selectedFaculty.id || selectedFaculty._id, // Support both formats
+        userId: selectedFaculty.id || selectedFaculty._id, // Support both formats
+        name: selectedFaculty.name,
+        email: selectedFaculty.email,
+        department: selectedFaculty.department
       },
-      facultyInfo: selectedFaculty
+      course: formData.course,
+      appointment_date: formData.appointment_date,
+      appointment_time: formData.appointment_time,
+      duration: formData.duration,
+      custom_duration: formData.duration === 'custom' ? parseInt(formData.custom_duration, 10) : undefined,
+      meeting_mode: formData.meeting_mode,
+      priority: formData.priority,
+      phone: formData.phone,
+      reason: formData.reason,
+      alt_date_1: formData.alt_date_1,
+      alt_time_1: formData.alt_time_1,
+      alt_date_2: formData.alt_date_2,
+      alt_time_2: formData.alt_time_2
     };
     
-    // Simulate API call
-    setTimeout(() => {
-      console.log('Form submitted:', submissionData);
-      console.log('File:', selectedFile);
-      
-      handleCloseModal(); // Use the new close modal function
-      setIsSubmitting(false);
-      showMessage('Your appointment request has been submitted successfully!', 'success');
-      resetForm();
-    }, 1500);
+    // Send API request to create appointment
+    createAppointment(submissionData)
+      .then(response => {
+        if (response.success) {
+          handleCloseModal(); // Close the modal
+          setIsSubmitting(false);
+          showMessage('Your appointment request has been submitted successfully!', 'success');
+          resetForm();
+        } else {
+          setIsSubmitting(false);
+          handleCloseModal(); // Close the modal
+          showMessage(response.message || 'Failed to submit appointment', 'error');
+        }
+      })
+      .catch(error => {
+        console.error('Appointment submission error:', error);
+        setIsSubmitting(false);
+        handleCloseModal(); // Close the modal
+        showMessage('An error occurred while submitting your appointment', 'error');
+      });
   };
 
   // Format a date for display

@@ -1,70 +1,85 @@
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 
-// Authenticate user based on JWT
+// Authenticate user middleware
 const authenticateUser = async (req, res, next) => {
-  // Check header
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ message: 'Authentication invalid' });
-  }
-  
-  const token = authHeader.split(' ')[1];
-  
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-    // Attach the user and his/her permissions to the request object
+    // Get token from Authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({ success: false, message: 'Authorization token required' });
+    }
+    
+    const token = authHeader.split(' ')[1];
+    
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Find the user
+    const user = await User.findById(decoded.userId);
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'User not found' });
+    }
+    
+    // Add user info to request object
+    // Include both userId and _id to ensure both formats are available
     req.user = {
-      userId: payload.userId,
-      name: payload.name,
-      role: payload.role,
-      email: payload.email
+      userId: user._id,
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      department: user.department,
+      studentId: user.studentId
     };
+    
     next();
   } catch (error) {
-    return res.status(401).json({ message: 'Authentication invalid' });
-  }
-};
-
-// Role-based authorization middleware
-const authorizeRoles = (...roles) => {
-  return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ 
-        message: `User with role ${req.user.role} is not authorized to access this route` 
-      });
+    console.error('Authentication error:', error);
+    
+    if (error.name === 'JsonWebTokenError') {
+      return res.status(401).json({ success: false, message: 'Invalid token' });
     }
-    next();
-  };
+    
+    if (error.name === 'TokenExpiredError') {
+      return res.status(401).json({ success: false, message: 'Token expired' });
+    }
+    
+    res.status(500).json({ success: false, message: 'Server error', error: error.message });
+  }
 };
 
 // Check if user is admin
 const isAdmin = (req, res, next) => {
-  if (req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+  if (req.user && req.user.role === 'admin') {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Admin access required' });
   }
-  next();
 };
 
 // Check if user is faculty or admin
 const isFacultyOrAdmin = (req, res, next) => {
-  if (req.user.role !== 'faculty' && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied. Faculty or admin privileges required.' });
+  if (req.user && (req.user.role === 'faculty' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Faculty or admin access required' });
   }
-  next();
 };
 
 // Check if user is club head or admin
 const isClubHeadOrAdmin = (req, res, next) => {
-  if (req.user.role !== 'clubHead' && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Access denied. Club head or admin privileges required.' });
+  if (req.user && (req.user.role === 'clubHead' || req.user.role === 'admin')) {
+    next();
+  } else {
+    res.status(403).json({ success: false, message: 'Club head or admin access required' });
   }
-  next();
 };
 
 module.exports = {
   authenticateUser,
-  authorizeRoles,
   isAdmin,
   isFacultyOrAdmin,
   isClubHeadOrAdmin

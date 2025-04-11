@@ -1,326 +1,164 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import api from '../utils/axiosConfig';  // Using our configured axios instance
+import api from '../utils/axiosConfig';
 
+// Create context
 const AuthContext = createContext();
 
+// Custom hook to use the auth context
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
+
+// Provider component
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || '');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-
-  // Load user data on initial load or token change
+  
+  // Check if user is already logged in (from localStorage)
   useEffect(() => {
-    const loadUser = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
-
+    const checkLoggedIn = async () => {
       try {
-        const res = await api.get('/api/auth/me');
-        setCurrentUser(res.data.user);
-      } catch (error) {
-        localStorage.removeItem('token');
-        setToken('');
-        setError('Session expired. Please log in again.');
+        // Get token and user from localStorage
+        const token = localStorage.getItem('token');
+        const storedUser = localStorage.getItem('user');
+        
+        if (token && storedUser) {
+          // Set auth token to axios default headers
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          
+          // Try to parse stored user
+          try {
+            const user = JSON.parse(storedUser);
+            setCurrentUser(user);
+          } catch (e) {
+            console.error('Error parsing stored user:', e);
+            // Clear invalid user data
+            localStorage.removeItem('user');
+          }
+          
+          // Optionally verify token with backend
+          // const response = await api.get('/api/auth/verify');
+          // if (!response.data.success) {
+          //   handleLogout();
+          // }
+        }
+      } catch (err) {
+        console.error('Auth verification error:', err);
+        setError('Failed to authenticate user');
+        // Logout user if token is invalid
+        handleLogout();
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     };
-
-    loadUser();
-  }, [token]);
-
-  // Register user (students only)
-  const register = async (userData) => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/register', userData);
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message,
-        email: res.data.email // Return email for verification step
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Registration failed');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Registration failed' 
-      };
-    }
-  };
-
-  // Add verification method
-  const verifyEmail = async (email, otp) => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/verify-email', { email, otp });
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message 
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Verification failed');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Verification failed' 
-      };
-    }
-  };
-
-  // Login user
+    
+    checkLoggedIn();
+  }, []);
+  
+  // Login function
   const login = async (credentials) => {
     try {
       setError('');
-      // Add a timeout to handle network issues
-      const timeout = setTimeout(() => {
-        console.log('Request is taking too long, might be a connectivity issue');
-      }, 10000); // 10 second warning
-
-      const res = await api.post('/api/auth/login', credentials);
-      clearTimeout(timeout);
+      const response = await api.post('/api/auth/login', credentials);
       
-      if (res.data.success) {
-        setCurrentUser(res.data.user);
-        localStorage.setItem('token', res.data.token);
-        setToken(res.data.token);
+      if (response.data.success) {
+        const { token, user } = response.data;
         
-        return { success: true };
+        // Save token and user to localStorage
+        localStorage.setItem('token', token);
+        localStorage.setItem('user', JSON.stringify(user));
+        
+        // Set auth token to axios default headers
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        // Update context
+        setCurrentUser(user);
+        return { success: true, user };
       } else {
-        // This case shouldn't happen as API should throw error for failures
-        setError(res.data.message || 'Login failed');
-        return { 
-          success: false, 
-          message: res.data.message || 'Login failed',
-          errorType: res.data.errorType 
-        };
+        throw new Error(response.data.message || 'Login failed');
       }
-    } catch (error) {
-      console.error('Login error in context:', error);
-      
-      // Add deployment-specific error checks
-      if (error.message === 'Network Error') {
-        setError('Cannot connect to server. Please check your connection or try again later.');
-        return {
-          success: false,
-          message: 'Cannot connect to server. Please check your connection or try again later.',
-          errorType: 'NETWORK_ERROR'
-        };
-      }
-      
-      // Extract error details from the response
-      const errorMessage = error.response?.data?.message || 'Login failed';
-      const errorType = error.response?.data?.errorType || 'UNKNOWN_ERROR';
-      
-      setError(errorMessage);
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err.response?.data?.message || err.message || 'Login failed');
       return { 
         success: false, 
-        message: errorMessage,
-        errorType: errorType 
+        error: err.response?.data?.message || err.message || 'Login failed',
+        errorType: err.response?.data?.errorType || 'UNKNOWN_ERROR'
       };
     }
   };
-
-  // Logout user
-  const logout = () => {
+  
+  // Logout function
+  const handleLogout = () => {
+    // Remove token and user from localStorage
     localStorage.removeItem('token');
-    setToken('');
+    localStorage.removeItem('user');
+    
+    // Remove auth token from axios default headers
+    delete api.defaults.headers.common['Authorization'];
+    
+    // Clear user from context
     setCurrentUser(null);
   };
-
-  // Create user (Admin only)
-  const createUser = async (userData) => {
-    setLoading(true);
+  
+  // Create alias for handleLogout to maintain backward compatibility
+  const logout = handleLogout;
+  
+  // Register function
+  const register = async (userData) => {
     try {
-      const res = await api.post('/api/auth/create-user', userData);
-      setLoading(false);
-      return { success: true, message: res.data.message };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to create user');
-      return { success: false, message: error.response?.data?.message || 'Failed to create user' };
+      setError('');
+      const response = await api.post('/api/auth/register', userData);
+      
+      if (response.data.success) {
+        return { success: true, message: response.data.message };
+      } else {
+        throw new Error(response.data.message || 'Registration failed');
+      }
+    } catch (err) {
+      console.error('Register error:', err);
+      setError(err.response?.data?.message || err.message || 'Registration failed');
+      return { success: false, error: err.response?.data?.message || err.message || 'Registration failed' };
     }
   };
-
-  // Delete faculty (Admin only)
-  const deleteFaculty = async (facultyId) => {
-    setLoading(true);
-    try {
-      const res = await api.delete(`/api/faculty/${facultyId}`);
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data?.message || 'Faculty member successfully deleted' 
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to delete faculty member');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to delete faculty member' 
-      };
-    }
+  
+  // Role-based access control functions
+  const isAdmin = () => {
+    return currentUser?.role === 'admin';
   };
-
-  // Request password reset OTP (renamed from forgotPassword)
-  const forgotPassword = async (email) => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/forgot-password', { email });
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message,
-        email: res.data.email
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to process request');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to process request' 
-      };
-    }
+  
+  const isFaculty = () => {
+    return currentUser?.role === 'faculty';
   };
-
-  // Verify password reset OTP
-  const verifyResetOTP = async (email, otp) => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/verify-reset-otp', { email, otp });
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message,
-        email: res.data.email
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to verify code');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to verify code' 
-      };
-    }
+  
+  const isStudent = () => {
+    return currentUser?.role === 'student';
   };
-
-  // Reset password with OTP
-  const resetPassword = async (email, otp, password) => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/reset-password', { email, otp, password });
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message 
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to reset password');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to reset password' 
-      };
-    }
+  
+  const isClubHead = () => {
+    return currentUser?.role === 'clubHead';
   };
-
-  // Request password change OTP (for logged in users)
-  const requestPasswordChangeOTP = async () => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/request-password-change-otp');
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message,
-        email: res.data.email
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to send verification code');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to send verification code' 
-      };
-    }
-  };
-
-  // Change password with OTP verification
-  const changePasswordWithOTP = async (otp, newPassword) => {
-    setLoading(true);
-    try {
-      const res = await api.post('/api/auth/change-password', { otp, newPassword });
-      setLoading(false);
-      return { 
-        success: true, 
-        message: res.data.message 
-      };
-    } catch (error) {
-      setLoading(false);
-      setError(error.response?.data?.message || 'Failed to change password');
-      return { 
-        success: false, 
-        message: error.response?.data?.message || 'Failed to change password' 
-      };
-    }
-  };
-
-  // Check if user has a specific role
-  const hasRole = (role) => {
-    if (!currentUser) return false;
-    
-    // Make sure we're checking currentUser.role
-    if (typeof role === 'string') return currentUser.role === role;
-    if (Array.isArray(role)) return role.includes(currentUser.role);
-    return false;
-  };
-
-  // Check if user is admin
-  const isAdmin = () => hasRole('admin');
-
-  // Check if user is faculty
-  const isFaculty = () => hasRole('faculty');
-
-  // Check if user is club head
-  const isClubHead = () => hasRole('clubHead');
-
-  // Check if user is student
-  const isStudent = () => hasRole('student');
-
+  
+  // Context value
   const value = {
     currentUser,
+    login,
+    handleLogout,
+    logout, // Add the alias to the exported context
+    register,
     loading,
     error,
-    register,
-    verifyEmail, // Add the new method to the context
-    login,
-    logout,
-    createUser,
-    deleteFaculty, // Add the new method to the context
-    forgotPassword,
-    verifyResetOTP,
-    resetPassword,
-    requestPasswordChangeOTP,
-    changePasswordWithOTP,
-    hasRole,
+    setError,
     isAdmin,
     isFaculty,
-    isClubHead,
     isStudent,
-    setError
+    isClubHead
   };
-
+  
   return (
     <AuthContext.Provider value={value}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 };
-
-export const useAuth = () => useContext(AuthContext);
-
-export default AuthContext;

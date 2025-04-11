@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-// Replace direct axios import with the configured api client
 import api from '../utils/axiosConfig';
 
 const Login = () => {
@@ -18,7 +17,7 @@ const Login = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   
-  const { login, error, setError, currentUser } = useAuth();
+  const { login, error, currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -39,8 +38,8 @@ const Login = () => {
       navigate(from, { replace: true });
     }
     
-    setError('');
-  }, [currentUser, navigate, location.state?.from?.pathname, setError]);
+    // Don't try to call setError here since we removed it from dependency array
+  }, [currentUser, navigate, location.state?.from?.pathname]);
   
   // Validate only email in step 1
   const validateEmail = () => {

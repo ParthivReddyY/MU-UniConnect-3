@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
 
 // Faculty Appointment Component
 export const FacultyAppointment = () => {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
+  const { isFaculty } = useAuth(); // Add auth context
   
   const handleScheduleMeeting = () => {
     navigate('/college/bookings/faculty-appointment');
   };
+  
+  // Don't render this component for faculty members
+  if (isFaculty()) {
+    return null;
+  }
   
   return (
     <motion.div 
@@ -52,6 +59,69 @@ export const FacultyAppointment = () => {
             onClick={handleScheduleMeeting}
           >
             Schedule Meeting
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+// Student Appointments Component (for faculty to view appointments)
+export const StudentAppointments = () => {
+  const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+  const { isFaculty, isAdmin } = useAuth(); // Add auth context
+  
+  const handleViewAppointments = () => {
+    navigate('/faculty-appointments');
+  };
+  
+  // Only render this component for faculty members or admins
+  if (!isFaculty() && !isAdmin()) {
+    return null;
+  }
+  
+  return (
+    <motion.div 
+      className="relative overflow-hidden bg-white rounded-2xl shadow-lg"
+      whileHover={{ y: -8 }}
+      transition={{ type: "spring", stiffness: 300 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 to-purple-500 opacity-90" />
+      
+      <div className="absolute top-5 right-5 bg-white/20 backdrop-blur-md rounded-full p-3">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      </div>
+      
+      <div className="relative p-7 z-10 h-full flex flex-col">
+        <h3 className="text-2xl font-bold mb-2 text-black">Student Appointments</h3>
+        
+        <div className="my-4 bg-white/20 backdrop-blur-md h-px w-16" />
+        
+        <p className="text-black/90 mb-6 flex-grow">
+          View, approve, and manage appointment requests from students. 
+          Set meeting availability and track upcoming meetings.
+        </p>
+        
+        <div className="mt-auto space-y-4">
+          <div className="flex items-center text-black/90 text-sm font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-black/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Manage appointment requests</span>
+          </div>
+          
+          <motion.button 
+            className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
+            whileTap={{ scale: 0.97 }}
+            animate={{ scale: isHovered ? 1.03 : 1 }}
+            onClick={handleViewAppointments}
+          >
+            View Appointments
           </motion.button>
         </div>
       </div>
@@ -265,6 +335,14 @@ const Bookings = () => {
             transition={{ duration: 0.3, delay: 0.3 }}
           >
             <ProjectSubmission />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.3, delay: 0.4 }}
+          >
+            <StudentAppointments />
           </motion.div>
         </motion.div>
       </motion.div>

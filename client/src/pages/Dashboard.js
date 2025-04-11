@@ -197,105 +197,6 @@ const Dashboard = () => {
   
   // Get menu cards based on user role
   const getMenuCards = () => {
-    if (isAdmin()) {
-      return (
-        <>
-          <MenuCard 
-            title="User Management"
-            icon="fa-users"
-            description="Create, edit, and manage user accounts"
-            path="/admin/users"
-            color="primary"
-          />
-          <MenuCard 
-            title="Create Accounts"
-            icon="fa-user-plus"
-            description="Create faculty and club head accounts"
-            path="/admin/create-user"
-            color="success"
-          />
-          <MenuCard 
-            title="System Settings"
-            icon="fa-cogs"
-            description="Configure system settings"
-            path="/admin/settings"
-            color="secondary"
-          />
-          <MenuCard 
-            title="Club Management"
-            icon="fa-people-group"
-            description="Manage clubs and organizations"
-            path="/admin/clubs"
-            color="warning"
-            badge="New"
-          />
-          <MenuCard 
-            title="Analytics"
-            icon="fa-chart-line"
-            description="View system usage statistics"
-            path="/admin/analytics"
-            color="info"
-          />
-          <MenuCard 
-            title="Help Requests"
-            icon="fa-circle-question"
-            description="Manage user support tickets"
-            path="/admin/help-requests"
-            color="danger"
-          />
-        </>
-      );
-    }
-    
-    if (isFaculty()) {
-      return (
-        <>
-          <MenuCard 
-            title="My Profile"
-            icon="fa-user-circle"
-            description="View and edit your profile information"
-            path="/profile"
-            color="primary"
-          />
-          <MenuCard 
-            title="Department Info"
-            icon="fa-building"
-            description="View department information and contacts"
-            path="/faculty/department"
-            color="success"
-          />
-          <MenuCard 
-            title="Research Publications"
-            icon="fa-book"
-            description="Manage your research and publications"
-            path="/faculty/publications"
-            color="secondary"
-          />
-          <MenuCard 
-            title="Office Hours"
-            icon="fa-clock"
-            description="Set your availability for student consultations"
-            path="/faculty/office-hours"
-            color="warning"
-          />
-          <MenuCard 
-            title="Student Appointments"
-            icon="fa-calendar-alt"
-            description="View and manage student appointments"
-            path="/faculty/appointments"
-            color="info"
-            badge="3 New"
-          />
-          <MenuCard 
-            title="Resources"
-            icon="fa-file-alt"
-            description="Upload and manage resources for students"
-            path="/faculty/resources"
-            color="indigo"
-          />
-        </>
-      );
-    }
     
     if (isClubHead()) {
       return (
@@ -347,49 +248,72 @@ const Dashboard = () => {
       );
     }
     
+    // Faculty menu cards
+    if (isFaculty()) {
+      return (
+        <>
+          <MenuCard 
+            title="Student Appointments"
+            icon="fa-calendar-check"
+            description="View and manage appointment requests from students"
+            path="/faculty-appointments"
+            color="primary"
+          />
+          <MenuCard 
+            title="Office Hours"
+            icon="fa-clock"
+            description="Set and manage your office hours availability"
+            path="/office-hours"
+            color="success"
+          />
+          <MenuCard 
+            title="Course Materials"
+            icon="fa-book"
+            description="Upload and manage course materials and resources"
+            path="/course-materials"
+            color="info"
+          />
+          <MenuCard 
+            title="Research Projects"
+            icon="fa-flask"
+            description="Manage your research projects and collaborations"
+            path="/research-projects"
+            color="secondary"
+          />
+        </>
+      );
+    }
+    
+    // Default menu cards for students
     return (
       <>
         <MenuCard 
-          title="My Profile"
-          icon="fa-user-circle"
-          description="View and edit your profile information"
-          path="/profile"
+          title="Faculty Appointments"
+          icon="fa-calendar-plus"
+          description="Schedule meetings with faculty members"
+          path="/college/bookings/faculty-appointment"
           color="primary"
         />
         <MenuCard 
-          title="Clubs & Events"
-          icon="fa-calendar-check"
-          description="Explore and join clubs, view upcoming events"
-          path="/clubs-events"
+          title="Course Registration"
+          icon="fa-graduation-cap"
+          description="Register for courses and view your schedule"
+          path="/course-registration"
           color="success"
         />
         <MenuCard 
-          title="Faculty Directory"
-          icon="fa-chalkboard-teacher"
-          description="Browse and contact faculty members"
-          path="/faculty"
-          color="secondary"
-        />
-        <MenuCard 
-          title="My Clubs"
-          icon="fa-people-group"
-          description="View clubs you've joined and their activities"
-          path="/student/my-clubs"
-          color="warning"
-        />
-        <MenuCard 
-          title="Resources"
-          icon="fa-book"
-          description="Access important student resources"
-          path="/student/resources"
+          title="Academic Records"
+          icon="fa-file-alt"
+          description="View your grades, transcripts, and academic history"
+          path="/academic-records"
           color="info"
         />
         <MenuCard 
-          title="Help & Support"
-          icon="fa-circle-question"
-          description="Get help and support"
-          path="/help"
-          color="danger"
+          title="Campus Events"
+          icon="fa-ticket-alt"
+          description="Browse and register for upcoming campus events"
+          path="/events"
+          color="warning"
         />
       </>
     );

@@ -17,6 +17,7 @@ import Unauthorized from './pages/Unauthorized';
 import FacultyDetail from './pages/FacultyDetail';
 import ChangePassword from './pages/ChangePassword';
 import Profile from './pages/Profile'; // Import the new Profile page
+import FacultyAppointments from './pages/FacultyAppointments'; // Import the Faculty Appointments page
 
 // Import components
 import Navbar from './components/Navbar';
@@ -192,6 +193,15 @@ function App() {
                   <ProtectedRoute>
                     <PageContainer fullWidth>
                       <ChangePassword />
+                    </PageContainer>
+                  </ProtectedRoute>
+                } />
+                
+                {/* Faculty Appointments page */}
+                <Route path="/faculty-appointments" element={
+                  <ProtectedRoute allowedRoles={['faculty', 'admin']}>
+                    <PageContainer fullWidth>
+                      <FacultyAppointments />
                     </PageContainer>
                   </ProtectedRoute>
                 } />

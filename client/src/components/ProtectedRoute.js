@@ -3,9 +3,9 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { currentUser, loading, hasRole } = useAuth();
+  const { currentUser, isAdmin, isFaculty, isStudent, isClubHead, loading } = useAuth();
   const location = useLocation();
-  
+
   // Show loading state if auth is still being determined
   if (loading) {
     return (
@@ -14,21 +14,35 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
       </div>
     );
   }
-  
-  // If no user is logged in, redirect to login
+
+  // If not logged in, redirect to login
   if (!currentUser) {
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
-  
-  // If roles are specified, check if user has any of the allowed roles
+
+  // If roles are specified, check if user has at least one of the allowed roles
   if (allowedRoles.length > 0) {
-    const hasAllowedRole = allowedRoles.some(role => hasRole(role));
-    if (!hasAllowedRole) {
+    const userHasAllowedRole = allowedRoles.some(role => {
+      switch (role) {
+        case 'admin':
+          return isAdmin();
+        case 'faculty':
+          return isFaculty();
+        case 'student':
+          return isStudent();
+        case 'clubHead':
+          return isClubHead();
+        default:
+          return false;
+      }
+    });
+
+    if (!userHasAllowedRole) {
       return <Navigate to="/unauthorized" replace />;
     }
   }
-  
-  // Render children if all checks pass
+
+  // User is authenticated and has allowed role (if specified)
   return children;
 };
 
