@@ -52,9 +52,9 @@ function NavbarWrapper() {
 }
 
 // Standard container wrapper to ensure consistent sizing across pages
-function PageContainer({ children, fullWidth = false, noTopMargin = false }) {
+function PageContainer({ children, fullWidth = false }) {
   return (
-    <main className={`flex-1 w-full ${noTopMargin ? '' : 'mt-16 md:mt-20'} ${fullWidth ? 'full-width-container' : 'std-container'}`}>
+    <main className={`flex-1 w-full mt-16 md:mt-20 ${fullWidth ? 'full-width-container' : 'std-container'}`}>
       <div className="w-full">
         {children}
       </div>
@@ -111,25 +111,25 @@ function App() {
                 } />
                 
                 <Route path="/login" element={
-                  <PageContainer fullWidth noTopMargin>
+                  <PageContainer fullWidth>
                     <Login />
                   </PageContainer>
                 } />
                 
                 <Route path="/signup" element={
-                  <PageContainer fullWidth noTopMargin>
+                  <PageContainer fullWidth>
                     <SignUp />
                   </PageContainer>
                 } />
                 
                 <Route path="/forgot-password" element={
-                  <PageContainer fullWidth noTopMargin>
+                  <PageContainer fullWidth>
                     <ForgotPassword />
                   </PageContainer>
                 } />
                 
                 <Route path="/reset-password/:token" element={
-                  <PageContainer fullWidth noTopMargin>
+                  <PageContainer fullWidth>
                     <ResetPassword />
                   </PageContainer>
                 } />
@@ -241,7 +241,9 @@ function App() {
                 } />
               </Routes>
               
-              {/* Footer has been removed */}
+              <footer className="bg-dark-gray text-white text-center p-2 mt-0">
+                <p>&copy; {new Date().getFullYear()} MU-UniConnect. All rights reserved.</p>
+              </footer>
             </>
           )}
         </div>

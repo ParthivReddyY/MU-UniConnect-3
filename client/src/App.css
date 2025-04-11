@@ -678,13 +678,13 @@
 /* Dashboard and Profile specific styles */
 .dashboard-page,
 .profile-page {
-  min-height: calc(100vh - 64px); /* Updated: removed footer height subtraction */
+  min-height: calc(100vh - 64px - 40px); /* Account for navbar and footer */
   width: 100%;
 }
 
 @media (max-width: 768px) {
   .dashboard-page,
   .profile-page {
-    min-height: calc(100vh - 56px); /* Updated: removed footer height subtraction */
+    min-height: calc(100vh - 56px - 40px); /* Smaller navbar on mobile */
   }
 }
