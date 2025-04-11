@@ -310,11 +310,16 @@ const login = async (req, res) => {
 // Forgot password - sends OTP instead of reset link
 const forgotPassword = async (req, res) => {
   try {
+    console.log('Forgot password request received:', req.body);
     const { email } = req.body;
+    
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
     
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(404).json({ message: 'User not found' });
+      return res.status(404).json({ success: false, message: 'User not found' });
     }
     
     // Generate reset OTP (6 digits)
@@ -343,16 +348,30 @@ const forgotPassword = async (req, res) => {
         message: 'Password reset code sent to your email',
         email: user.email // Return email for OTP verification step
       });
-    } catch (error) {
+    } catch (emailError) {
+      console.error('Error sending password reset email:', emailError);
+      
+      // Reset the token since email failed
       user.resetPasswordToken = undefined;
       user.resetPasswordExpires = undefined;
       await user.save();
       
-      return res.status(500).json({ message: 'Email could not be sent' });
+      return res.status(500).json({ 
+        success: false, 
+        message: 'Could not send reset email. Please try again later.' 
+      });
     }
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Server error', error: error.message });
+    console.error('Forgot password error:', {
+      message: error.message,
+      stack: error.stack,
+      body: req.body
+    });
+    res.status(500).json({ 
+      success: false, 
+      message: 'An error occurred while processing your request',
+      error: process.env.NODE_ENV === 'production' ? undefined : error.message
+    });
   }
 };
 

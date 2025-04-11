@@ -1,88 +1,99 @@
 import axios from 'axios';
 
-// Create an axios instance with debug logging
+// Get the correct API URL based on the environment
+const getBaseURL = () => {
+  // For local development
+  if (process.env.NODE_ENV !== 'production') {
+    // Try to use the environment variable if available
+    if (process.env.REACT_APP_API_URL) {
+      return process.env.REACT_APP_API_URL;
+    }
+    // Default local development URL
+    return 'http://localhost:5000';
+  }
+  
+  // For production, use relative URL (empty string)
+  return '';
+};
+
+// Create axios instance with environment-specific configuration
 const api = axios.create({
-  // In production, use relative URLs (empty baseURL)
-  // In development, use the localhost URL
-  baseURL: process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000',
-  timeout: 15000, // Increase timeout to 15 seconds
+  baseURL: getBaseURL(),
+  timeout: 30000, // Longer timeout (30 seconds) for slower connections
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Add request interceptor for debugging
+// Add simplified request logging
 api.interceptors.request.use(
-  (config) => {
-    // Get the token from localStorage
+  config => {
+    // Simplified logging - just show the essential information
+    console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
+    
+    // Add auth token from localStorage if available
     const token = localStorage.getItem('token');
-    
-    // If token exists, add it to the headers
     if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
-      console.log(`Request with authorization to ${config.url}`);
-    } else {
-      console.log(`Request without authorization to ${config.url}`);
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    
-    console.log('API Request:', {
-      method: config.method.toUpperCase(),
-      url: config.url,
-      data: config.data,
-      headers: config.headers,
-      baseURL: config.baseURL
-    });
     
     return config;
   },
-  (error) => {
-    console.error('API Request Error:', error);
+  error => {
+    console.error('API Request Error:', error.message);
     return Promise.reject(error);
   }
 );
 
-// Add response logging
+// Simplified response handling
 api.interceptors.response.use(
-  (response) => {
-    console.log(`Response from ${response.config.url}: Status ${response.status}`);
+  response => {
+    // Only log critical information
+    console.log(`API Response: ${response.status} ${response.config.url}`);
     return response;
   },
-  (error) => {
-    console.error('Response error:', error.message);
+  error => {
+    // Simplified error logging
     if (error.response) {
-      console.error(`Error status: ${error.response.status}`);
-      console.error('Error data:', error.response.data);
+      console.error(`API Error ${error.response.status}: ${error.config?.url}`);
+    } else if (error.code) {
+      console.error(`Network error: ${error.code}`);
+    } else {
+      console.error('API Error:', error.message);
     }
     
-    // Only redirect on 401 errors that are not from auth endpoints or appointment endpoints
-    if (error.response && error.response.status === 401) {
-      // Don't redirect on login/register/auth failures to avoid redirect loops
-      const isAuthEndpoint = 
+    // Special handling for network/connectivity errors - silently log but don't show warnings
+    if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
+      // Just return a simple error without special properties that might trigger warnings
+      return Promise.reject(new Error('Network error'));
+    }
+    
+    // Don't redirect on login/register/auth failures to avoid redirect loops
+    if (
+      error.response && 
+      error.response.status === 401 && 
+      !(
         error.config.url.includes('/login') ||
         error.config.url.includes('/register') ||
-        error.config.url.includes('/auth');
+        error.config.url.includes('/verify-email') ||
+        error.config.url.includes('/forgot-password') ||
+        error.config.url.includes('/reset-password') ||
+        error.config.url.includes('/check-email') ||
+        error.config.url.includes('/verify-reset-otp')
+      )
+    ) {
+      console.log('Authentication token expired or invalid. Redirecting to login...');
       
-      // Don't redirect on appointment endpoints - let the components handle these errors
-      const isAppointmentEndpoint = 
-        error.config.url.includes('/appointments') ||
-        error.config.url.includes('/faculty-appointments') ||
-        error.config.url.includes('/faculty-stats');
+      // Clear user data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
       
-      // Skip the localStorage clear and redirect if it's an auth endpoint or appointment endpoint
-      if (!isAuthEndpoint && !isAppointmentEndpoint) {
-        console.log('Authentication token expired or invalid. Redirecting to login...');
-        
-        // Clear local storage
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        
-        // Redirect to login page if not already there
-        if (!window.location.href.includes('login')) {
-          // Use a slight delay to allow for any current operations to finish
-          setTimeout(() => {
-            window.location.href = '/login';
-          }, 100);
-        }
+      // Redirect to login page if not already there
+      if (!window.location.href.includes('login')) {
+        // Use a slight delay to allow for any current operations to finish
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 100);
       }
     }
     
@@ -90,4 +101,18 @@ api.interceptors.response.use(
   }
 );
 
+// Simplified connection test with minimal logging
+api.testConnection = async () => {
+  try {
+    await api.get('/health');
+    console.log('Server health: OK');
+    return { success: true };
+  } catch (error) {
+    console.log('Server health: Failed');
+    return { success: false };
+  }
+};
+
+// Export getBaseURL function so it can be used elsewhere
+export { getBaseURL };
 export default api;

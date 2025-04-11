@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import './App.css';
 import './CSS/quill-custom.css'; // Update custom editor styles
+import testServerConnection from './utils/testConnection';
+import ServerStatusIndicator from './components/ServerStatusIndicator';
 
 // Import pages
 import Home from './pages/Home';
@@ -78,27 +80,34 @@ function PageContainer({ children, fullWidth = false }) {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
+  const [serverStatus, setServerStatus] = useState({ checked: false, online: false, message: '' });
   
   useEffect(() => {
-    // Simulate content loading and hide loading state
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 300);
-    
-    // Handle resizing for responsive design
-    const handleResize = () => {
-      // Add custom vh variable for mobile browsers to handle viewport height correctly
-      const vh = window.innerHeight * 0.01;
-      document.documentElement.style.setProperty('--vh', `${vh}px`);
+    // Test server connection during app initialization
+    const checkServerConnection = async () => {
+      try {
+        const result = await testServerConnection();
+        setServerStatus({
+          checked: true,
+          online: result.success,
+          message: result.message
+        });
+        console.log('Server connection status:', result);
+      } catch (error) {
+        console.error('Error checking server connection:', error);
+        setServerStatus({
+          checked: true,
+          online: false,
+          message: 'Error checking server connection'
+        });
+      }
     };
     
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initialize on load
+    checkServerConnection();
     
-    return () => {
-      clearTimeout(timer);
-      window.removeEventListener('resize', handleResize);
-    };
+    // Other initialization code...
+    
+    setIsLoading(false);
   }, []);
   
   return (
@@ -113,6 +122,14 @@ function App() {
             </div>
           ) : (
             <>
+              {/*
+              {!serverStatus.online && serverStatus.checked && (
+                <div className="bg-red-500 text-white p-3 text-center">
+                  <strong>Server Connection Error:</strong> {serverStatus.message} - Login and other features may not work.
+                </div>
+              )}
+              */}
+              
               <ScrollToTop />
               <NavbarWrapper />
               
@@ -268,6 +285,7 @@ function App() {
               <footer className="bg-dark-gray text-white text-center p-2 mt-0">
                 <p>&copy; {new Date().getFullYear()} MU-UniConnect. All rights reserved.</p>
               </footer>
+              <ServerStatusIndicator />
             </>
           )}
         </div>

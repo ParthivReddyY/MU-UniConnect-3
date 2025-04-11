@@ -82,6 +82,36 @@ app.get('/api/test-connection', (req, res) => {
   });
 });
 
+// Add detailed error monitoring for all API routes
+app.use('/api', (req, res, next) => {
+  console.log(`API Request: ${req.method} ${req.originalUrl}`);
+  console.log('Request Body:', req.body);
+  console.log('Request Headers:', req.headers);
+  
+  // Track response time
+  const startTime = Date.now();
+  
+  // Save original res.json function
+  const originalJson = res.json;
+  
+  // Override res.json to log response
+  res.json = function(data) {
+    const responseTime = Date.now() - startTime;
+    console.log(`API Response Time: ${responseTime}ms`);
+    console.log(`API Response Status: ${res.statusCode}`);
+    
+    // Only log response data in development to avoid sensitive data in logs
+    if (process.env.NODE_ENV !== 'production') {
+      console.log('Response Data:', data);
+    }
+    
+    // Call original res.json with data
+    return originalJson.call(this, data);
+  };
+  
+  next();
+});
+
 // IMPORTANT: API Routes must be defined BEFORE static file serving
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
@@ -115,6 +145,31 @@ app.use((err, req, res, next) => {
   });
   
   res.status(500).json({
+    error: 'Server Error',
+    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
+  });
+});
+
+// Add global error handler
+app.use((err, req, res, next) => {
+  // Log detailed error information
+  console.error('Error details:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+  
+  // Determine if the response has already been sent
+  if (res.headersSent) {
+    return next(err);
+  }
+  
+  // Send error response
+  res.status(err.status || 500).json({
+    success: false,
     error: 'Server Error',
     message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
   });

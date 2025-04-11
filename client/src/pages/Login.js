@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../utils/axiosConfig';
+import api, { getBaseURL } from '../utils/axiosConfig';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const [formData, setFormData] = useState({
     email: '',
     password: ''
@@ -18,8 +20,9 @@ const Login = () => {
   const [isCheckingEmail, setIsCheckingEmail] = useState(false);
   
   const { login, error, currentUser } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
+  
+  // Define the "from" variable from location state or default to "/dashboard"
+  const from = location.state?.from?.pathname || "/dashboard";
   
   const adminEmails = [
     'parthivreddy7769@gmail.com',
@@ -34,12 +37,37 @@ const Login = () => {
   
   useEffect(() => {
     if (currentUser) {
-      const from = location.state?.from?.pathname || '/dashboard';
       navigate(from, { replace: true });
     }
+  }, [currentUser, navigate, from]);
+
+  // Modified server connectivity test - quieter approach without warnings
+  useEffect(() => {
+    const testConnection = async () => {
+      try {
+        // Silent server test - only log results without showing warnings
+        const response = await fetch(`${getBaseURL()}/health`, { 
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+          mode: 'cors',
+          cache: 'no-cache',
+          timeout: 5000
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Server health check:', data);
+        } else {
+          console.log('Server health check failed with status:', response.status);
+        }
+      } catch (error) {
+        // Only log the error without showing warnings to the user
+        console.log('Server connectivity test error (silent):', error.message);
+      }
+    };
     
-    // Don't try to call setError here since we removed it from dependency array
-  }, [currentUser, navigate, location.state?.from?.pathname]);
+    testConnection();
+  }, []);
   
   // Validate only email in step 1
   const validateEmail = () => {
@@ -56,7 +84,7 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle first step (email verification)
+  // Function to check if email exists
   const handleContinue = async (e) => {
     e.preventDefault();
     
@@ -66,10 +94,14 @@ const Login = () => {
     setLoginError('');
     
     try {
-      // Use the configured api client instead of direct axios
+      console.log('Checking email:', formData.email);
+      
+      // Make API call to check email
       const response = await api.post('/api/auth/check-email', {
         email: formData.email
       });
+      
+      console.log('Email check response:', response.data);
       
       if (response.data.exists) {
         // Email exists, proceed to step 2
@@ -86,24 +118,24 @@ const Login = () => {
         });
       }
     } catch (err) {
-      // Improved error handling with more specific messages
+      // More discreet error handling - only show specific errors
       console.error("Error checking email:", err);
       
       if (err.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
+        // Server responded with an error status
         setErrors({
-          email: err.response.data.message || 'Server error. Please try again.'
+          email: err.response.data?.message || 'Invalid email or server error'
         });
       } else if (err.request) {
-        // The request was made but no response was received
+        // Server connectivity issue - simplified message
+        console.error('No response received from server');
         setErrors({
-          email: 'No response from server. Please check your connection.'
+          email: 'Connection issue. Please try again later.'
         });
       } else {
-        // Something happened in setting up the request that triggered an Error
+        // Other errors
         setErrors({
-          email: 'An error occurred while checking your email. Please try again.'
+          email: 'Unable to process request'
         });
       }
     } finally {
@@ -135,32 +167,30 @@ const Login = () => {
     
     if (!validateForm()) return;
     
+    setIsSubmitting(true);
+    setLoginError('');
+    
     try {
-      setIsSubmitting(true);
+      console.log('Attempting login with:', { 
+        email: formData.email, 
+        password: formData.password ? '********' : 'empty' 
+      });
+      
       const result = await login(formData);
-      setIsSubmitting(false);
+      
+      console.log('Login result:', { 
+        success: result.success, 
+        user: result.success ? result.user.email : 'login failed' 
+      });
       
       if (result.success) {
-        // Removed forcePasswordChange check and redirect
-        // Always redirect to dashboard or home on successful login
-        const from = location.state?.from?.pathname || '/dashboard';
         navigate(from);
       } else {
-        // Format error message based on the type of error
+        // Handle specific error types
         if (result.errorType === 'INVALID_PASSWORD') {
           setLoginError('Incorrect password. Please try again.');
-          // Focus on password field and clear it for re-entry
-          setFormData({...formData, password: ''});
-          setTimeout(() => {
-            const passwordField = document.getElementById('password');
-            if (passwordField) {
-              passwordField.focus();
-            }
-          }, 100);
         } else if (result.errorType === 'EMAIL_NOT_FOUND') {
-          // If email not found, go back to step 1
           setLoginError('No account found with this email. Please check the email address.');
-          setCurrentStep(1);
         } else if (result.errorType === 'EMAIL_NOT_VERIFIED') {
           setLoginError('Please verify your email address before logging in.');
         } else {
@@ -168,26 +198,37 @@ const Login = () => {
         }
       }
     } catch (err) {
-      console.error('Login error:', err);
-      setLoginError('An unexpected error occurred. Please try again.');
+      console.error('Login error details:', {
+        message: err.message,
+        stack: err.stack,
+        response: err.response?.data,
+        status: err.response?.status
+      });
+      
+      if (err.response) {
+        setLoginError(`Server error (${err.response.status}): ${err.response.data?.message || 'Unknown error'}`);
+      } else if (err.request) {
+        setLoginError('Server connection failed. Please verify the server is running.');
+      } else {
+        setLoginError(`Request error: ${err.message}`);
+      }
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  // Function to go back to email step
-  const handleBackToEmail = () => {
-    setCurrentStep(1);
-    setLoginError('');
-  };
-
-  // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
+  };
+  
+  // Function to go back to email step
+  const handleBackToEmail = () => {
+    setCurrentStep(1);
+    setLoginError('');
   };
 
   // Common label class for consistent styling
@@ -197,9 +238,9 @@ const Login = () => {
   const inputClass = (fieldName) => `w-full pl-12 pr-${fieldName === 'password' ? '12' : '4'} py-4 h-[50px] border ${
     errors[fieldName] ? 'border-red-500' : 'border-gray-700'
   } rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-100 bg-gray-800 bg-opacity-70 transition-all duration-200 shadow-sm`;
-
+  
   return (
-    <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden" 
+    <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden"
          style={{
            backgroundImage: 'url("/img/login and signup background.jpg")',
            backgroundSize: 'cover',
@@ -213,7 +254,7 @@ const Login = () => {
       {/* Back to Home Button */}
       <Link 
         to="/" 
-        className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group"
+        className="absolute top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group z-10"
       >
         <i className="fas fa-arrow-left mr-2 group-hover:-translate-x-1 transition-transform"></i>
         Back to Home
