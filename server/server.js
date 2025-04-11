@@ -30,15 +30,30 @@ const connectDB = async () => {
   }
 };
 
-// Middleware
-app.use(cors({
-  origin: [
-    'https://mu-uniconnect-ob9x.onrender.com',
-    'https://mu-uniconnect.onrender.com', 
-    'http://localhost:3000'
-  ],
-  credentials: true
-}));
+// Request logging middleware for debugging
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+// CORS configuration - update to be more permissive in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(cors({
+    // Allow requests from any origin in production
+    origin: true,
+    credentials: true
+  }));
+} else {
+  app.use(cors({
+    origin: [
+      'https://mu-uniconnect-ob9x.onrender.com',
+      'https://mu-uniconnect.onrender.com', 
+      'http://localhost:3000'
+    ],
+    credentials: true
+  }));
+}
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -52,7 +67,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API Routes
+// IMPORTANT: API Routes must be defined BEFORE static file serving
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
@@ -73,15 +88,27 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Error handling middleware
+// Enhanced error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Server Error');
+  console.error('Error details:', {
+    message: err.message,
+    stack: err.stack,
+    path: req.path,
+    method: req.method,
+    body: req.body,
+    timestamp: new Date().toISOString()
+  });
+  
+  res.status(500).json({
+    error: 'Server Error',
+    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
+  });
 });
 
 // Connect to MongoDB first, then start the server
 connectDB().then(() => {
   app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    console.log(`API endpoints available at http://localhost:${PORT}/api/`);
   });
 });

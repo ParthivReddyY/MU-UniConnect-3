@@ -7,13 +7,13 @@ import { useAuth } from '../../../contexts/AuthContext';
 export const FacultyAppointment = () => {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
-  const { isFaculty } = useAuth(); // Add auth context
+  const { isFaculty } = useAuth();
   
   const handleScheduleMeeting = () => {
     navigate('/college/bookings/faculty-appointment');
   };
   
-  // Don't render this component for faculty members
+  // Only hide for faculty members, show for students and admins
   if (isFaculty()) {
     return null;
   }
@@ -70,13 +70,13 @@ export const FacultyAppointment = () => {
 export const StudentAppointments = () => {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
-  const { isFaculty, isAdmin } = useAuth(); // Add auth context
+  const { isFaculty, isAdmin } = useAuth();
   
   const handleViewAppointments = () => {
     navigate('/faculty-appointments');
   };
   
-  // Only render this component for faculty members or admins
+  // Show for faculty and admins
   if (!isFaculty() && !isAdmin()) {
     return null;
   }
@@ -247,7 +247,7 @@ export const EventBooking = () => {
       
       <div className="absolute top-5 right-5 bg-white/20 backdrop-blur-md rounded-full p-3">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       </div>
       
@@ -284,6 +284,8 @@ export const EventBooking = () => {
 
 // Main Bookings Component
 const Bookings = () => {
+  const { isFaculty } = useAuth();
+  
   return (
     <div className="px-6 py-10 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
       <motion.div 
@@ -318,7 +320,7 @@ const Bookings = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.1 }}
           >
-            <FacultyAppointment />
+            {isFaculty() ? <StudentAppointments /> : <FacultyAppointment />}
           </motion.div>
           
           <motion.div
@@ -342,7 +344,7 @@ const Bookings = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.4 }}
           >
-            <StudentAppointments />
+            {isFaculty() ? <FacultyAppointment /> : <StudentAppointments />}
           </motion.div>
         </motion.div>
       </motion.div>
