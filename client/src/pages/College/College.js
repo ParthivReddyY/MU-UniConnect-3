@@ -10,6 +10,8 @@ import Bookings from './components/Bookings';
 import HostelMaintenance from './components/HostelMaintenance';
 import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
+import PresentationSlot from './components/bookings/PresentationSlot';
+import HostPresentation from './components/bookings/HostPresentation';
 
 const College = () => {
   const navigate = useNavigate();
@@ -96,7 +98,7 @@ const College = () => {
         {!isBookingSubRoute && (
           <div className="w-full mx-auto mb-6">
             <CollegeTabs 
-              activeTab={activeTab} 
+              activeTab={activeTab}
               setActiveTab={handleTabChange}
             />
           </div>
@@ -106,6 +108,8 @@ const College = () => {
         {isBookingSubRoute ? (
           <Routes>
             <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
+            <Route path="bookings/presentation-slot" element={<PresentationSlot />} />
+            <Route path="bookings/host-presentation" element={<HostPresentation />} />
             {/* Add other booking sub-routes here when they are implemented */}
           </Routes>
         ) : (

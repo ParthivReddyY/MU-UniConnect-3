@@ -309,6 +309,7 @@ export const AuthProvider = ({ children }) => {
     logout,
     register,
     loading,
+    isLoading,
     error,
     setError,
     isAdmin,

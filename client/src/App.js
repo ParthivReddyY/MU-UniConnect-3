@@ -122,13 +122,6 @@ function App() {
             </div>
           ) : (
             <>
-              {/*
-              {!serverStatus.online && serverStatus.checked && (
-                <div className="bg-red-500 text-white p-3 text-center">
-                  <strong>Server Connection Error:</strong> {serverStatus.message} - Login and other features may not work.
-                </div>
-              )}
-              */}
               
               <ScrollToTop />
               <NavbarWrapper />
@@ -285,7 +278,7 @@ function App() {
               <footer className="bg-dark-gray text-white text-center p-2 mt-0">
                 <p>&copy; {new Date().getFullYear()} MU-UniConnect. All rights reserved.</p>
               </footer>
-              <ServerStatusIndicator />
+              <ServerStatusIndicator status={serverStatus} />
             </>
           )}
         </div>

@@ -202,19 +202,11 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    // Detailed logging for debugging
-    console.log('==== LOGIN ATTEMPT DETAILS ====');
-    console.log(`Email: ${email}`);
-    console.log(`Password provided: ${password ? 'Yes' : 'No'}`);
-    console.log('Request headers:', req.headers);
-    console.log('Request origin:', req.get('origin'));
-    console.log('Request method:', req.method);
-    console.log('Request path:', req.path);
-    console.log('Request IP:', req.ip);
-    console.log('==============================');
+    // Simplified logging for login attempts
+    console.log(`Login attempt for email: ${email}`);
     
     if (!email || !password) {
-      console.log('Missing email or password');
+      console.log(`Login failed: Missing email or password`);
       return res.status(400).json({ 
         success: false, 
         message: 'Please provide email and password',
@@ -223,11 +215,10 @@ const login = async (req, res) => {
     }
 
     // Make sure we're selecting all the fields we need including role
-    // Note: We need to explicitly include fields that are not automatically returned
     const user = await User.findOne({ email }).select('+password');
     
     if (!user) {
-      console.log(`User not found for email: ${email}`);
+      console.log(`Login failed: No account found for ${email}`);
       return res.status(401).json({ 
         success: false, 
         message: 'No account found with this email address',
@@ -235,7 +226,7 @@ const login = async (req, res) => {
       });
     }
     
-    // Log the complete user object to debug the issue
+    // Simplified user details log
     console.log('Found user details:', {
       id: user._id,
       name: user.name,
@@ -243,9 +234,9 @@ const login = async (req, res) => {
       role: user.role
     });
     
-    // For users who haven't verified their email (if your system requires verification)
+    // For users who haven't verified their email
     if (user.isEmailVerified === false) {
-      console.log(`User email not verified: ${email}`);
+      console.log(`Login failed: Email not verified for ${email}`);
       return res.status(401).json({ 
         success: false, 
         message: 'Please verify your email before logging in',
@@ -254,10 +245,11 @@ const login = async (req, res) => {
     }
 
     const isPasswordCorrect = await user.comparePassword(password);
+    console.log(`Password comparison result: ${isPasswordCorrect ? 'Match' : 'Mismatch'}`);
     console.log(`Password check result: ${isPasswordCorrect ? 'correct' : 'incorrect'}`);
     
     if (!isPasswordCorrect) {
-      console.log(`Invalid password for email: ${email}`);
+      console.log(`Login failed: Incorrect password for ${email}`);
       return res.status(401).json({ 
         success: false, 
         message: 'Incorrect password',
@@ -270,6 +262,12 @@ const login = async (req, res) => {
     await user.save({ validateBeforeSave: false });
 
     // Generate JWT token
+    console.log('Creating JWT with user data:', {
+      userId: user._id,
+      name: user.name,
+      role: user.role,
+      email: user.email
+    });
     const token = user.createJWT();
     
     console.log(`Login successful for: ${email}, role: ${user.role || 'undefined'}`);
@@ -291,12 +289,7 @@ const login = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error("Login error details:", {
-      message: error.message,
-      stack: error.stack,
-      name: error.name,
-      code: error.code
-    });
+    console.error("Login error:", error.message);
     
     res.status(500).json({ 
       success: false, 
@@ -407,7 +400,9 @@ const verifyResetOTP = async (req, res) => {
       email: user.email
     });
   } catch (error) {
-    console.error(error);
+    // Add timestamp to error log
+    const timestamp = new Date().toISOString();
+    console.error(`[${timestamp}] Error verifying reset OTP:`, error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };

@@ -30,9 +30,9 @@ const connectDB = async () => {
   }
 };
 
-// Request logging middleware for debugging
+// Simplified request logging middleware
 app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.originalUrl}`);
+  console.log(`${req.method} ${req.originalUrl}`);
   next();
 });
 
@@ -82,11 +82,9 @@ app.get('/api/test-connection', (req, res) => {
   });
 });
 
-// Add detailed error monitoring for all API routes
+// Simplified API monitoring middleware
 app.use('/api', (req, res, next) => {
-  console.log(`API Request: ${req.method} ${req.originalUrl}`);
-  console.log('Request Body:', req.body);
-  console.log('Request Headers:', req.headers);
+  // No need to log detailed request info
   
   // Track response time
   const startTime = Date.now();
@@ -94,15 +92,12 @@ app.use('/api', (req, res, next) => {
   // Save original res.json function
   const originalJson = res.json;
   
-  // Override res.json to log response
+  // Override res.json to log minimal response info
   res.json = function(data) {
     const responseTime = Date.now() - startTime;
-    console.log(`API Response Time: ${responseTime}ms`);
-    console.log(`API Response Status: ${res.statusCode}`);
-    
-    // Only log response data in development to avoid sensitive data in logs
-    if (process.env.NODE_ENV !== 'production') {
-      console.log('Response Data:', data);
+    // Only log status and time for non-success responses
+    if (res.statusCode >= 400) {
+      console.log(`Response: ${res.statusCode} (${responseTime}ms)`);
     }
     
     // Call original res.json with data
@@ -133,43 +128,11 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Enhanced error handling middleware
+// Simplified error handling middleware
 app.use((err, req, res, next) => {
-  console.error('Error details:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: req.body,
-    timestamp: new Date().toISOString()
-  });
+  console.error('Error:', err.message);
   
   res.status(500).json({
-    error: 'Server Error',
-    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
-  });
-});
-
-// Add global error handler
-app.use((err, req, res, next) => {
-  // Log detailed error information
-  console.error('Error details:', {
-    message: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: req.body,
-    timestamp: new Date().toISOString()
-  });
-  
-  // Determine if the response has already been sent
-  if (res.headersSent) {
-    return next(err);
-  }
-  
-  // Send error response
-  res.status(err.status || 500).json({
-    success: false,
     error: 'Server Error',
     message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
   });
@@ -179,6 +142,5 @@ app.use((err, req, res, next) => {
 connectDB().then(() => {
   app.listen(PORT, () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-    console.log(`API endpoints available at http://localhost:${PORT}/api/`);
   });
 });

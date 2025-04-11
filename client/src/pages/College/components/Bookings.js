@@ -132,6 +132,7 @@ export const StudentAppointments = () => {
 // Presentation Slot Component
 export const PresentationSlot = () => {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
   
   return (
     <motion.div 
@@ -171,59 +172,9 @@ export const PresentationSlot = () => {
             className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
             whileTap={{ scale: 0.97 }}
             animate={{ scale: isHovered ? 1.03 : 1 }}
+            onClick={() => navigate('/college/bookings/presentation-slot')}
           >
             Book Slot
-          </motion.button>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
-// Project Submission Component
-export const ProjectSubmission = () => {
-  const [isHovered, setIsHovered] = useState(false);
-  
-  return (
-    <motion.div 
-      className="relative overflow-hidden bg-white rounded-2xl shadow-lg"
-      whileHover={{ y: -8 }}
-      transition={{ type: "spring", stiffness: 300 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-emerald-600 opacity-90" />
-      
-      <div className="absolute top-5 right-5 bg-white/20 backdrop-blur-md rounded-full p-3">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-      </div>
-      
-      <div className="relative p-7 z-10 h-full flex flex-col">
-        <h3 className="text-2xl font-bold mb-2 text-black">Project Submission</h3>
-        
-        <div className="my-4 bg-white/20 backdrop-blur-md h-px w-16" />
-        
-        <p className="text-black/90 mb-6 flex-grow ">
-          Submit your academic projects, research papers, and assignments through our 
-          digital portal with easy tracking and feedback.
-        </p>
-        
-        <div className="mt-auto space-y-4">
-          <div className="flex items-center text-black/90 text-sm font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-black/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-            <span>Supports multiple file formats</span>
-          </div>
-          
-          <motion.button 
-            className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
-            whileTap={{ scale: 0.97 }}
-            animate={{ scale: isHovered ? 1.03 : 1 }}
-          >
-            Submit Project
           </motion.button>
         </div>
       </div>
@@ -282,9 +233,72 @@ export const EventBooking = () => {
   );
 };
 
+// Host Presentation Component (NEW)
+export const HostPresentation = () => {
+  const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+  const { isFaculty, isClubHead, isAdmin } = useAuth();
+  
+  const handleHostPresentation = () => {
+    navigate('/college/bookings/host-presentation');
+  };
+  
+  // Only show for faculty, club heads, and admins
+  if (!isFaculty() && !isClubHead() && !isAdmin()) {
+    return null;
+  }
+  
+  return (
+    <motion.div 
+      className="relative overflow-hidden bg-white rounded-2xl shadow-lg"
+      whileHover={{ y: -8 }}
+      transition={{ type: "spring", stiffness: 300 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-teal-500 opacity-90" />
+      
+      <div className="absolute top-5 right-5 bg-white/20 backdrop-blur-md rounded-full p-3">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3m0 0l3 3m-3-3v7m6-6v.01M19 12a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      
+      <div className="relative p-7 z-10 h-full flex flex-col">
+        <h3 className="text-2xl font-bold mb-2 text-black">Host Presentation</h3>
+        
+        <div className="my-4 bg-white/20 backdrop-blur-md h-px w-16" />
+        
+        <p className="text-black/90 mb-6 flex-grow">
+          Create and manage presentation slots for students to book. Set availability, 
+          locations, and review incoming presentation requests.
+        </p>
+        
+        <div className="mt-auto space-y-4">
+          <div className="flex items-center text-black/90 text-sm font-medium">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-black/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Manage presentation schedule</span>
+          </div>
+          
+          <motion.button 
+            className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
+            whileTap={{ scale: 0.97 }}
+            animate={{ scale: isHovered ? 1.03 : 1 }}
+            onClick={handleHostPresentation}
+          >
+            Manage Slots
+          </motion.button>
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
 // Main Bookings Component
 const Bookings = () => {
-  const { isFaculty } = useAuth();
+  const { isFaculty, isClubHead, isAdmin } = useAuth();
   
   return (
     <div className="px-6 py-10 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
@@ -305,7 +319,7 @@ const Bookings = () => {
         
         <motion.div 
           layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-4xl mx-auto"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
@@ -336,15 +350,7 @@ const Bookings = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.3 }}
           >
-            <ProjectSubmission />
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.4 }}
-          >
-            {isFaculty() ? <FacultyAppointment /> : <StudentAppointments />}
+            {isFaculty() || isClubHead() || isAdmin() ? <HostPresentation /> : <StudentAppointments />}
           </motion.div>
         </motion.div>
       </motion.div>
