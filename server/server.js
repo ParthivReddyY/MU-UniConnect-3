@@ -113,6 +113,14 @@ app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
 // Add other API routes here
 
+// Define Routes
+app.use('/api/users', require('./routes/api/users'));
+app.use('/api/auth', require('./routes/api/auth'));
+app.use('/api/posts', require('./routes/api/posts'));
+app.use('/api/appointments', require('./routes/api/appointments'));
+app.use('/api/presentation-slots', require('./routes/api/presentationSlots'));
+app.use('/api/faculty', require('./routes/api/faculty'));
+
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
   console.log('Running in production mode - serving static files from ../client/build');

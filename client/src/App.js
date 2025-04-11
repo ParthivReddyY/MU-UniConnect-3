@@ -4,6 +4,9 @@ import './App.css';
 import './CSS/quill-custom.css'; // Update custom editor styles
 import testServerConnection from './utils/testConnection';
 import ServerStatusIndicator from './components/ServerStatusIndicator';
+// Import react-toastify
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 // Import pages
 import Home from './pages/Home';
@@ -114,6 +117,20 @@ function App() {
     <AuthProvider>
       <Router>
         <div className="flex flex-col min-h-[calc(var(--vh,1vh)*100)]">
+          {/* Add ToastContainer at the application root level */}
+          <ToastContainer
+            position="top-right"
+            autoClose={3000}
+            hideProgressBar={false}
+            newestOnTop
+            closeOnClick
+            rtl={false}
+            pauseOnFocusLoss
+            draggable
+            pauseOnHover
+            theme="light"
+          />
+          
           {isLoading ? (
             <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
               <div className="animate-pulse text-primary-red text-lg font-medium">
@@ -122,7 +139,6 @@ function App() {
             </div>
           ) : (
             <>
-              
               <ScrollToTop />
               <NavbarWrapper />
               
