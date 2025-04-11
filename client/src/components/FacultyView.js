@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { renderHTML } from '../utils/editorUtils';
 import ScrollProgress from './ScrollProgress';
+import { Link } from 'react-router-dom';
 
 const FacultyView = ({ faculty }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -270,6 +271,14 @@ const FacultyView = ({ faculty }) => {
                       Call
                     </a>
                   )}
+                  {/* Add Book Appointment Button */}
+                  <Link 
+                    to={`/college/bookings/faculty-appointment?faculty=${encodeURIComponent(JSON.stringify(faculty))}`}
+                    className="inline-flex items-center px-4 py-2 bg-red-500/90 backdrop-blur-sm text-white rounded-full hover:bg-red-600 transition-all shadow-md hover:shadow-lg hover:-translate-y-1 border border-red-400/50"
+                  >
+                    <i className="fas fa-calendar-check mr-2"></i>
+                    Book Appointment
+                  </Link>
                   <button 
                     onClick={() => {
                       if (window.print) window.print();

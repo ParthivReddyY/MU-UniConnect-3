@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../../contexts/AuthContext'; // Import auth context
 import api from '../../../../utils/axiosConfig'; // Import API utility
 
 // Constants
-const MIN_REASON_CHARS = 50;
+const MIN_REASON_CHARS = 20;
 const MAX_REASON_CHARS = 200;
 const MAX_FILE_SIZE_MB = 5;
 const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
@@ -21,6 +21,7 @@ const ALLOWED_FILE_TYPES = [
 const FacultyAppointmentComponent = () => {
   // Navigation
   const navigate = useNavigate();
+  const location = useLocation();
   
   // Get auth context for user information
   const { currentUser, isStudent, isAdmin } = useAuth();
@@ -41,6 +42,7 @@ const FacultyAppointmentComponent = () => {
     appointment_date: '',
     appointment_time: '',
     duration: '',
+    custom_duration: '',
     meeting_mode: '',
     priority: '',
     phone: '',
@@ -230,6 +232,38 @@ const FacultyAppointmentComponent = () => {
       }, 1000);
     }
   }, [currentUser, isStudent, isAdmin, navigate]);
+
+  // Check for pre-selected faculty from URL parameters
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const facultyParam = searchParams.get('faculty');
+    
+    if (facultyParam) {
+      try {
+        const preSelectedFaculty = JSON.parse(decodeURIComponent(facultyParam));
+        
+        // Validate the faculty object has required fields
+        if (preSelectedFaculty && preSelectedFaculty.name && preSelectedFaculty.department) {
+          setSelectedFaculty(preSelectedFaculty);
+          setFormData(prev => ({ ...prev, faculty: preSelectedFaculty.name }));
+          setSearchQuery(preSelectedFaculty.name);
+          
+          // Clear any faculty-related errors
+          setErrors(prev => ({ ...prev, faculty: '' }));
+          
+          // Scroll to the form
+          setTimeout(() => {
+            const formElement = document.getElementById('appointment-form');
+            if (formElement) {
+              formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+          }, 500);
+        }
+      } catch (error) {
+        console.error("Error parsing faculty data from URL:", error);
+      }
+    }
+  }, [location.search]);
 
   // Handle input change
   const handleChange = (e) => {
@@ -448,6 +482,20 @@ const FacultyAppointmentComponent = () => {
         return validateTime(name, value, 'Preferred Time');
       case 'duration':
         return validateRequiredSelect(name, value, 'Duration');
+      case 'custom_duration':
+        if (formData.duration === 'custom') {
+          if (!value) {
+            setErrors(prev => ({ ...prev, custom_duration: 'Custom duration is required.' }));
+            return false;
+          } else if (isNaN(value) || value <= 0 || value > 120) {
+            setErrors(prev => ({ ...prev, custom_duration: 'Duration must be between 1-120 minutes.' }));
+            return false;
+          } else {
+            setErrors(prev => ({ ...prev, custom_duration: '' }));
+            return true;
+          }
+        }
+        return true;
       case 'priority':
         return validateRequiredSelect(name, value, 'Priority');
       case 'meeting_mode':
@@ -473,6 +521,10 @@ const FacultyAppointmentComponent = () => {
     if (!validateDate('appointment_date', formData.appointment_date, 'Preferred Date')) isValid = false;
     if (!validateTime('appointment_time', formData.appointment_time, 'Preferred Time')) isValid = false;
     if (!validateRequiredSelect('duration', formData.duration, 'Duration')) isValid = false;
+    
+    // Validate custom duration if that option is selected
+    if (formData.duration === 'custom' && !validateField('custom_duration', formData.custom_duration)) isValid = false;
+    
     if (!validateRequiredSelect('priority', formData.priority, 'Priority')) isValid = false;
     
     // Validate meeting mode
@@ -513,6 +565,7 @@ const FacultyAppointmentComponent = () => {
       appointment_date: '',
       appointment_time: '',
       duration: '',
+      custom_duration: '',
       meeting_mode: '',
       priority: '',
       phone: '',
@@ -726,7 +779,7 @@ const FacultyAppointmentComponent = () => {
 
           {/* Form */}
           <div className="p-8">
-            <form ref={formRef} className="space-y-6">
+            <form ref={formRef} className="space-y-6" id="appointment-form">
               {/* Faculty Search Input - NEW */}
               <div ref={searchRef} className="relative">
                 <label htmlFor="faculty" className="block text-gray-700 text-md font-semibold mb-2">
@@ -885,25 +938,57 @@ const FacultyAppointmentComponent = () => {
                   <label htmlFor="duration" className="block text-gray-700 text-md font-semibold mb-2">
                     Duration: <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id="duration"
-                    name="duration"
-                    value={formData.duration}
-                    onChange={handleChange}
-                    className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
-                      errors.duration ? 'border-red-500' : ''
-                    }`}
-                    required
-                  >
-                    <option value="" disabled>Select duration</option>
-                    <option value="15">15 minutes</option>
-                    <option value="30">30 minutes</option>
-                    <option value="45">45 minutes</option>
-                    <option value="60">60 minutes</option>
-                  </select>
-                  {errors.duration && (
-                    <p className="text-red-500 text-xs mt-1">{errors.duration}</p>
-                  )}
+                  <div className="space-y-2">
+                    <select
+                      id="duration"
+                      name="duration"
+                      value={formData.duration}
+                      onChange={handleChange}
+                      className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                        errors.duration ? 'border-red-500' : ''
+                      }`}
+                      required
+                    >
+                      <option value="" disabled>Select duration</option>
+                      <option value="default">Default (20 minutes)</option>
+                      <option value="10">10 minutes</option>
+                      <option value="15">15 minutes</option>
+                      <option value="20">20 minutes</option>
+                      <option value="25">25 minutes</option>
+                      <option value="30">30 minutes</option>
+                      <option value="35">35 minutes</option>
+                      <option value="40">40 minutes</option>
+                      <option value="45">45 minutes</option>
+                      <option value="50">50 minutes</option>
+                      <option value="55">55 minutes</option>
+                      <option value="60">60 minutes</option>
+                      <option value="custom">Custom time</option>
+                    </select>
+                    {formData.duration === 'custom' && (
+                      <div className="mt-2">
+                        <input
+                          type="number"
+                          id="custom_duration"
+                          name="custom_duration"
+                          value={formData.custom_duration}
+                          onChange={handleChange}
+                          min="1"
+                          max="120"
+                          placeholder="Enter minutes (1-120)"
+                          className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                            errors.custom_duration ? 'border-red-500' : ''
+                          }`}
+                          required
+                        />
+                        {errors.custom_duration && (
+                          <p className="text-red-500 text-xs mt-1">{errors.custom_duration}</p>
+                        )}
+                      </div>
+                    )}
+                    {errors.duration && (
+                      <p className="text-red-500 text-xs mt-1">{errors.duration}</p>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -1268,7 +1353,11 @@ const FacultyAppointmentComponent = () => {
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <dt className="text-blue-700 font-semibold mb-1">Duration:</dt>
                         <dd className="text-gray-900">
-                          {formData.duration ? `${formData.duration} minutes` : 'Not selected'}
+                          {formData.duration ? 
+                            formData.duration === 'default' ? 'Default (20 minutes)' :
+                            formData.duration === 'custom' ? `${formData.custom_duration} minutes (Custom)` :
+                            `${formData.duration} minutes` 
+                            : 'Not selected'}
                         </dd>
                       </div>
                       <div className="bg-blue-50 p-4 rounded-lg">
