@@ -1,9 +1,15 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 
 // Faculty Appointment Component
 export const FacultyAppointment = () => {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+  
+  const handleScheduleMeeting = () => {
+    navigate('/college/bookings/faculty-appointment');
+  };
   
   return (
     <motion.div 
@@ -43,6 +49,7 @@ export const FacultyAppointment = () => {
             className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
             whileTap={{ scale: 0.97 }}
             animate={{ scale: isHovered ? 1.03 : 1 }}
+            onClick={handleScheduleMeeting}
           >
             Schedule Meeting
           </motion.button>

@@ -1,13 +1,11 @@
-import { 
-  EventBooking,
-  FacultyAppointment,
-  PresentationSlot,
-  ProjectSubmission
-} from '../../components/Bookings';
+import FacultyAppointment from './FacultyAppointment';
+import EventBooking from './EventBooking';
+import PresentationSlot from './PresentationSlot';
+import ProjectSubmission from './ProjectSubmission';
 
 export {
-  EventBooking,
   FacultyAppointment,
+  EventBooking,
   PresentationSlot,
   ProjectSubmission
 };

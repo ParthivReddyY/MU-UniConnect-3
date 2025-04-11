@@ -3,39 +3,33 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, hasRole } = useAuth();
   const location = useLocation();
   
-  // Show loading while checking auth status
+  // Show loading state if auth is still being determined
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-red"></div>
       </div>
     );
   }
   
-  // If not logged in, redirect to login
+  // If no user is logged in, redirect to login
   if (!currentUser) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
   
-  // If no specific roles required, just being logged in is enough
-  if (allowedRoles.length === 0) {
-    return children;
+  // If roles are specified, check if user has any of the allowed roles
+  if (allowedRoles.length > 0) {
+    const hasAllowedRole = allowedRoles.some(role => hasRole(role));
+    if (!hasAllowedRole) {
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
   
-  // Check if user has at least one of the allowed roles - log for debugging
-  console.log(`User role: ${currentUser.role}, Allowed roles:`, allowedRoles);
-  
-  // Explicitly check if the user's role is included in the allowedRoles array
-  if (allowedRoles.includes(currentUser.role)) {
-    return children;
-  }
-  
-  // If user doesn't have required role, redirect to unauthorized
-  console.log(`Access denied: User with role ${currentUser.role} tried to access a route requiring one of:`, allowedRoles);
-  return <Navigate to="/unauthorized" replace />;
+  // Render children if all checks pass
+  return children;
 };
 
 export default ProtectedRoute;

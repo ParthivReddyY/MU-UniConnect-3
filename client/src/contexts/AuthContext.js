@@ -272,6 +272,8 @@ export const AuthProvider = ({ children }) => {
   // Check if user has a specific role
   const hasRole = (role) => {
     if (!currentUser) return false;
+    
+    // Make sure we're checking currentUser.role
     if (typeof role === 'string') return currentUser.role === role;
     if (Array.isArray(role)) return role.includes(currentUser.role);
     return false;

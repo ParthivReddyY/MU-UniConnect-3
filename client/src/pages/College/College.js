@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import CollegeHeader from './components/CollegeHeader';
 import CollegeTabs from './components/CollegeTabs';
 import Overview from './components/Overview';
@@ -8,7 +9,7 @@ import AcademicCalendar from './components/AcademicCalendar';
 import Bookings from './components/Bookings';
 import HostelMaintenance from './components/HostelMaintenance';
 import CampusMap from './components/CampusMap';
-import { useNavigate, useLocation } from 'react-router-dom';
+import FacultyAppointment from './components/bookings/FacultyAppointment';
 
 const College = () => {
   const navigate = useNavigate();
@@ -52,10 +53,18 @@ const College = () => {
     }
   };
 
+  // Check if we're on a booking sub-route
+  const isBookingSubRoute = location.pathname.includes('/college/bookings/');
+
   // Render the appropriate component based on the active tab
   const renderTabContent = () => {
     if (isLoading) {
       return <TabSkeleton />;
+    }
+
+    // If we're on a booking sub-route, don't render the main tab content
+    if (isBookingSubRoute) {
+      return null;
     }
 
     switch (activeTab) {
@@ -78,32 +87,41 @@ const College = () => {
 
   return (
     <div className="flex flex-col w-full min-h-screen bg-gray-50">
-      {/* Hero Section with parallax effect */}
-      <CollegeHeader />
+      {/* Hero Section with parallax effect - only show on main routes */}
+      {!isBookingSubRoute && <CollegeHeader />}
 
-      {/* Content Section - moved up slightly to connect better with header */}
-      <div className="w-full px-4 md:px-6 lg:px-8 py-6 md:py-8 -mt-6 relative z-10">
-        {/* Navigation Tabs - removed the width constraint to allow full expansion */}
-        <div className="w-full mx-auto mb-6">
-          <CollegeTabs 
-            activeTab={activeTab} 
-            setActiveTab={handleTabChange}
-          />
-        </div>
+      {/* Content Section */}
+      <div className={`w-full px-4 md:px-6 lg:px-8 py-6 md:py-8 ${!isBookingSubRoute ? "-mt-6" : ""} relative z-10`}>
+        {/* Navigation Tabs - only show on main routes */}
+        {!isBookingSubRoute && (
+          <div className="w-full mx-auto mb-6">
+            <CollegeTabs 
+              activeTab={activeTab} 
+              setActiveTab={handleTabChange}
+            />
+          </div>
+        )}
         
-        {/* Tab Content with Animation - now full width */}
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeTab}
-            variants={containerVariants}
-            initial="hidden"
-            animate="visible"
-            exit="exit"
-            className="w-full bg-white rounded-xl shadow-md p-5 md:p-8"
-          >
-            {renderTabContent()}
-          </motion.div>
-        </AnimatePresence>
+        {/* Main Content Area */}
+        {isBookingSubRoute ? (
+          <Routes>
+            <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
+            {/* Add other booking sub-routes here when they are implemented */}
+          </Routes>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              variants={containerVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="w-full bg-white rounded-xl shadow-md p-5 md:p-8"
+            >
+              {renderTabContent()}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </div>
     </div>
   );

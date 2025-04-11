@@ -172,7 +172,8 @@ function App() {
                   </PageContainer>
                 } />
                 
-                <Route path="/college" element={
+                {/* College routes with nested sub-routes */}
+                <Route path="/college/*" element={
                   <PageContainer fullWidth>
                     <College />
                   </PageContainer>
