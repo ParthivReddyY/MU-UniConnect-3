@@ -53,8 +53,21 @@ function NavbarWrapper() {
 
 // Standard container wrapper to ensure consistent sizing across pages
 function PageContainer({ children, fullWidth = false }) {
+  const location = useLocation();
+  
+  // List of paths where Navbar should be hidden (same as in NavbarWrapper)
+  const noNavbarPaths = ['/login', '/signup', '/forgot-password', '/reset-password'];
+  
+  // Check if the current path starts with any of the paths where Navbar should be hidden
+  const hideNavbar = noNavbarPaths.some(path => 
+    location.pathname === path || location.pathname.startsWith(`${path}/`)
+  );
+  
+  // Only apply top margin if navbar is visible
+  const topMarginClass = hideNavbar ? '' : 'mt-16 md:mt-20';
+  
   return (
-    <main className={`flex-1 w-full mt-16 md:mt-20 ${fullWidth ? 'full-width-container' : 'std-container'}`}>
+    <main className={`flex-1 w-full ${topMarginClass} ${fullWidth ? 'full-width-container' : 'std-container'}`}>
       <div className="w-full">
         {children}
       </div>
