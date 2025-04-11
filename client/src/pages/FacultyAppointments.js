@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import { 
   getFacultyAppointments, 
   getFacultyAppointmentStats, 
@@ -183,25 +184,25 @@ const FacultyAppointments = () => {
     return `${hour12}:${minutes} ${ampm}`;
   };
 
-  // Get status badge color
+  // Update the getStatusColor function with more vibrant colors
   const getStatusColor = (status) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'completed': return 'bg-blue-100 text-blue-800';
-      case 'cancelled': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border border-yellow-300';
+      case 'approved': return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+      case 'rejected': return 'bg-rose-100 text-rose-800 border border-rose-300';
+      case 'completed': return 'bg-blue-100 text-blue-800 border border-blue-300';
+      case 'cancelled': return 'bg-gray-100 text-gray-800 border border-gray-300';
+      default: return 'bg-gray-100 text-gray-800 border border-gray-300';
     }
   };
 
-  // Get priority badge color
+  // Update the getPriorityColor function with more distinct colors
   const getPriorityColor = (priority) => {
     switch (priority) {
-      case 'High': return 'bg-red-100 text-red-800';
-      case 'Medium': return 'bg-yellow-100 text-yellow-800';
-      case 'Low': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'High': return 'bg-red-100 text-red-800 border border-red-300';
+      case 'Medium': return 'bg-amber-100 text-amber-800 border border-amber-300';
+      case 'Low': return 'bg-teal-100 text-teal-800 border border-teal-300';
+      default: return 'bg-gray-100 text-gray-800 border border-gray-300';
     }
   };
 
@@ -526,9 +527,9 @@ const FacultyAppointments = () => {
       {/* Appointment Details Modal */}
       <AnimatePresence>
         {showDetailsModal && selectedAppointment && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 z-[9999] overflow-y-auto">
             <motion.div 
-              className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+              className="bg-white rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden relative"
               variants={modalVariants}
               initial="hidden"
               animate="visible"
@@ -536,143 +537,193 @@ const FacultyAppointments = () => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold text-gray-900">Appointment Details</h2>
-                  <button 
-                    className="text-gray-500 hover:text-gray-700"
-                    onClick={() => setShowDetailsModal(false)}
-                  >
-                    ✕
-                  </button>
-                </div>
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-800 px-6 py-4 flex justify-between items-center">
+                <h3 className="text-xl font-bold text-white flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Appointment Details
+                </h3>
+                <button 
+                  className="text-white hover:text-indigo-100 transition-colors"
+                  onClick={() => setShowDetailsModal(false)}
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               </div>
 
               {/* Modal Body */}
-              <div className="p-6">
-                {/* Student Information */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 text-gray-800">Student Information</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Name</span>
-                      <p className="font-medium">{selectedAppointment.student.name}</p>
+              <div className="p-6 space-y-6">
+                <div className="flex flex-col md:flex-row gap-6">
+                  <div className="md:w-1/2 space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                        Student Information
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                        <p className="text-gray-700"><span className="font-medium">Name:</span> {selectedAppointment.student.name}</p>
+                        <p className="text-gray-700"><span className="font-medium">Email:</span> {selectedAppointment.student.email}</p>
+                        <p className="text-gray-700"><span className="font-medium">Department:</span> {selectedAppointment.student.department}</p>
+                        <p className="text-gray-700"><span className="font-medium">Roll Number:</span> {selectedAppointment.student.rollNumber}</p>
+                        {selectedAppointment.phone && (
+                          <p className="text-gray-700"><span className="font-medium">Phone:</span> {selectedAppointment.phone}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Email</span>
-                      <p className="font-medium">{selectedAppointment.student.email}</p>
+                    
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        Appointment Details
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-700 font-medium">Status</span>
+                          <p className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedAppointment.status)}`}>
+                            {selectedAppointment.status.charAt(0).toUpperCase() + selectedAppointment.status.slice(1)}
+                          </p>
+                        </div>
+                        
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-gray-700 font-medium">Priority</span>
+                          <p className={`px-3 py-1 rounded-full text-xs font-semibold ${getPriorityColor(selectedAppointment.priority)}`}>
+                            {selectedAppointment.priority}
+                          </p>
+                        </div>
+                        
+                        <p className="text-gray-700"><span className="font-medium">Course:</span> {selectedAppointment.course}</p>
+                        <p className="text-gray-700"><span className="font-medium">Date:</span> {formatDate(selectedAppointment.appointment_date)}</p>
+                        <p className="text-gray-700"><span className="font-medium">Time:</span> {
+                          selectedAppointment.appointment_time 
+                            ? format(new Date(`2000-01-01T${selectedAppointment.appointment_time}`), 'h:mm a')
+                            : 'Not selected'
+                        }</p>
+                        <p className="text-gray-700"><span className="font-medium">Duration:</span> {
+                          selectedAppointment.duration === 'default' 
+                            ? '20 minutes (Default)' 
+                            : selectedAppointment.duration === 'custom'
+                            ? `${selectedAppointment.custom_duration} minutes (Custom)`
+                            : `${selectedAppointment.duration} minutes`
+                        }</p>
+                        <p className="text-gray-700"><span className="font-medium">Meeting Mode:</span> {
+                          selectedAppointment.meeting_mode === 'in-person' 
+                            ? 'In-Person (Office Hours)' 
+                            : 'Virtual (Google Meet)'
+                        }</p>
+                      </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Department</span>
-                      <p className="font-medium">{selectedAppointment.student.department}</p>
+                  </div>
+                  
+                  <div className="md:w-1/2 space-y-6">
+                    <div className="space-y-2">
+                      <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                        </svg>
+                        Reason for Appointment
+                      </h4>
+                      <div className="bg-gray-50 p-4 rounded-lg shadow-sm max-h-36 overflow-y-auto">
+                        <p className="text-gray-700 whitespace-pre-wrap">{selectedAppointment.reason}</p>
+                      </div>
                     </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Roll Number</span>
-                      <p className="font-medium">{selectedAppointment.student.rollNumber}</p>
-                    </div>
-                    {selectedAppointment.phone && (
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        <span className="text-gray-500 text-sm">Phone</span>
-                        <p className="font-medium">{selectedAppointment.phone}</p>
+                    
+                    {selectedAppointment.faculty_notes && (
+                      <div className="space-y-2">
+                        <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Your Notes
+                        </h4>
+                        <div className="bg-blue-50 p-4 rounded-lg shadow-sm border border-blue-100 max-h-28 overflow-y-auto">
+                          <p className="text-gray-700 whitespace-pre-wrap">{selectedAppointment.faculty_notes}</p>
+                        </div>
                       </div>
                     )}
+                    
+                    {selectedAppointment.meeting_mode === 'virtual' && 
+                      selectedAppointment.status === 'approved' && 
+                      selectedAppointment.meeting_link && (
+                      <div className="space-y-2">
+                        <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Meeting Link
+                        </h4>
+                        <div className="bg-green-50 p-4 rounded-lg shadow-sm border border-green-100">
+                          <a 
+                            href={selectedAppointment.meeting_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center text-blue-600 hover:underline break-all"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                            </svg>
+                            {selectedAppointment.meeting_link}
+                          </a>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Alternative Time Slots */}
+                    {(selectedAppointment.alt_date_1 && selectedAppointment.alt_time_1) || 
+                     (selectedAppointment.alt_date_2 && selectedAppointment.alt_time_2) ? (
+                      <div className="space-y-2">
+                        <h4 className="text-lg font-semibold text-gray-800 flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Alternative Time Slots
+                        </h4>
+                        <div className="bg-gray-50 p-4 rounded-lg shadow-sm">
+                          {selectedAppointment.alt_date_1 && selectedAppointment.alt_time_1 && (
+                            <div className="mb-2 flex items-center">
+                              <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-2 flex-shrink-0">
+                                <span className="text-xs font-bold">1</span>
+                              </div>
+                              <p className="text-gray-700">
+                                {formatDate(selectedAppointment.alt_date_1)} at {
+                                  format(new Date(`2000-01-01T${selectedAppointment.alt_time_1}`), 'h:mm a')
+                                }
+                              </p>
+                            </div>
+                          )}
+                          {selectedAppointment.alt_date_2 && selectedAppointment.alt_time_2 && (
+                            <div className="flex items-center">
+                              <div className="w-6 h-6 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mr-2 flex-shrink-0">
+                                <span className="text-xs font-bold">2</span>
+                              </div>
+                              <p className="text-gray-700">
+                                {formatDate(selectedAppointment.alt_date_2)} at {
+                                  format(new Date(`2000-01-01T${selectedAppointment.alt_time_2}`), 'h:mm a')
+                                }
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
-
-                {/* Appointment Details */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 text-gray-800">Appointment Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Course/Subject</span>
-                      <p className="font-medium">{selectedAppointment.course}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Status</span>
-                      <p className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedAppointment.status)}`}>
-                        {selectedAppointment.status.charAt(0).toUpperCase() + selectedAppointment.status.slice(1)}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Date</span>
-                      <p className="font-medium">{formatDate(selectedAppointment.appointment_date)}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Time</span>
-                      <p className="font-medium">{formatTime(selectedAppointment.appointment_time)}</p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Duration</span>
-                      <p className="font-medium">
-                        {selectedAppointment.duration === 'default' 
-                          ? '20 minutes (Default)' 
-                          : selectedAppointment.duration === 'custom'
-                          ? `${selectedAppointment.custom_duration} minutes (Custom)`
-                          : `${selectedAppointment.duration} minutes`}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Meeting Mode</span>
-                      <p className="font-medium">
-                        {selectedAppointment.meeting_mode === 'in-person' 
-                          ? 'In-Person (Office Hours)' 
-                          : 'Virtual (Google Meet)'}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Priority</span>
-                      <p className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${getPriorityColor(selectedAppointment.priority)}`}>
-                        {selectedAppointment.priority}
-                      </p>
-                    </div>
-                    <div className="bg-gray-50 p-3 rounded-lg">
-                      <span className="text-gray-500 text-sm">Requested On</span>
-                      <p className="font-medium">{formatDate(selectedAppointment.created_at)}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Reason for Appointment */}
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 text-gray-800">Reason for Appointment</h3>
-                  <div className="bg-gray-50 p-4 rounded-lg">
-                    <p className="whitespace-pre-wrap text-gray-700">{selectedAppointment.reason}</p>
-                  </div>
-                </div>
-
-                {/* Faculty Notes (if any) */}
-                {selectedAppointment.faculty_notes && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-800">Your Notes</h3>
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                      <p className="whitespace-pre-wrap text-gray-700">{selectedAppointment.faculty_notes}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Meeting Link (if virtual and approved) */}
-                {selectedAppointment.meeting_mode === 'virtual' && 
-                  selectedAppointment.status === 'approved' && 
-                  selectedAppointment.meeting_link && (
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-800">Meeting Link</h3>
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-100">
-                      <a 
-                        href={selectedAppointment.meeting_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline break-all"
-                      >
-                        {selectedAppointment.meeting_link}
-                      </a>
-                    </div>
-                  </div>
-                )}
-
+                
                 {/* Action Form */}
                 {selectedAppointment.status === 'pending' && (
-                  <div className="mb-6 border-t pt-6 mt-6">
-                    <h3 className="text-lg font-semibold mb-3 text-gray-800">Take Action</h3>
+                  <div className="mt-6 border-t pt-6">
+                    <h3 className="text-lg font-semibold mb-3 text-gray-800 flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Take Action
+                    </h3>
                     
                     {/* Faculty Notes */}
                     <div className="mb-4">
@@ -680,7 +731,7 @@ const FacultyAppointments = () => {
                         Notes (Optional)
                       </label>
                       <textarea
-                        className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                        className="shadow-sm border border-gray-300 rounded-md w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                         rows="3"
                         placeholder="Add notes about the appointment..."
                         value={actionNotes}
@@ -691,36 +742,53 @@ const FacultyAppointments = () => {
                     {/* Meeting Link (only for virtual meetings) */}
                     {selectedAppointment.meeting_mode === 'virtual' && (
                       <div className="mb-4">
-                        <label className="block text-gray-700 text-sm font-semibold mb-2">
+                        <label className="flex text-gray-700 text-sm font-semibold mb-2 items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 015.656 0l4 4a4 4 0 01-5.656 5.656l-1.1-1.1" />
+                          </svg>
                           Meeting Link (Required for approval)
                         </label>
-                        <input
-                          type="url"
-                          className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-                          placeholder="https://meet.google.com/..."
-                          value={meetingLink}
-                          onChange={(e) => setMeetingLink(e.target.value)}
-                        />
+                        <div className="flex">
+                          <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                          </span>
+                          <input
+                            type="url"
+                            className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors sm:text-sm"
+                            placeholder="https://meet.google.com/..."
+                            value={meetingLink}
+                            onChange={(e) => setMeetingLink(e.target.value)}
+                          />
+                        </div>
                       </div>
                     )}
                     
                     {/* Action Buttons */}
-                    <div className="flex justify-end gap-3 mt-4">
+                    <div className="flex flex-col sm:flex-row gap-3 justify-end mt-6">
                       <button
                         type="button"
                         onClick={() => handleAppointmentAction(selectedAppointment._id, 'rejected')}
-                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                        className="px-4 py-2 rounded-md bg-gradient-to-r from-rose-600 to-red-600 text-white font-medium hover:from-rose-700 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 shadow-md transition-all flex items-center justify-center"
                         disabled={isSubmitting}
                       >
-                        {isSubmitting ? 'Processing...' : 'Reject'}
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {isSubmitting ? 'Processing...' : 'Decline Appointment'}
                       </button>
                       <button
                         type="button"
                         onClick={() => handleAppointmentAction(selectedAppointment._id, 'approved')}
-                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                        className="px-4 py-2 rounded-md bg-gradient-to-r from-emerald-500 to-green-600 text-white font-medium hover:from-emerald-600 hover:to-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 shadow-md transition-all flex items-center justify-center"
                         disabled={isSubmitting || (selectedAppointment.meeting_mode === 'virtual' && !meetingLink)}
                       >
-                        {isSubmitting ? 'Processing...' : 'Approve'}
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {isSubmitting ? 'Processing...' : 'Approve Appointment'}
                       </button>
                     </div>
                   </div>
@@ -729,13 +797,20 @@ const FacultyAppointments = () => {
                 {/* Mark Complete Button (for approved appointments) */}
                 {selectedAppointment.status === 'approved' && (
                   <div className="border-t pt-6 mt-6">
-                    <div className="flex justify-end">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                      <div className="mb-4 sm:mb-0">
+                        <h3 className="text-lg font-semibold text-gray-800">Complete Appointment</h3>
+                        <p className="text-sm text-gray-600">Mark this appointment as completed after the meeting.</p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => handleAppointmentAction(selectedAppointment._id, 'completed')}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                        className="px-4 py-2 rounded-md bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium hover:from-blue-600 hover:to-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 shadow-md transition-all flex items-center"
                         disabled={isSubmitting}
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
                         {isSubmitting ? 'Processing...' : 'Mark as Completed'}
                       </button>
                     </div>
