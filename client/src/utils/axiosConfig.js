@@ -2,14 +2,16 @@ import axios from 'axios';
 
 // Create an axios instance with debug logging
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
-  timeout: 15000,
+  // In production, use relative URLs (empty baseURL)
+  // In development, use the localhost URL
+  baseURL: process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5000',
+  timeout: 15000, // Increase timeout to 15 seconds
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Add request logging
+// Add request interceptor for debugging
 api.interceptors.request.use(
   (config) => {
     // Get the token from localStorage
@@ -23,10 +25,18 @@ api.interceptors.request.use(
       console.log(`Request without authorization to ${config.url}`);
     }
     
+    console.log('API Request:', {
+      method: config.method.toUpperCase(),
+      url: config.url,
+      data: config.data,
+      headers: config.headers,
+      baseURL: config.baseURL
+    });
+    
     return config;
   },
   (error) => {
-    console.error('Request error:', error);
+    console.error('API Request Error:', error);
     return Promise.reject(error);
   }
 );

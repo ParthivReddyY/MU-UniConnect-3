@@ -202,7 +202,16 @@ const login = async (req, res) => {
   try {
     const { email, password } = req.body;
     
-    console.log(`Login attempt for email: ${email}`);
+    // Detailed logging for debugging
+    console.log('==== LOGIN ATTEMPT DETAILS ====');
+    console.log(`Email: ${email}`);
+    console.log(`Password provided: ${password ? 'Yes' : 'No'}`);
+    console.log('Request headers:', req.headers);
+    console.log('Request origin:', req.get('origin'));
+    console.log('Request method:', req.method);
+    console.log('Request path:', req.path);
+    console.log('Request IP:', req.ip);
+    console.log('==============================');
     
     if (!email || !password) {
       console.log('Missing email or password');
@@ -282,11 +291,18 @@ const login = async (req, res) => {
       token
     });
   } catch (error) {
-    console.error("Login error:", error);
+    console.error("Login error details:", {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      code: error.code
+    });
+    
     res.status(500).json({ 
       success: false, 
       message: 'Something went wrong during login',
-      errorType: 'SERVER_ERROR' 
+      errorType: 'SERVER_ERROR',
+      errorMessage: error.message
     });
   }
 };

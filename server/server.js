@@ -67,6 +67,21 @@ app.get('/health', (req, res) => {
   });
 });
 
+// API connectivity test endpoint
+app.get('/api/test-connection', (req, res) => {
+  console.log('Test connection endpoint hit');
+  res.status(200).json({
+    success: true,
+    message: 'API connection successful',
+    timestamp: new Date().toISOString(),
+    headers: req.headers,
+    cookies: req.cookies,
+    method: req.method,
+    clientIP: req.ip,
+    path: req.path
+  });
+});
+
 // IMPORTANT: API Routes must be defined BEFORE static file serving
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
