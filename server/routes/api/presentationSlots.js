@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const auth = require('../../middleware/auth');
+const { authenticateUser, isAdmin, isFacultyOrAdmin } = require('../../middleware/auth');
 const PresentationSlot = require('../../models/PresentationSlot');
 const { check, validationResult } = require('express-validator');
 
@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 // @route   GET api/presentation-slots/faculty
 // @desc    Get presentation slots created by a faculty member
 // @access  Private (Faculty/Admin only)
-router.get('/faculty', auth, async (req, res) => {
+router.get('/faculty', authenticateUser, async (req, res) => {
   try {
     // Check if user is faculty or admin
     if (!['faculty', 'admin'].includes(req.user.role)) {
@@ -65,7 +65,7 @@ router.get('/:id', async (req, res) => {
 router.post(
   '/',
   [
-    auth,
+    authenticateUser,
     [
       check('title', 'Title is required').not().isEmpty(),
       check('description', 'Description is required').not().isEmpty(),
@@ -136,7 +136,7 @@ router.post(
 // @route   PUT api/presentation-slots/:id
 // @desc    Update a presentation slot
 // @access  Private (Faculty owner or Admin only)
-router.put('/:id', auth, async (req, res) => {
+router.put('/:id', authenticateUser, async (req, res) => {
   try {
     const slot = await PresentationSlot.findById(req.params.id);
     
@@ -185,7 +185,7 @@ router.put('/:id', auth, async (req, res) => {
 // @route   DELETE api/presentation-slots/:id
 // @desc    Delete a presentation slot
 // @access  Private (Faculty owner or Admin only)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', authenticateUser, async (req, res) => {
   try {
     const slot = await PresentationSlot.findById(req.params.id);
     
@@ -222,7 +222,7 @@ router.delete('/:id', auth, async (req, res) => {
 // @route   PUT api/presentation-slots/:id/book
 // @desc    Book a presentation slot
 // @access  Private (Students only)
-router.put('/:id/book', auth, async (req, res) => {
+router.put('/:id/book', authenticateUser, async (req, res) => {
   try {
     // Check if user is a student
     if (req.user.role !== 'student') {
