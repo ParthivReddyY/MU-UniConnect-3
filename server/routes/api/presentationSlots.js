@@ -1,264 +1,46 @@
 const express = require('express');
 const router = express.Router();
-const { authenticateUser, isAdmin, isFacultyOrAdmin } = require('../../middleware/auth');
-const PresentationSlot = require('../../models/PresentationSlot');
-const { check, validationResult } = require('express-validator');
+const { authenticateUser } = require('../../middleware/auth');
+const presentationSlotController = require('../../controllers/presentationSlotController');
 
-// @route   GET api/presentation-slots
-// @desc    Get all presentation slots
-// @access  Public
-router.get('/', async (req, res) => {
-  try {
-    const slots = await PresentationSlot.find().sort({ date: 1, startTime: 1 });
-    res.json(slots);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-});
+// Route to create a single presentation slot
+// POST /api/presentation-slots
+router.post('/', authenticateUser, presentationSlotController.createPresentationSlot);
 
-// @route   GET api/presentation-slots/faculty
-// @desc    Get presentation slots created by a faculty member
-// @access  Private (Faculty/Admin only)
-router.get('/faculty', authenticateUser, async (req, res) => {
-  try {
-    // Check if user is faculty or admin
-    if (!['faculty', 'admin'].includes(req.user.role)) {
-      return res.status(403).json({ msg: 'Not authorized' });
-    }
+// Route to create multiple presentation slots in batch
+// POST /api/presentation-slots/batch
+router.post('/batch', authenticateUser, presentationSlotController.createBatchPresentationSlots);
 
-    const slots = await PresentationSlot.find({ 
-      'host.userId': req.user.userId 
-    }).sort({ date: 1, startTime: 1 });
-    
-    res.json(slots);
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
-  }
-});
+// Route to get all presentation slots created by the logged-in host
+// GET /api/presentation-slots/host
+router.get('/host', authenticateUser, presentationSlotController.getHostPresentationSlots);
 
-// @route   GET api/presentation-slots/:id
-// @desc    Get presentation slot by ID
-// @access  Public
-router.get('/:id', async (req, res) => {
-  try {
-    const slot = await PresentationSlot.findById(req.params.id);
-    
-    if (!slot) {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    
-    res.json(slot);
-  } catch (err) {
-    console.error(err.message);
-    if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    res.status(500).send('Server Error');
-  }
-});
+// Route to get all available presentation slots (filterable by year, school, department)
+// GET /api/presentation-slots/available
+router.get('/available', authenticateUser, presentationSlotController.getAvailablePresentationSlots);
 
-// @route   POST api/presentation-slots
-// @desc    Create a presentation slot
-// @access  Private (Faculty/Admin only)
-router.post(
-  '/',
-  [
-    authenticateUser,
-    [
-      check('title', 'Title is required').not().isEmpty(),
-      check('description', 'Description is required').not().isEmpty(),
-      check('targetYear', 'Target year is required').not().isEmpty(),
-      check('targetDepartment', 'Target department is required').not().isEmpty(),
-      check('date', 'Date is required').not().isEmpty(),
-      check('startTime', 'Start time is required').not().isEmpty(),
-      check('endTime', 'End time is required').not().isEmpty(),
-      check('venue', 'Venue is required').not().isEmpty(),
-      check('duration', 'Duration is required').isNumeric()
-    ]
-  ],
-  async (req, res) => {
-    // Check if user is faculty or admin
-    if (!['faculty', 'admin'].includes(req.user.role)) {
-      return res.status(403).json({ msg: 'Not authorized to create presentation slots' });
-    }
-    
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+// Route to get all presentation slots booked by the student
+// GET /api/presentation-slots/student-bookings
+router.get('/student-bookings', authenticateUser, presentationSlotController.getStudentBookings);
 
-    try {
-      const {
-        title,
-        description,
-        targetYear,
-        targetDepartment,
-        date,
-        startTime,
-        endTime,
-        venue,
-        duration,
-        bufferTime = 0
-      } = req.body;
+// Route to get a single presentation slot by ID
+// GET /api/presentation-slots/:id
+router.get('/:id', authenticateUser, presentationSlotController.getPresentationSlotById);
 
-      // Create new presentation slot
-      const newSlot = new PresentationSlot({
-        host: {
-          userId: req.user.userId,
-          name: req.user.name,
-          email: req.user.email,
-          department: req.user.department
-        },
-        title,
-        description,
-        targetYear,
-        targetDepartment,
-        date,
-        startTime,
-        endTime,
-        venue,
-        duration,
-        bufferTime,
-        status: 'available'
-      });
+// Route to update a presentation slot
+// PUT /api/presentation-slots/:id
+router.put('/:id', authenticateUser, presentationSlotController.updatePresentationSlot);
 
-      const slot = await newSlot.save();
-      res.json(slot);
-    } catch (err) {
-      console.error(err.message);
-      res.status(500).send('Server Error');
-    }
-  }
-);
+// Route to delete a presentation slot
+// DELETE /api/presentation-slots/:id
+router.delete('/:id', authenticateUser, presentationSlotController.deletePresentationSlot);
 
-// @route   PUT api/presentation-slots/:id
-// @desc    Update a presentation slot
-// @access  Private (Faculty owner or Admin only)
-router.put('/:id', authenticateUser, async (req, res) => {
-  try {
-    const slot = await PresentationSlot.findById(req.params.id);
-    
-    if (!slot) {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    
-    // Check if user is the owner or admin
-    if (
-      slot.host.userId.toString() !== req.user.userId.toString() && 
-      req.user.role !== 'admin'
-    ) {
-      return res.status(403).json({ msg: 'Not authorized to update this slot' });
-    }
+// Route to book a presentation slot
+// POST /api/presentation-slots/:id/book
+router.post('/:id/book', authenticateUser, presentationSlotController.bookPresentationSlot);
 
-    // Don't allow updates if slot is already booked
-    if (slot.status === 'booked' && req.body.status !== 'cancelled') {
-      return res.status(400).json({ 
-        msg: 'Cannot update details of a booked slot. You can only cancel it.' 
-      });
-    }
-
-    const updateFields = {};
-    for (const [key, value] of Object.entries(req.body)) {
-      if (value !== null && value !== undefined) {
-        updateFields[key] = value;
-      }
-    }
-
-    const updatedSlot = await PresentationSlot.findByIdAndUpdate(
-      req.params.id,
-      { $set: updateFields },
-      { new: true }
-    );
-
-    res.json(updatedSlot);
-  } catch (err) {
-    console.error(err.message);
-    if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    res.status(500).send('Server Error');
-  }
-});
-
-// @route   DELETE api/presentation-slots/:id
-// @desc    Delete a presentation slot
-// @access  Private (Faculty owner or Admin only)
-router.delete('/:id', authenticateUser, async (req, res) => {
-  try {
-    const slot = await PresentationSlot.findById(req.params.id);
-    
-    if (!slot) {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    
-    // Check if user is the owner or admin
-    if (
-      slot.host.userId.toString() !== req.user.userId.toString() && 
-      req.user.role !== 'admin'
-    ) {
-      return res.status(403).json({ msg: 'Not authorized to delete this slot' });
-    }
-
-    // Don't allow deletion if slot is already booked
-    if (slot.status === 'booked') {
-      return res.status(400).json({ 
-        msg: 'Cannot delete a booked slot. Cancel it first.' 
-      });
-    }
-
-    await slot.remove();
-    res.json({ msg: 'Presentation slot removed' });
-  } catch (err) {
-    console.error(err.message);
-    if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    res.status(500).send('Server Error');
-  }
-});
-
-// @route   PUT api/presentation-slots/:id/book
-// @desc    Book a presentation slot
-// @access  Private (Students only)
-router.put('/:id/book', authenticateUser, async (req, res) => {
-  try {
-    // Check if user is a student
-    if (req.user.role !== 'student') {
-      return res.status(403).json({ msg: 'Only students can book presentation slots' });
-    }
-
-    const slot = await PresentationSlot.findById(req.params.id);
-    
-    if (!slot) {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    
-    // Check if slot is already booked
-    if (slot.status !== 'available') {
-      return res.status(400).json({ msg: 'This slot is not available for booking' });
-    }
-
-    // Update slot status and add booking details
-    slot.status = 'booked';
-    slot.bookedBy = {
-      userId: req.user.userId,
-      name: req.user.name,
-      email: req.user.email,
-      department: req.user.department,
-      rollNumber: req.user.studentId || 'Unknown'
-    };
-
-    await slot.save();
-    res.json(slot);
-  } catch (err) {
-    console.error(err.message);
-    if (err.kind === 'ObjectId') {
-      return res.status(404).json({ msg: 'Presentation slot not found' });
-    }
-    res.status(500).send('Server Error');
-  }
-});
+// Route to cancel a booked presentation slot
+// POST /api/presentation-slots/:id/cancel
+router.post('/:id/cancel', authenticateUser, presentationSlotController.cancelBooking);
 
 module.exports = router;

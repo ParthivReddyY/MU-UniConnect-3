@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import './App.css';
 import './CSS/quill-custom.css'; // Update custom editor styles
 import testServerConnection from './utils/testConnection';
-import ServerStatusIndicator from './components/ServerStatusIndicator';
 // Import react-toastify
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -83,34 +82,27 @@ function PageContainer({ children, fullWidth = false }) {
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
-  const [serverStatus, setServerStatus] = useState({ checked: false, online: false, message: '' });
   
   useEffect(() => {
-    // Test server connection during app initialization
-    const checkServerConnection = async () => {
+    // Set a short timeout to simulate initialization
+    const initializeApp = async () => {
       try {
+        // We can still test the connection but won't display the indicator
         const result = await testServerConnection();
-        setServerStatus({
-          checked: true,
-          online: result.success,
-          message: result.message
-        });
         console.log('Server connection status:', result);
+        // You can choose to handle server connectivity in a different way
+        // or remove this completely if not needed
       } catch (error) {
         console.error('Error checking server connection:', error);
-        setServerStatus({
-          checked: true,
-          online: false,
-          message: 'Error checking server connection'
-        });
       }
+      
+      // Other initialization code...
+      
+      // Complete loading regardless of server status
+      setIsLoading(false);
     };
     
-    checkServerConnection();
-    
-    // Other initialization code...
-    
-    setIsLoading(false);
+    initializeApp();
   }, []);
   
   return (
@@ -294,7 +286,6 @@ function App() {
               <footer className="bg-dark-gray text-white text-center p-2 mt-0">
                 <p>&copy; {new Date().getFullYear()} MU-UniConnect. All rights reserved.</p>
               </footer>
-              <ServerStatusIndicator status={serverStatus} />
             </>
           )}
         </div>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../../../contexts/AuthContext';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import PresentationService from '../../../../services/PresentationService';
+import { toast } from 'react-toastify';
 
 const HostPresentation = () => {
   const { currentUser } = useAuth();
@@ -18,15 +18,16 @@ const HostPresentation = () => {
     title: '',
     description: '',
     targetYear: '',
-    targetSchool: '',  // Added school field
+    targetSchool: '',    
     targetDepartment: '',
-    presentationType: 'single', // Added presentation type field
-    minTeamMembers: 2, // Add min team members with default 2
-    maxTeamMembers: 5, // Add max team members with default 5
+    presentationType: 'single',    
+    minTeamMembers: 2,    
+    maxTeamMembers: 5,    
     date: '',
     startTime: '',
-    duration: 30, // default 30 minutes
-    bufferTime: 5, // default 5 minutes buffer
+    endTime: '',
+    duration: 30,    
+    bufferTime: 5,    
     venue: ''
   });
   
@@ -36,7 +37,7 @@ const HostPresentation = () => {
     dateRange: {
       startDate: '',
       endDate: '',
-      daysOfWeek: [] // e.g. [1, 3, 5] for Mon, Wed, Fri
+      daysOfWeek: []
     },
     timeSlots: [{ startTime: '', endTime: '', computed: false }]
   });
@@ -125,23 +126,27 @@ const HostPresentation = () => {
 
   // Time suggestions by day of week
   const timeSlotSuggestions = useMemo(() => ({
-    0: ['10:00', '11:30', '13:00', '14:30', '16:00'], // Sunday
-    1: ['09:00', '10:30', '12:00', '14:00', '15:30', '17:00'], // Monday
-    2: ['09:30', '11:00', '13:30', '15:00', '16:30'], // Tuesday
-    3: ['09:00', '10:30', '12:00', '14:00', '15:30', '17:00'], // Wednesday
-    4: ['09:30', '11:00', '13:30', '15:00', '16:30'], // Thursday
-    5: ['09:00', '10:30', '12:00', '14:00', '15:30'], // Friday
-    6: ['10:00', '11:30', '13:00', '14:30'] // Saturday
+    0: ['10:00', '11:30', '13:00', '14:30', '16:00'],
+    1: ['09:00', '10:30', '12:00', '14:00', '15:30', '17:00'],
+    2: ['09:30', '11:00', '13:30', '15:00', '16:30'],
+    3: ['09:00', '10:30', '12:00', '14:00', '15:30', '17:00'],
+    4: ['09:30', '11:00', '13:30', '15:00', '16:30'],
+    5: ['09:00', '10:30', '12:00', '14:00', '15:30'],
+    6: ['10:00', '11:30', '13:00', '14:30']
   }), []);
   
-  // Add missing calculateEndTime function
+  // Calculate end time based on start time and duration
   const calculateEndTime = (startTime, durationMinutes, bufferTime = 0) => {
     if (!startTime) return '';
     const [hours, minutes] = startTime.split(':').map(Number);
-    let totalMinutes = hours * 60 + minutes + parseInt(durationMinutes) + parseInt(bufferTime || 0);
-    const endHours = Math.floor(totalMinutes / 60) % 24;
-    const endMinutes = totalMinutes % 60;
-    return `${String(endHours).padStart(2, '0')}:${String(endMinutes).padStart(2, '0')}`;
+    const startDate = new Date();
+    startDate.setHours(hours, minutes, 0, 0);
+    
+    const endDate = new Date(startDate.getTime() + (durationMinutes + bufferTime) * 60000);
+    const endHours = endDate.getHours().toString().padStart(2, '0');
+    const endMinutes = endDate.getMinutes().toString().padStart(2, '0');
+    
+    return `${endHours}:${endMinutes}`;
   };
 
   // Define functions before they're used in useEffect dependencies
@@ -149,22 +154,19 @@ const HostPresentation = () => {
     if (!batchData.dateRange.startDate || !batchData.dateRange.endDate || batchData.dateRange.daysOfWeek.length === 0) {
       return [];
     }
-    
+
     const startDate = new Date(batchData.dateRange.startDate);
     const endDate = new Date(batchData.dateRange.endDate);
     const selectedDays = batchData.dateRange.daysOfWeek;
     const dates = [];
+
+    let currentDate = new Date(startDate);
     
-    // Clone startDate to avoid modifying the original
-    const currentDate = new Date(startDate);
-    
-    // Iterate through all dates in the range
     while (currentDate <= endDate) {
-      const dayOfWeek = currentDate.getDay(); // 0 for Sunday, 1 for Monday, etc.
+      const dayOfWeek = currentDate.getDay(); // 0 is Sunday, 1 is Monday, etc.
       
-      // If this day of the week is selected, add it to our dates
       if (selectedDays.includes(dayOfWeek)) {
-        dates.push(new Date(currentDate).toISOString().split('T')[0]);
+        dates.push(new Date(currentDate));
       }
       
       // Move to the next day
@@ -174,60 +176,53 @@ const HostPresentation = () => {
     return dates;
   }, [batchData.dateRange]);
   
+  // Auto populate time slots based on day of week
   const autoPopulateTimeSlots = useCallback(() => {
     const dates = generateDatesFromRange();
+    
     if (dates.length === 0) return;
     
-    // Get unique days of week from selected dates
-    const uniqueDaysOfWeek = [...new Set(dates.map(date => new Date(date).getDay()))];
+    // Find the most common day of week in the selected dates
+    const dayFrequency = {};
+    let mostCommonDay = 1; // Default to Monday
     
-    // Find common time slots across all selected days
-    let commonTimeSlots = [];
-    
-    uniqueDaysOfWeek.forEach(dayOfWeek => {
-      const daySlots = timeSlotSuggestions[dayOfWeek] || [];
-      if (commonTimeSlots.length === 0) {
-        commonTimeSlots = [...daySlots];
-      } else {
-        commonTimeSlots = commonTimeSlots.filter(slot => daySlots.includes(slot));
+    dates.forEach(date => {
+      const day = date.getDay();
+      dayFrequency[day] = (dayFrequency[day] || 0) + 1;
+      
+      if (!mostCommonDay || dayFrequency[day] > dayFrequency[mostCommonDay]) {
+        mostCommonDay = day;
       }
     });
     
-    // If no common slots, use the first day's slots
-    const slotsToUse = commonTimeSlots.length > 0 ? 
-      commonTimeSlots : 
-      timeSlotSuggestions[uniqueDaysOfWeek[0]] || [];
+    // Get suggested time slots for the most common day
+    const suggestedTimes = timeSlotSuggestions[mostCommonDay] || timeSlotSuggestions[1];
     
-    // Use first 2-3 slots to avoid overwhelming the user
-    const suggestedSlots = slotsToUse.slice(0, 3);
+    // Create time slots from suggestions
+    const newTimeSlots = suggestedTimes.map(startTime => {
+      const endTime = calculateEndTime(startTime, formData.duration, formData.bufferTime);
+      return {
+        startTime,
+        endTime,
+        computed: true
+      };
+    });
     
-    // Update batch data with suggested time slots
     setBatchData(prev => ({
       ...prev,
-      timeSlots: suggestedSlots.map(startTime => {
-        const endTime = calculateEndTime(startTime, formData.duration, formData.bufferTime);
-        return {
-          startTime,
-          endTime,
-          computed: true
-        };
-      })
+      timeSlots: newTimeSlots
     }));
-  }, [formData.duration, formData.bufferTime, generateDatesFromRange, timeSlotSuggestions, setBatchData]);
+  }, [formData.duration, formData.bufferTime, generateDatesFromRange, timeSlotSuggestions]);
 
+  // Load presentation slots on mount
   useEffect(() => {
     fetchPresentationSlots();
   }, []);
 
   // Update available departments when school changes
   useEffect(() => {
-    if (formData.targetSchool) {
-      const departments = academicData[formData.targetSchool] || [];
-      setAvailableDepartments(departments);
-      setFormData(prev => ({
-        ...prev,
-        targetDepartment: ''
-      }));
+    if (formData.targetSchool && academicData[formData.targetSchool]) {
+      setAvailableDepartments(academicData[formData.targetSchool]);
     } else {
       setAvailableDepartments([]);
     }
@@ -236,82 +231,73 @@ const HostPresentation = () => {
   // Add useEffect to update time slots when dates change
   useEffect(() => {
     if (batchMode) {
-      const dates = generateDatesFromRange();
-      if (dates.length > 0 && batchData.timeSlots.length === 1 && !batchData.timeSlots[0].startTime) {
-        autoPopulateTimeSlots();
+      if (batchData.dateRange.startDate && 
+          batchData.dateRange.endDate && 
+          batchData.dateRange.daysOfWeek.length > 0) {
+        
+        // Generate dates based on range and selected days
+        const dates = generateDatesFromRange();
+        setBatchData(prev => ({
+          ...prev,
+          dates
+        }));
+        
+        // If time slots are empty or all computed, auto-populate
+        if (batchData.timeSlots.length === 0 || 
+            batchData.timeSlots.every(slot => slot.computed)) {
+          autoPopulateTimeSlots();
+        }
       }
     }
-  }, [batchData.dateRange, formData.duration, formData.bufferTime, batchMode, generateDatesFromRange, batchData.timeSlots, autoPopulateTimeSlots]);
+  }, [
+    batchData.dateRange, 
+    formData.duration, 
+    formData.bufferTime, 
+    batchMode, 
+    generateDatesFromRange, 
+    batchData.timeSlots, 
+    autoPopulateTimeSlots
+  ]);
 
+  // Fetch presentation slots created by the host
   const fetchPresentationSlots = async () => {
     setIsLoading(true);
     try {
-      // In a real application, this would be an API call
-      // For now we'll simulate a delay and use mock data
-      setTimeout(() => {
-        const mockSlots = [
-          {
-            _id: '1',
-            title: 'Project Defense Session',
-            description: 'Present your final year projects for evaluation',
-            targetYear: 'Fourth Year',
-            targetSchool: 'École Centrale School of Engineering(ECSE)',
-            targetDepartment: 'CSE (Computer Science and Engineering)',
-            presentationType: 'team',
-            date: '2023-11-15',
-            startTime: '10:00',
-            endTime: '11:00',
-            venue: 'Conference Room A',
-            duration: 60,
-            bufferTime: 10,
-            status: 'available'
-          },
-          {
-            _id: '2',
-            title: 'Thesis Presentation',
-            description: 'Present your thesis work and research findings',
-            targetYear: 'All Years',
-            targetSchool: 'All Schools',
-            targetDepartment: 'All Departments',
-            presentationType: 'single',
-            date: '2023-11-20',
-            startTime: '14:00',
-            endTime: '15:30',
-            venue: 'Auditorium',
-            duration: 90,
-            bufferTime: 15,
-            status: 'booked',
-            bookedBy: {
-              name: 'John Doe',
-              rollNumber: 'CS2021015'
-            }
-          }
-        ];
-        setSlots(mockSlots);
-        setIsLoading(false);
-      }, 1000);
+      const data = await PresentationService.getHostSlots();
+      setSlots(data);
     } catch (error) {
       console.error('Error fetching presentation slots:', error);
-      toast.error('Failed to fetch presentation slots');
+      toast.error('Failed to load your presentation slots');
+    } finally {
       setIsLoading(false);
     }
   };
 
+  // Handle form input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target;
+    
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: type === 'number' ? (value ? parseInt(value, 10) : '') : value
     }));
+    
+    // Calculate end time when start time or duration changes
+    if (name === 'startTime' || name === 'duration' || name === 'bufferTime') {
+      const endTime = calculateEndTime(
+        name === 'startTime' ? value : formData.startTime,
+        name === 'duration' ? parseInt(value, 10) : formData.duration,
+        name === 'bufferTime' ? parseInt(value, 10) : formData.bufferTime
+      );
+      
+      setFormData(prev => ({
+        ...prev,
+        endTime
+      }));
+    }
   };
   
-  // Removed unused function handleBatchInputChange
-  
-  // This is a duplicate function, we now use the useCallback version defined above
-  /* const generateDatesFromRange = () => {
-    // Function body moved to useCallback version above
-  }; */
-  
+  // Remove a time slot from batch creation
   const removeTimeSlot = (index) => {
     setBatchData(prev => ({
       ...prev,
@@ -319,69 +305,101 @@ const HostPresentation = () => {
     }));
   };
   
+  // Handle batch time slot changes
   const handleTimeSlotChange = (index, field, value) => {
-    setBatchData(prev => {
-      const updatedTimeSlots = [...prev.timeSlots];
-      updatedTimeSlots[index] = {
-        ...updatedTimeSlots[index],
-        [field]: value
-      };
-      
-      // If startTime changed and duration is set, calculate endTime
-      if (field === 'startTime' && formData.duration) {
-        updatedTimeSlots[index].endTime = calculateEndTime(value, formData.duration);
-        updatedTimeSlots[index].computed = true;
-      } else if (field === 'endTime') {
-        updatedTimeSlots[index].computed = false;
-      }
-      
-      return {
-        ...prev,
-        timeSlots: updatedTimeSlots
-      };
-    });
-  };
-
-  const suggestTimeSlots = (date) => {
-    if (!date) return [];
+    const updatedSlots = [...batchData.timeSlots];
+    updatedSlots[index] = {
+      ...updatedSlots[index],
+      [field]: value,
+      computed: false
+    };
     
-    const dayOfWeek = new Date(date).getDay();
-    return timeSlotSuggestions[dayOfWeek] || [];
+    // If changing start time, recalculate end time
+    if (field === 'startTime') {
+      updatedSlots[index].endTime = calculateEndTime(
+        value, 
+        formData.duration, 
+        formData.bufferTime
+      );
+    }
+    
+    setBatchData(prev => ({
+      ...prev,
+      timeSlots: updatedSlots
+    }));
   };
 
+  // Suggest time slots based on day of week
+  const suggestTimeSlots = (date) => {
+    if (!date) return;
+    
+    const selectedDate = new Date(date);
+    const dayOfWeek = selectedDate.getDay();
+    const suggestedTimes = timeSlotSuggestions[dayOfWeek];
+    
+    if (suggestedTimes && suggestedTimes.length > 0) {
+      // If in single mode, suggest the first time
+      if (!batchMode) {
+        const startTime = suggestedTimes[0];
+        const endTime = calculateEndTime(startTime, formData.duration, formData.bufferTime);
+        
+        setFormData(prev => ({
+          ...prev,
+          startTime,
+          endTime
+        }));
+      } 
+      // In batch mode, suggest multiple time slots
+      else {
+        const newTimeSlots = suggestedTimes.map(startTime => {
+          const endTime = calculateEndTime(startTime, formData.duration, formData.bufferTime);
+          return {
+            startTime,
+            endTime,
+            computed: true
+          };
+        });
+        
+        setBatchData(prev => ({
+          ...prev,
+          timeSlots: newTimeSlots
+        }));
+      }
+    }
+  };
+
+  // Initialize edit mode with slot data
   const initializeEditMode = (slot) => {
+    setEditingSlot(slot);
     setFormData({
       title: slot.title,
       description: slot.description,
       targetYear: slot.targetYear,
-      targetSchool: slot.targetSchool || '',
+      targetSchool: slot.targetSchool,
       targetDepartment: slot.targetDepartment,
-      presentationType: slot.presentationType || 'single',
+      presentationType: slot.presentationType,
       minTeamMembers: slot.minTeamMembers || 2,
       maxTeamMembers: slot.maxTeamMembers || 5,
-      date: slot.date,
+      date: new Date(slot.date).toISOString().split('T')[0],
       startTime: slot.startTime,
+      endTime: slot.endTime,
       duration: slot.duration,
-      bufferTime: slot.bufferTime,
+      bufferTime: slot.bufferTime || 0,
       venue: slot.venue
     });
-    setEditingSlot(slot._id);
+    
     setBatchMode(false);
     setShowForm(true);
-    
-    // Scroll to the form
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
   };
   
+  // Cancel edit mode
   const cancelEdit = () => {
     setEditingSlot(null);
-    setShowForm(false);
     resetForm();
+    setShowForm(false);
   };
   
+  // Reset form to initial state
   const resetForm = () => {
     setFormData({
       title: '',
@@ -394,6 +412,7 @@ const HostPresentation = () => {
       maxTeamMembers: 5,
       date: '',
       startTime: '',
+      endTime: '',
       duration: 30,
       bufferTime: 5,
       venue: ''
@@ -408,176 +427,178 @@ const HostPresentation = () => {
       },
       timeSlots: [{ startTime: '', endTime: '', computed: false }]
     });
+    
+    setBatchMode(false);
+    setEditingSlot(null);
   };
   
+  // Show delete confirmation
   const handleConfirmDelete = (slotId) => {
     setSlotToDelete(slotId);
     setShowDeleteConfirm(true);
   };
   
-  const executeDelete = () => {
-    handleDeleteSlot(slotToDelete);
-    setShowDeleteConfirm(false);
-    setSlotToDelete(null);
+  // Execute the delete action
+  const executeDelete = async () => {
+    if (!slotToDelete) return;
+    
+    try {
+      await PresentationService.deleteSlot(slotToDelete);
+      
+      // Remove from UI
+      setSlots(prev => prev.filter(slot => slot._id !== slotToDelete));
+      
+      toast.success('Presentation slot deleted successfully');
+    } catch (error) {
+      console.error('Error deleting slot:', error);
+      toast.error('Failed to delete slot. It may be already booked.');
+    } finally {
+      setShowDeleteConfirm(false);
+      setSlotToDelete(null);
+    }
   };
   
-  const createMultipleSlots = () => {
-    // Generate all combinations of dates and times
-    let dates = [];
-    
-    // Either use the manually added dates or generate from date range
-    if (batchData.dates.length > 0) {
-      dates = batchData.dates;
-    } else {
-      dates = generateDatesFromRange();
+  // Create multiple slots in batch mode
+  const createMultipleSlots = async () => {
+    if (batchData.dates.length === 0 || batchData.timeSlots.length === 0) {
+      toast.error('Please select dates and time slots for batch creation');
+      return;
     }
     
-    if (dates.length === 0) {
-      toast.error('Please select at least one date for your slots');
-      return [];
-    }
-    
-    if (batchData.timeSlots.some(slot => !slot.startTime)) {
-      toast.error('Please provide start times for all time slots');
-      return [];
-    }
-    
-    // Create slot objects for all combinations
-    const newSlots = [];
-    
-    dates.forEach(date => {
-      batchData.timeSlots.forEach(timeSlot => {
-        // Calculate endTime with buffer time included
-        let endTime = timeSlot.endTime;
-        if (!endTime) {
-          endTime = calculateEndTime(timeSlot.startTime, formData.duration, formData.bufferTime);
-        }
-        
-        newSlots.push({
-          _id: Date.now().toString() + Math.random().toString().substring(2, 8),
-          ...formData,
-          date,
-          startTime: timeSlot.startTime,
-          endTime,
-          displayEndTime: calculateEndTime(timeSlot.startTime, formData.duration), // End time without buffer for display
-          actualEndTime: endTime, // End time with buffer for scheduling
-          host: {
-            userId: currentUser?.userId || '',
-            name: currentUser?.name || '',
-            email: currentUser?.email || '',
-            department: currentUser?.department || ''
-          },
-          status: 'available'
-        });
-      });
-    });
-    
-    return newSlots;
-  };
-  
-  const handleSubmit = async (e) => {
-    e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      if (editingSlot) {
-        // Editing an existing slot
-        const endTime = calculateEndTime(formData.startTime, formData.duration);
-        
-        // In a real application, this would be an API call to update
-        console.log('Updating presentation slot with ID:', editingSlot);
-        
-        // Update the slot in the list
-        const updatedSlots = slots.map(slot => {
-          if (slot._id === editingSlot) {
-            return {
-              ...slot,
-              ...formData,
-              endTime
-            };
-          }
-          return slot;
-        });
-        
-        setSlots(updatedSlots);
-        toast.success('Presentation slot updated successfully!');
-        setEditingSlot(null);
-      } else if (batchMode) {
-        // Batch creation mode
-        const newSlots = createMultipleSlots();
-        
-        if (newSlots.length === 0) {
-          setIsSubmitting(false);
-          return;
-        }
-        
-        // In a real application, this would be an API call to create multiple slots
-        console.log('Creating multiple presentation slots:', newSlots);
-        
-        // Add the new slots to the list
-        setSlots(prev => [...newSlots, ...prev]);
-        toast.success(`Created ${newSlots.length} presentation slots successfully!`);
-      } else {
-        // Single slot creation
-        const endTime = calculateEndTime(formData.startTime, formData.duration);
-        
-        // Prepare data for submission
-        const presentationData = {
-          ...formData,
-          endTime,
-          host: {
-            userId: currentUser?.userId || '',
-            name: currentUser?.name || '',
-            email: currentUser?.email || '',
-            department: currentUser?.department || ''
-          },
-          status: 'available'
-        };
-        
-        // In a real application, this would be an API call
-        console.log('Creating presentation slot with data:', presentationData);
-        
-        // Add the new slot to the list
-        const newSlot = {
-          _id: Date.now().toString(), 
-          ...presentationData
-        };
-        setSlots(prev => [newSlot, ...prev]);
-        toast.success('Presentation slot created successfully!');
-      }
+      // Format dates for API
+      const formattedDates = batchData.dates.map(date => 
+        date instanceof Date ? date.toISOString() : new Date(date).toISOString()
+      );
       
-      // Reset form and state
+      // Create batch data object for API
+      const batchCreateData = {
+        commonData: {
+          title: formData.title,
+          description: formData.description,
+          targetYear: formData.targetYear,
+          targetSchool: formData.targetSchool,
+          targetDepartment: formData.targetDepartment,
+          presentationType: formData.presentationType,
+          minTeamMembers: formData.presentationType === 'team' ? formData.minTeamMembers : undefined,
+          maxTeamMembers: formData.presentationType === 'team' ? formData.maxTeamMembers : undefined,
+          duration: formData.duration,
+          bufferTime: formData.bufferTime,
+          venue: formData.venue
+        },
+        dates: formattedDates,
+        timeSlots: batchData.timeSlots
+      };
+      
+      // Call the batch create endpoint
+      const createdSlots = await PresentationService.createBatchSlots(batchCreateData);
+      
+      // Add created slots to the UI
+      setSlots(prev => [...createdSlots, ...prev]);
+      
+      // Reset form and hide it
       resetForm();
       setShowForm(false);
-      setIsSubmitting(false);
-    } catch (error) {
-      console.error('Error handling presentation slot:', error);
-      toast.error(editingSlot ? 'Failed to update slot' : 'Failed to create slot');
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteSlot = async (slotId) => {
-    try {
-      setIsLoading(true);
-      // In a real application, this would be an API call
-      console.log('Deleting slot with ID:', slotId);
       
-      // Filter out the deleted slot
-      setSlots(prev => prev.filter(slot => slot._id !== slotId));
-      toast.success('Slot deleted successfully');
-      setIsLoading(false);
+      toast.success(`Created ${createdSlots.length} presentation slots`);
     } catch (error) {
-      console.error('Error deleting slot:', error);
-      toast.error('Failed to delete slot');
-      setIsLoading(false);
+      console.error('Error creating batch slots:', error);
+      toast.error('Failed to create presentation slots');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate form
+    if (!formData.title || !formData.description || !formData.venue || 
+        !formData.targetYear || !formData.targetSchool || !formData.targetDepartment) {
+      toast.error('Please fill all required fields');
+      return;
+    }
+    
+    if (batchMode) {
+      createMultipleSlots();
+      return;
+    }
+    
+    setIsSubmitting(true);
+    
+    try {
+      let response;
+      
+      // If editing, update the slot
+      if (editingSlot) {
+        response = await PresentationService.updateSlot(editingSlot._id, formData);
+        
+        // Update in UI
+        setSlots(prev => prev.map(slot => 
+          slot._id === editingSlot._id ? response : slot
+        ));
+        
+        toast.success('Presentation slot updated successfully');
+      } 
+      // Otherwise create a new slot
+      else {
+        response = await PresentationService.createSlot(formData);
+        
+        // Add to UI
+        setSlots(prev => [response, ...prev]);
+        
+        toast.success('Presentation slot created successfully');
+      }
+      
+      // Reset form and hide it
+      resetForm();
+      setShowForm(false);
+    } catch (error) {
+      console.error('Error saving presentation slot:', error);
+      toast.error('Failed to save presentation slot');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  // Helper function to format date for display
+  // Format date for display
   const formatDate = (dateString) => {
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    return new Date(dateString).toLocaleDateString(undefined, options);
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  };
+
+  // Toggle a day of week selection
+  const handleDayOfWeekToggle = (dayValue) => {
+    setBatchData(prev => {
+      const currentDays = prev.dateRange.daysOfWeek;
+      const updatedDays = currentDays.includes(dayValue) 
+        ? currentDays.filter(day => day !== dayValue)
+        : [...currentDays, dayValue];
+      
+      return {
+        ...prev,
+        dateRange: {
+          ...prev.dateRange,
+          daysOfWeek: updatedDays
+        }
+      };
+    });
+  };
+  
+  // Add a new time slot
+  const addTimeSlot = () => {
+    setBatchData(prev => ({
+      ...prev,
+      timeSlots: [...prev.timeSlots, { startTime: '', endTime: '', computed: false }]
+    }));
   };
 
   // Page animation variants
@@ -587,813 +608,582 @@ const HostPresentation = () => {
     exit: { opacity: 0, y: -20 }
   };
 
-  // Add missing handleDayOfWeekToggle function
-  const handleDayOfWeekToggle = (dayValue) => {
-    setBatchData(prev => {
-      const daysOfWeek = [...prev.dateRange.daysOfWeek];
-      
-      if (daysOfWeek.includes(dayValue)) {
-        return {
-          ...prev,
-          dateRange: {
-            ...prev.dateRange,
-            daysOfWeek: daysOfWeek.filter(day => day !== dayValue)
-          }
-        };
-      } else {
-        return {
-          ...prev,
-          dateRange: {
-            ...prev.dateRange,
-            daysOfWeek: [...daysOfWeek, dayValue].sort()
-          }
-        };
-      }
-    });
-  };
-  
-  // Add missing addTimeSlot function
-  const addTimeSlot = () => {
-    setBatchData(prev => ({
-      ...prev,
-      timeSlots: [...prev.timeSlots, { startTime: '', endTime: '', computed: false }]
-    }));
-  };
-
   return (
     <motion.div
-      className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50 py-8 w-full"
+      className="min-h-screen bg-gradient-to-br from-green-50 via-teal-50 to-emerald-50 py-8 w-full"
       variants={pageVariants}
       initial="initial"
       animate="animate"
       exit="exit"
       transition={{ duration: 0.5 }}
     >
-      {/* Toast Container */}
-      <ToastContainer 
-        position="top-right"
-        autoClose={3000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-      
-      {/* Delete Confirmation Modal */}
-      {showDeleteConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl max-w-md w-full">
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Confirm Deletion</h3>
-            <p className="text-gray-600 mb-6">Are you sure you want to delete this presentation slot? This action cannot be undone.</p>
-            <div className="flex justify-end space-x-3">
-              <button 
-                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-                onClick={() => setShowDeleteConfirm(false)}
-              >
-                Cancel
-              </button>
-              <button 
-                className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600"
-                onClick={executeDelete}
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-      
       <div className="max-w-7xl mx-auto px-4 pb-20">
-        {/* Loading Indicator */}
-        {isLoading ? (
-          <div className="w-full flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+        {/* Header */}
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8 border border-green-100">
+          <div className="p-8 bg-gradient-to-r from-green-600 to-teal-500">
+            <h1 className="text-3xl font-bold text-white">Host Presentations</h1>
+            <p className="text-green-50 mt-2">Create and manage presentation slots for students</p>
           </div>
-        ) : (
-          <motion.div
-            className="bg-white rounded-2xl shadow-xl overflow-hidden w-full border border-amber-100 mb-10"
-            initial={{ opacity: 0, scale: 0.98 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            {/* Header */}
-            <div className="p-8 bg-gradient-to-r from-amber-500 to-orange-500">
-              <h1 className="text-3xl font-bold text-white">Host Presentation Slots</h1>
-              <p className="text-amber-50 mt-2">Create and manage presentation slots for students</p>
-            </div>
-
-            <div className="p-6">
-              <div className="mb-6 flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-gray-800">
-                  {editingSlot ? 'Edit Presentation Slot' : 'Your Presentation Slots'}
-                </h2>
-                {!editingSlot && (
-                  <button 
-                    className="bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-md shadow-sm transition-colors flex items-center"
-                    onClick={() => setShowForm(!showForm)}
-                  >
-                    <i className={`fas ${showForm ? 'fa-times' : 'fa-plus'} mr-2`}></i> 
-                    {showForm ? 'Cancel' : 'Add New Slot'}
-                  </button>
-                )}
+          
+          <div className="p-6">
+            <div className="flex flex-col md:flex-row justify-between items-start mb-8">
+              <div className="mb-4 md:mb-0">
+                <h2 className="text-xl font-semibold text-gray-800">My Presentation Slots</h2>
+                <p className="text-gray-600">Manage your presentation availability for students</p>
               </div>
-
-              {/* Add New Slot Form */}
-              {showForm && (
-                <div className="mb-8 bg-gray-50 p-6 rounded-lg border border-gray-200">
-                  <h3 className="text-lg font-semibold mb-4">
-                    {editingSlot ? 'Edit Presentation Slot' : 'Create New Presentation Slot'}
-                  </h3>
-                  
-                  {/* Creation Mode Toggle */}
-                  {!editingSlot && (
-                    <div className="flex items-center mb-4 space-x-4">
-                      <span className="text-sm font-medium text-gray-700">Creation Mode:</span>
-                      <div className="flex space-x-4">
-                        <label className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            className="form-radio h-4 w-4 text-amber-500"
-                            checked={!batchMode}
-                            onChange={() => setBatchMode(false)}
-                          />
-                          <span className="ml-2 text-gray-700">Single Slot</span>
-                        </label>
-                        <label className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            className="form-radio h-4 w-4 text-amber-500"
-                            checked={batchMode}
-                            onChange={() => setBatchMode(true)}
-                          />
-                          <span className="ml-2 text-gray-700">Multiple Slots</span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <form onSubmit={handleSubmit}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Title*
-                        </label>
-                        <input
-                          type="text"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="e.g., Project Presentation"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Venue*
-                        </label>
-                        <input
-                          type="text"
-                          name="venue"
-                          value={formData.venue}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          placeholder="e.g., Conference Room A"
-                          required
-                        />
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description*
-                      </label>
-                      <textarea
-                        name="description"
-                        value={formData.description}
-                        onChange={handleInputChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        placeholder="Describe the purpose of this presentation slot"
-                        rows="3"
-                        required
-                      ></textarea>
-                    </div>
-
-                    {/* Presentation Type Selection with Team Members Fields */}
-                    <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Presentation Type*
-                      </label>
-                      <div className="flex space-x-4">
-                        <label className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            name="presentationType"
-                            value="single"
-                            checked={formData.presentationType === 'single'}
-                            onChange={handleInputChange}
-                            className="form-radio h-4 w-4 text-amber-500"
-                          />
-                          <span className="ml-2 text-gray-700">Individual Presentation</span>
-                        </label>
-                        <label className="inline-flex items-center">
-                          <input
-                            type="radio"
-                            name="presentationType"
-                            value="team"
-                            checked={formData.presentationType === 'team'}
-                            onChange={handleInputChange}
-                            className="form-radio h-4 w-4 text-amber-500"
-                          />
-                          <span className="ml-2 text-gray-700">Team Presentation</span>
-                        </label>
-                      </div>
-                    </div>
-                    
-                    {/* Team size fields - only show when team presentation is selected */}
-                    {formData.presentationType === 'team' && (
-                      <div className="mb-4 p-4 bg-amber-50 rounded-lg border border-amber-100">
-                        <h4 className="text-sm font-medium text-gray-700 mb-3">Team Size Requirements</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Minimum Team Members*
-                            </label>
-                            <input
-                              type="number"
-                              name="minTeamMembers"
-                              value={formData.minTeamMembers}
-                              onChange={handleInputChange}
-                              min="2"
-                              max="20"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Maximum Team Members*
-                            </label>
-                            <input
-                              type="number"
-                              name="maxTeamMembers"
-                              value={formData.maxTeamMembers}
-                              onChange={handleInputChange}
-                              min={formData.minTeamMembers}
-                              max="20"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                              required
-                            />
-                            {formData.maxTeamMembers < formData.minTeamMembers && (
-                              <p className="text-xs text-red-500 mt-1">Maximum must be greater than or equal to minimum</p>
+              
+              <button
+                onClick={() => {
+                  resetForm();
+                  setShowForm(true);
+                }}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                </svg>
+                Add Presentation Slot
+              </button>
+            </div>
+            
+            {isLoading ? (
+              <div className="w-full flex justify-center items-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-green-500"></div>
+              </div>
+            ) : slots.length === 0 ? (
+              <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <h3 className="text-xl font-medium text-gray-800 mb-2">No Presentation Slots</h3>
+                <p className="text-gray-600 mb-6">You haven't created any presentation slots yet.</p>
+                <button
+                  onClick={() => {
+                    resetForm();
+                    setShowForm(true);
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+                >
+                  Create Your First Slot
+                </button>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {slots.map(slot => (
+                      <tr key={slot._id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {formatDate(slot.date)}, {slot.startTime} - {slot.endTime}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm font-medium text-gray-900">{slot.title}</div>
+                          <div className="text-sm text-gray-500">{slot.venue}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{slot.targetYear}</div>
+                          <div className="text-sm text-gray-500">{slot.targetDepartment}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full 
+                            ${slot.status === 'available' ? 'bg-green-100 text-green-800' : 
+                              slot.status === 'booked' ? 'bg-blue-100 text-blue-800' : 
+                              'bg-red-100 text-red-800'}`}>
+                            {slot.status === 'available' ? 'Available' : 
+                              slot.status === 'booked' ? 'Booked' : 'Cancelled'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex space-x-2">
+                            {slot.status === 'available' && (
+                              <>
+                                <button 
+                                  onClick={() => initializeEditMode(slot)}
+                                  className="text-indigo-600 hover:text-indigo-900"
+                                >
+                                  Edit
+                                </button>
+                                <button 
+                                  onClick={() => handleConfirmDelete(slot._id)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  Delete
+                                </button>
+                              </>
                             )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Target Year*
-                        </label>
-                        <select
-                          name="targetYear"
-                          value={formData.targetYear}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          required
-                        >
-                          <option value="">Select Year</option>
-                          {years.map(year => (
-                            <option key={year} value={year}>{year}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      {/* School Selection */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Target School*
-                        </label>
-                        <select
-                          name="targetSchool"
-                          value={formData.targetSchool}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          required
-                        >
-                          <option value="">Select School</option>
-                          {Object.keys(academicData).map(school => (
-                            <option key={school} value={school}>{school}</option>
-                          ))}
-                        </select>
-                      </div>
-                      
-                      {/* Department Selection - based on selected school */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Target Department*
-                        </label>
-                        <select
-                          name="targetDepartment"
-                          value={formData.targetDepartment}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          required
-                          disabled={!formData.targetSchool}
-                        >
-                          <option value="">Select Department</option>
-                          {availableDepartments.map(dept => (
-                            <option key={dept} value={dept}>{dept}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-
-                    {/* Single Slot Date/Time */}
-                    {!batchMode && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Date*
-                          </label>
-                          <input
-                            type="date"
-                            name="date"
-                            value={formData.date}
-                            onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                            required
-                          />
-                          {formData.date && (
-                            <div className="mt-1 text-sm font-medium text-amber-600">
-                              {new Date(formData.date).toLocaleDateString(undefined, {weekday: 'long'})}, {new Date(formData.date).toLocaleDateString()}
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Start Time* {formData.date && (
-                              <span className="text-amber-600 font-normal">
-                                ({new Date(formData.date).toLocaleDateString(undefined, {weekday: 'short'})})
+                            {slot.status === 'booked' && (
+                              <span className="text-sm text-gray-500">
+                                Booked by: {slot.bookedBy?.name || 'Unknown'}
                               </span>
                             )}
-                          </label>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+        
+        {/* Form Section */}
+        {showForm && (
+          <motion.div
+            className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8 border border-green-100"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <div className="p-6 bg-gradient-to-r from-green-600 to-teal-500">
+              <h2 className="text-xl font-bold text-white">
+                {editingSlot ? 'Edit Presentation Slot' : 'Create New Presentation Slot'}
+              </h2>
+            </div>
+            
+            <div className="p-6">
+              <div className="mb-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <button
+                      type="button"
+                      onClick={() => setBatchMode(false)}
+                      className={`px-4 py-2 rounded-md ${!batchMode ? 
+                        'bg-green-600 text-white' : 
+                        'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      disabled={editingSlot !== null}
+                    >
+                      Single Slot
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setBatchMode(true)}
+                      className={`px-4 py-2 rounded-md ${batchMode ? 
+                        'bg-green-600 text-white' : 
+                        'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      disabled={editingSlot !== null}
+                    >
+                      Batch Create
+                    </button>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <form onSubmit={handleSubmit}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Title and Description */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      placeholder="e.g., Final Project Presentation"
+                    />
+                  </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description *</label>
+                    <textarea
+                      name="description"
+                      value={formData.description}
+                      onChange={handleInputChange}
+                      required
+                      rows={3}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      placeholder="Briefly describe the presentation requirements and expectations"
+                    />
+                  </div>
+                  
+                  {/* Target Audience */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Year *</label>
+                    <select
+                      name="targetYear"
+                      value={formData.targetYear}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="">Select Year</option>
+                      {years.map(year => (
+                        <option key={year} value={year}>{year}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Target School *</label>
+                    <select
+                      name="targetSchool"
+                      value={formData.targetSchool}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="">Select School</option>
+                      {Object.keys(academicData).map(school => (
+                        <option key={school} value={school}>{school}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Target Department *</label>
+                    <select
+                      name="targetDepartment"
+                      value={formData.targetDepartment}
+                      onChange={handleInputChange}
+                      required
+                      disabled={!formData.targetSchool}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="">Select Department</option>
+                      {availableDepartments.map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Presentation Type *</label>
+                    <select
+                      name="presentationType"
+                      value={formData.presentationType}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    >
+                      <option value="single">Individual</option>
+                      <option value="team">Team</option>
+                    </select>
+                  </div>
+                  
+                  {/* Team Size (only if team presentation) */}
+                  {formData.presentationType === 'team' && (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Min Team Members</label>
+                        <input
+                          type="number"
+                          name="minTeamMembers"
+                          min={2}
+                          max={10}
+                          value={formData.minTeamMembers}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Max Team Members</label>
+                        <input
+                          type="number"
+                          name="maxTeamMembers"
+                          min={formData.minTeamMembers || 2}
+                          max={10}
+                          value={formData.maxTeamMembers}
+                          onChange={handleInputChange}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+                    </>
+                  )}
+                  
+                  {/* Venue */}
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Venue *</label>
+                    <input
+                      type="text"
+                      name="venue"
+                      value={formData.venue}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                      placeholder="e.g., Conference Room 201, Engineering Building"
+                    />
+                  </div>
+                  
+                  {/* Slot Duration */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes) *</label>
+                    <input
+                      type="number"
+                      name="duration"
+                      min={5}
+                      max={120}
+                      value={formData.duration}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Buffer Time (minutes)</label>
+                    <input
+                      type="number"
+                      name="bufferTime"
+                      min={0}
+                      max={30}
+                      value={formData.bufferTime}
+                      onChange={handleInputChange}
+                      className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Additional time between presentations for setup</p>
+                  </div>
+                  
+                  {/* Date and Time Selection - Different UIs for single vs batch mode */}
+                  {!batchMode ? (
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                        <input
+                          type="date"
+                          name="date"
+                          value={formData.date}
+                          onChange={(e) => {
+                            handleInputChange(e);
+                            suggestTimeSlots(e.target.value);
+                          }}
+                          required
+                          className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                        />
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Start Time *</label>
                           <input
                             type="time"
                             name="startTime"
                             value={formData.startTime}
                             onChange={handleInputChange}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
                             required
+                            className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                           />
-                          {formData.date && (
-                            <div className="mt-1 text-xs text-gray-500">
-                              <button 
-                                type="button" 
-                                className="text-amber-600 hover:text-amber-800 underline"
-                                onClick={() => {
-                                  const suggestions = suggestTimeSlots(formData.date);
-                                  if (suggestions.length > 0) {
-                                    setFormData(prev => ({...prev, startTime: suggestions[0]}));
-                                  }
-                                }}
-                              >
-                                Suggest times for {new Date(formData.date).toLocaleDateString(undefined, {weekday: 'long'})}
-                              </button>
-                            </div>
-                          )}
                         </div>
+                        
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            End Time (Auto-calculated)
-                          </label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
                           <input
                             type="time"
-                            value={calculateEndTime(formData.startTime, formData.duration)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-100"
-                            readOnly
+                            name="endTime"
+                            value={formData.endTime}
+                            disabled
+                            className="w-full p-2 bg-gray-100 border border-gray-300 rounded-md"
                           />
-                          <p className="text-xs text-gray-500 mt-1">
-                            {formData.bufferTime > 0 ? 
-                              `Actual end with ${formData.bufferTime}min buffer: ${calculateEndTime(formData.startTime, formData.duration, formData.bufferTime)}` : 
-                              'No buffer time added'}
-                          </p>
                         </div>
                       </div>
-                    )}
-
-                    {/* Batch Create Mode - Date Selection */}
-                    {batchMode && (
-                      <>
-                        <div className="border-t border-gray-200 pt-4 mb-4">
-                          <h4 className="text-md font-medium text-gray-800 mb-2">Date Selection</h4>
-                          
-                          {/* Full width date range picker */}
-                          <div className="bg-white p-4 rounded-md border border-gray-200 mb-4 w-full">
-                            <h5 className="text-sm font-medium text-gray-700 mb-3">Select Date Range</h5>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">Start Date</label>
-                                <input
-                                  type="date"
-                                  value={batchData.dateRange.startDate}
-                                  onChange={(e) => {
-                                    const { value } = e.target;
-                                    setBatchData(prev => ({
-                                      ...prev,
-                                      dateRange: {
-                                        ...prev.dateRange,
-                                        startDate: value
-                                      }
-                                    }));
-                                  }}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                />
-                              </div>
-                              <div>
-                                <label className="block text-xs text-gray-500 mb-1">End Date</label>
-                                <input
-                                  type="date"
-                                  value={batchData.dateRange.endDate}
-                                  onChange={(e) => setBatchData(prev => ({
-                                    ...prev,
-                                    dateRange: {
-                                      ...prev.dateRange,
-                                      endDate: e.target.value
-                                    }
-                                  }))}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                />
-                              </div>
-                            </div>
-                            
-                            <div className="mb-4">
-                              <label className="block text-xs text-gray-500 mb-2">Days of Week</label>
-                              <div className="flex flex-wrap gap-2">
-                                {daysOfWeek.map(day => (
-                                  <button
-                                    key={day.value}
-                                    type="button"
-                                    onClick={() => handleDayOfWeekToggle(day.value)}
-                                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                                      batchData.dateRange.daysOfWeek.includes(day.value)
-                                        ? 'bg-amber-500 text-white'
-                                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                                    }`}
-                                  >
-                                    {day.label}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            
-                            {/* Preview of selected dates */}
-                            {batchData.dateRange.startDate && batchData.dateRange.endDate && batchData.dateRange.daysOfWeek.length > 0 && (
-                              <div className="mt-3">
-                                <p className="text-xs text-gray-500 mb-1">
-                                  Selected dates: <span className="font-medium">{generateDatesFromRange().length}</span>
-                                </p>
-                                <div className="max-h-24 overflow-y-auto bg-gray-50 p-2 rounded text-xs">
-                                  {generateDatesFromRange().map(date => (
-                                    <div key={date} className="inline-block px-2 py-1 bg-amber-100 text-amber-800 rounded m-1">
-                                      <span className="font-medium">{new Date(date).toLocaleDateString(undefined, {weekday: 'short'})}</span> {new Date(date).toLocaleDateString()}
-                                    </div>
-                                  ))}
-                                </div>
-                                
-                                {/* Add button to suggest time slots based on selected days */}
-                                <div className="mt-3 flex justify-end">
-                                  <button
-                                    type="button"
-                                    onClick={autoPopulateTimeSlots}
-                                    className="px-3 py-1 text-xs bg-amber-100 text-amber-800 hover:bg-amber-200 rounded-md"
-                                  >
-                                    Suggest Time Slots for Selected Days
-                                  </button>
-                                </div>
-                              </div>
-                            )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="md:col-span-2">
+                        <h3 className="text-lg font-medium text-gray-900 mb-3">Batch Date Selection</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                            <input
+                              type="date"
+                              value={batchData.dateRange.startDate}
+                              onChange={(e) => setBatchData(prev => ({
+                                ...prev,
+                                dateRange: {
+                                  ...prev.dateRange,
+                                  startDate: e.target.value
+                                }
+                              }))}
+                              required
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                            />
                           </div>
                           
-                          {/* Time Slots Section */}
-                          <div className="bg-white p-4 rounded-md border border-gray-200 mb-4 w-full">
-                            <div className="flex justify-between items-center mb-3">
-                              <h5 className="text-sm font-medium text-gray-700">Time Slots</h5>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
+                            <input
+                              type="date"
+                              value={batchData.dateRange.endDate}
+                              onChange={(e) => setBatchData(prev => ({
+                                ...prev,
+                                dateRange: {
+                                  ...prev.dateRange,
+                                  endDate: e.target.value
+                                }
+                              }))}
+                              required
+                              min={batchData.dateRange.startDate}
+                              className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div className="mb-6">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Days of Week *</label>
+                          <div className="flex flex-wrap gap-2">
+                            {daysOfWeek.map((day) => (
                               <button
+                                key={day.value}
                                 type="button"
-                                onClick={addTimeSlot}
-                                className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-md hover:bg-amber-200"
+                                onClick={() => handleDayOfWeekToggle(day.value)}
+                                className={`px-3 py-2 rounded-md text-sm font-medium 
+                                  ${batchData.dateRange.daysOfWeek.includes(day.value) ? 
+                                    'bg-green-600 text-white' : 
+                                    'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
                               >
-                                Add Time Slot
+                                {day.label}
                               </button>
-                            </div>
-                            
-                            {/* Get unique days of the week from selected dates */}
-                            {generateDatesFromRange().length > 0 && (
-                              <div className="mb-3">
-                                <div className="text-xs text-gray-500 mb-2">Days included:</div>
-                                <div className="flex flex-wrap gap-1">
-                                  {[...new Set(generateDatesFromRange().map(date => 
-                                    new Date(date).getDay()
-                                  ))].sort().map(day => (
-                                    <span key={day} className="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                      {daysOfWeek.find(d => d.value === day)?.label}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                            )}
-                            
-                            {batchData.timeSlots.map((slot, index) => (
-                              <div key={index} className="flex flex-wrap items-center gap-3 mb-3 p-2 bg-gray-50 rounded-md">
-                                <div className="flex-grow min-w-[140px]">
-                                  <label className="block text-xs text-gray-500 mb-1">
-                                    Start Time 
-                                    {batchData.dateRange.daysOfWeek.length > 0 && (
-                                      <span className="ml-1 text-amber-600">
-                                        (Applies to {batchData.dateRange.daysOfWeek.map(day => 
-                                          daysOfWeek.find(d => d.value === day)?.label
-                                        ).join(', ')})
-                                      </span>
-                                    )}
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between items-center mb-2">
+                            <h3 className="text-lg font-medium text-gray-900">Time Slots</h3>
+                            <button
+                              type="button"
+                              onClick={addTimeSlot}
+                              className="text-green-600 hover:text-green-800"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                          
+                          {batchData.timeSlots.map((slot, index) => (
+                            <div key={index} className="flex items-center space-x-4 mb-4">
+                              <div className="flex-1 grid grid-cols-2 gap-4">
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    {index === 0 ? 'Start Time *' : 'Start Time'}
                                   </label>
                                   <input
                                     type="time"
                                     value={slot.startTime}
                                     onChange={(e) => handleTimeSlotChange(index, 'startTime', e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                                    required
+                                    required={index === 0}
+                                    className="w-full p-2 border border-gray-300 rounded-md focus:ring-green-500 focus:border-green-500"
                                   />
-                                  {!slot.startTime && batchData.dateRange.daysOfWeek.length > 0 && (
-                                    <div className="mt-1">
-                                      <button 
-                                        type="button"
-                                        className="text-xs text-amber-600 hover:text-amber-800"
-                                        onClick={() => {
-                                          // Suggest a time for the first selected day of week
-                                          const firstDay = batchData.dateRange.daysOfWeek[0];
-                                          const suggestions = timeSlotSuggestions[firstDay] || [];
-                                          if (suggestions.length > 0) {
-                                            handleTimeSlotChange(index, 'startTime', suggestions[0]);
-                                          }
-                                        }}
-                                      >
-                                        Suggest time
-                                      </button>
-                                    </div>
-                                  )}
                                 </div>
-                                <div className="flex-grow min-w-[140px]">
-                                  <label className="block text-xs text-gray-500 mb-1">
-                                    End Time {slot.computed && '(Auto-calculated)'}
-                                  </label>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
                                   <input
                                     type="time"
                                     value={slot.endTime}
-                                    onChange={(e) => handleTimeSlotChange(index, 'endTime', e.target.value)}
-                                    className={`w-full px-3 py-2 border border-gray-300 rounded-md text-sm ${
-                                      slot.computed ? 'bg-gray-100' : ''
-                                    }`}
-                                    readOnly={slot.computed}
+                                    disabled
+                                    className="w-full p-2 bg-gray-100 border border-gray-300 rounded-md"
                                   />
-                                  {slot.computed && formData.bufferTime > 0 && (
-                                    <p className="text-xs text-gray-500 mt-1">
-                                      Includes {formData.bufferTime}min buffer time
-                                    </p>
-                                  )}
                                 </div>
-                                {batchData.timeSlots.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeTimeSlot(index)}
-                                    className="text-red-500 hover:text-red-700 p-1"
-                                    title="Remove time slot"
-                                  >
-                                    <i className="fas fa-trash-alt"></i>
-                                  </button>
-                                )}
                               </div>
-                            ))}
-                            
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Duration (minutes)*
-                        </label>
-                        <input
-                          type="number"
-                          name="duration"
-                          value={formData.duration}
-                          onChange={handleInputChange}
-                          min="5"
-                          max="240"
-                          step="5"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Buffer Time (minutes)
-                        </label>
-                        <input
-                          type="number"
-                          name="bufferTime"
-                          value={formData.bufferTime}
-                          onChange={handleInputChange}
-                          min="0"
-                          max="30"
-                          step="5"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-500"
-                        />
-                        <p className="text-xs text-gray-500 mt-1">
-                          Extra time between presentations for setup/teardown
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="flex justify-end">
-                      {editingSlot ? (
-                        <>
-                          <button
-                            type="button"
-                            className="px-4 py-2 mr-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={cancelEdit}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 flex items-center"
-                            disabled={isSubmitting}
-                          >
-                            {isSubmitting ? (
-                              <>
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Updating...
-                              </>
-                            ) : (
-                              'Update Slot'
-                            )}
-                          </button>
-                        </>
-                      ) : (
-                        <>
-                          <button
-                            type="button"
-                            className="px-4 py-2 mr-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                            onClick={() => setShowForm(false)}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            className="px-4 py-2 bg-amber-500 text-white rounded-md hover:bg-amber-600 flex items-center"
-                            disabled={isSubmitting}
-                          >
-                            {isSubmitting ? (
-                              <>
-                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Creating...
-                              </>
-                            ) : (
-                              batchMode ? 'Create Multiple Slots' : 'Create Slot'
-                            )}
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </form>
-                </div>
-              )}
-
-              {/* Slots Table */}
-              {slots.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead>
-                      <tr className="bg-gray-50">
-                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title & Description</th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Target Audience</th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {slots.map(slot => (
-                        <tr key={slot._id} className="hover:bg-gray-50">
-                          <td className="py-4 px-4">
-                            <div className="text-sm font-medium text-gray-800">{slot.title}</div>
-                            <div className="text-sm text-gray-500 mt-1">{slot.description}</div>
-                            <div className="text-xs text-gray-400 mt-1">
-                              Venue: {slot.venue}
-                              <span className="ml-2 inline-block px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full text-xs">
-                                {slot.presentationType === 'team' ? (
-                                  `Team Presentation (${slot.minTeamMembers}-${slot.maxTeamMembers} members)`
-                                ) : 'Individual Presentation'}
-                              </span>
-                            </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="text-sm text-gray-700">
-                              {formatDate(slot.date)}
-                            </div>
-                            <div className="text-sm text-gray-600">
-                              {`${slot.startTime} - ${
-                                // Show displayEndTime if available (time without buffer), otherwise use regular endTime
-                                slot.displayEndTime || slot.endTime
-                              }`}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              Duration: {slot.duration} min
-                              {slot.bufferTime > 0 && (
-                                <span className="text-amber-600 ml-1">
-                                  + {slot.bufferTime}min buffer
-                                </span>
+                              
+                              {index > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeTimeSlot(index)}
+                                  className="text-red-500 hover:text-red-700 mt-6"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
                               )}
                             </div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <div className="text-sm text-gray-700">{slot.targetYear}</div>
-                            <div className="text-sm text-gray-600 mb-1">{slot.targetSchool?.split('(')[0]}</div>
-                            <div className="text-xs text-gray-500">{slot.targetDepartment}</div>
-                          </td>
-                          <td className="py-4 px-4">
-                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                              slot.status === 'available' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-blue-100 text-blue-800'
-                            }`}>
-                              {slot.status === 'available' ? 'Available' : 'Booked'}
-                            </span>
-                            {slot.status === 'booked' && slot.bookedBy && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                by {slot.bookedBy.name || 'Unknown'} 
-                                {slot.bookedBy.rollNumber && ` (${slot.bookedBy.rollNumber})`}
-                              </div>
-                            )}
-                          </td>
-                          <td className="py-4 px-4 text-sm">
-                            <div className="flex space-x-2">
-                              <button 
-                                className="text-blue-600 hover:text-blue-800"
-                                title="Edit"
-                                onClick={() => initializeEditMode(slot)}
-                                disabled={slot.status === 'booked'}
-                              >
-                                <i className="fas fa-edit"></i>
-                              </button>
-                              <button 
-                                className="text-red-600 hover:text-red-800"
-                                title="Delete"
-                                onClick={() => handleConfirmDelete(slot._id)}
-                                disabled={slot.status === 'booked'}
-                              >
-                                <i className="fas fa-trash"></i>
-                              </button>
+                          ))}
+                          
+                          {/* Preview of generated slots */}
+                          {batchData.dates.length > 0 && (
+                            <div className="mt-4 p-4 bg-gray-50 rounded-md border border-gray-200">
+                              <h4 className="text-sm font-medium text-gray-800 mb-2">
+                                Will create {batchData.dates.length * batchData.timeSlots.length} slots:
+                              </h4>
+                              <p className="text-sm text-gray-600">
+                                {batchData.dates.length} days × {batchData.timeSlots.length} time slots per day
+                              </p>
+                              {batchData.dates.length > 0 && (
+                                <div className="mt-2">
+                                  <span className="text-xs font-medium text-gray-600">Dates: </span>
+                                  <span className="text-xs text-gray-600">
+                                    {batchData.dates.slice(0, 3).map(date => 
+                                      new Date(date).toLocaleDateString()
+                                    ).join(', ')}
+                                    {batchData.dates.length > 3 && `, +${batchData.dates.length - 3} more`}
+                                  </span>
+                                </div>
+                              )}
                             </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-              ) : (
-                <div className="text-center py-12 bg-gray-50 rounded-lg">
-                  <div className="text-amber-500 mb-2">
-                    <i className="fas fa-calendar-plus text-4xl"></i>
-                  </div>
-                  <h3 className="text-lg font-medium text-gray-800 mb-1">No Presentation Slots Yet</h3>
-                  <p className="text-gray-500 mb-4">Create your first presentation slot to get started</p>
-                  <button 
-                    className="bg-amber-500 hover:bg-amber-600 text-white py-2 px-4 rounded-md shadow-sm transition-colors"
-                    onClick={() => setShowForm(true)}
+                
+                <div className="mt-8 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={cancelEdit}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   >
-                    <i className="fas fa-plus mr-2"></i> Create First Slot
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Saving...' : editingSlot ? 'Update Slot' : batchMode ? 'Create Slots' : 'Create Slot'}
                   </button>
                 </div>
-              )}
+              </form>
             </div>
           </motion.div>
+        )}
+        
+        {/* Delete Confirmation Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Deletion</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this presentation slot? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  onClick={() => setShowDeleteConfirm(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  onClick={executeDelete}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </motion.div>

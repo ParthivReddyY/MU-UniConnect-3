@@ -1,50 +1,13 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const PresentationSlotSchema = new mongoose.Schema({
-  host: {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true
-    },
-    name: {
-      type: String,
-      required: true
-    },
-    email: {
-      type: String,
-      required: true
-    },
-    department: {
-      type: String,
-      required: true
-    }
-  },
+const presentationSlotSchema = new Schema({
   title: {
     type: String,
-    required: true
+    required: true,
+    trim: true
   },
   description: {
-    type: String,
-    required: true
-  },
-  targetYear: {
-    type: String,
-    required: true
-  },
-  targetDepartment: {
-    type: String,
-    required: true
-  },
-  date: {
-    type: Date,
-    required: true
-  },
-  startTime: {
-    type: String,
-    required: true
-  },
-  endTime: {
     type: String,
     required: true
   },
@@ -52,43 +15,93 @@ const PresentationSlotSchema = new mongoose.Schema({
     type: String,
     required: true
   },
-  duration: {
-    type: Number, // in minutes
+  date: {
+    type: Date
+  },
+  startTime: {
+    type: String,
     required: true
   },
+  endTime: {
+    type: String
+  },
+  duration: {
+    type: Number,
+    required: true,
+    min: 5
+  },
   bufferTime: {
-    type: Number, // in minutes
+    type: Number,
     default: 0
+  },
+  presentationType: {
+    type: String,
+    enum: ['single', 'team'],
+    required: true
+  },
+  minTeamMembers: {
+    type: Number,
+    min: 2,
+    default: 2
+  },
+  maxTeamMembers: {
+    type: Number,
+    min: 2,
+    default: 5
+  },
+  targetYear: {
+    type: String,
+    required: true
+  },
+  targetSchool: {
+    type: String,
+    required: true
+  },
+  targetDepartment: {
+    type: String,
+    required: true
   },
   status: {
     type: String,
-    enum: ['available', 'booked', 'completed', 'cancelled'],
+    enum: ['available', 'booked', 'cancelled'],
     default: 'available'
   },
   bookedBy: {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
+    user: {
+      type: Schema.Types.ObjectId,
       ref: 'User'
     },
     name: String,
     email: String,
-    department: String,
-    rollNumber: String
+    rollNumber: String,
+    teamMembers: [{
+      name: String,
+      email: String,
+      rollNumber: String
+    }]
   },
-  created_at: {
+  host: {
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    name: String,
+    email: String
+  },
+  createdAt: {
     type: Date,
     default: Date.now
   },
-  updated_at: {
+  updatedAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Update the updated_at field before saving
-PresentationSlotSchema.pre('save', function(next) {
-  this.updated_at = Date.now();
-  next();
-});
+// Index for better search performance
+presentationSlotSchema.index({ targetYear: 1, targetSchool: 1, targetDepartment: 1 });
+presentationSlotSchema.index({ date: 1, status: 1 });
+presentationSlotSchema.index({ 'host.user': 1 });
 
-module.exports = mongoose.model('PresentationSlot', PresentationSlotSchema);
+module.exports = mongoose.model('PresentationSlot', presentationSlotSchema);
