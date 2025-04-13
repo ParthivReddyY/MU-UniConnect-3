@@ -275,10 +275,21 @@ function Home() {
               <div className="bg-red-light w-16 h-16 rounded-full flex items-center justify-center mb-6">
                 <i className="fas fa-calendar-alt text-2xl text-primary-red"></i>
               </div>
-              <h3 className="text-2xl font-semibold text-dark-gray mb-4">Events Calendar</h3>
-              <p className="text-medium-gray mb-6 leading-relaxed">Stay updated with all campus events, workshops, seminars, and activities</p>
-              <Link to="/clubs-events" className="feature-link inline-flex items-center text-primary-red font-semibold">
-                View Events <i className="fas fa-arrow-right ml-2 transition-transform"></i>
+              <h3 className="text-2xl font-semibold text-dark-gray mb-4">Campus Calendars</h3>
+              <p className="text-medium-gray mb-6 leading-relaxed">Stay updated with academic schedules, campus events, workshops, seminars, and activities</p>
+              <Link to="/college/academic-calendar" className="feature-link inline-flex items-center text-primary-red font-semibold">
+                View Calendars <i className="fas fa-arrow-right ml-2 transition-transform"></i>
+              </Link>
+            </div>
+            
+            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform duration-300">
+              <div className="bg-red-light w-16 h-16 rounded-full flex items-center justify-center mb-6">
+                <i className="fas fa-bookmark text-2xl text-primary-red"></i>
+              </div>
+              <h3 className="text-2xl font-semibold text-dark-gray mb-4">Booking System</h3>
+              <p className="text-medium-gray mb-6 leading-relaxed">Reserve faculty appointments, presentation slots, and campus facilities with our streamlined system</p>
+              <Link to="/college/bookings?tab=bookings" className="feature-link inline-flex items-center text-primary-red font-semibold">
+                Make Bookings <i className="fas fa-arrow-right ml-2 transition-transform"></i>
               </Link>
             </div>
             
@@ -312,17 +323,6 @@ function Home() {
               <p className="text-medium-gray mb-6 leading-relaxed">Stay informed with the latest news, announcements, and updates from around the campus</p>
               <button type="button" className="feature-link inline-flex items-center text-primary-red font-semibold">
                 Read News <i className="fas fa-arrow-right ml-2 transition-transform"></i>
-              </button>
-            </div>
-            
-            <div className="bg-white rounded-xl p-8 shadow-lg border border-gray-100 hover:-translate-y-2 transition-transform duration-300">
-              <div className="bg-red-light w-16 h-16 rounded-full flex items-center justify-center mb-6">
-                <i className="fas fa-chalkboard-teacher text-2xl text-primary-red"></i>
-              </div>
-              <h3 className="text-2xl font-semibold text-dark-gray mb-4">Academic Calendar</h3>
-              <p className="text-medium-gray mb-6 leading-relaxed">Important dates, exam schedules, and holiday information for the academic year</p>
-              <button type="button" className="feature-link inline-flex items-center text-primary-red font-semibold">
-                View Calendar <i className="fas fa-arrow-right ml-2 transition-transform"></i>
               </button>
             </div>
           </div>
