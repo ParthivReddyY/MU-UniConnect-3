@@ -465,7 +465,7 @@ const Profile = () => {
                             value={formData.socialLinks.linkedin}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="https://linkedin.com/in/username"
+                            placeholder="https://www.linkedin.com/school/mahindra-unversity"
                           />
                         </div>
                         <div>
@@ -479,7 +479,7 @@ const Profile = () => {
                             value={formData.socialLinks.twitter}
                             onChange={handleInputChange}
                             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="https://twitter.com/username"
+                            placeholder="https://x.com/MahindraUni"
                           />
                         </div>
                         <div>

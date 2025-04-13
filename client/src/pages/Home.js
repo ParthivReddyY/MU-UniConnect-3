@@ -639,18 +639,21 @@ function Home() {
             <div>
               <h4 className="text-xl text-white font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Follow Us</h4>
               <div className="flex gap-4">
-                <button type="button" aria-label="Facebook" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                <a href="https://www.facebook.com/MahindraUni" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
                   <i className="fab fa-facebook-f"></i>
-                </button>
-                <button type="button" aria-label="Twitter" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                </a>
+                <a href="https://x.com/MahindraUni" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
                   <i className="fab fa-twitter"></i>
-                </button>
-                <button type="button" aria-label="Instagram" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                </a>
+                <a href="https://www.instagram.com/mahindrauni/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
                   <i className="fab fa-instagram"></i>
-                </button>
-                <button type="button" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                </a>
+                <a href="https://www.linkedin.com/school/mahindra-unversity/posts/?feedView=all" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
                   <i className="fab fa-linkedin-in"></i>
-                </button>
+                </a>
+                <a href="https://www.youtube.com/c/MahindraecolecentraleEduIn14/featured" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                  <i className="fab fa-youtube"></i>
+                </a>
               </div>
             </div>
           </div>
