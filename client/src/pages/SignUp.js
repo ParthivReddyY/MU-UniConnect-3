@@ -314,32 +314,48 @@ const SignUp = () => {
       
       if (result.success) {
         // Instead of showing success message, show OTP verification screen
-        setVerificationEmail(result.email);
+        setVerificationEmail(result.email || formData.email);
         setIsVerifying(true);
         setSignupSuccess('Verification code sent to your email. Please enter it below to complete registration.');
       } else {
         setSignupError(result.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
+      console.error('Registration error:', err);
       setSignupError('An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
-
-  // Add a new handler for OTP verification
+  
+  // Improved OTP verification handler with better validation
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     
+    // Validate OTP code is present
     if (!otpCode.trim()) {
       setOtpError('Please enter the verification code');
       return;
     }
     
+    // Validate email address is present
+    if (!verificationEmail || verificationEmail.trim() === '') {
+      setOtpError('Email address is missing. Please go back and try registering again.');
+      return;
+    }
+    
     setIsSubmitting(true);
+    setOtpError(''); // Clear any previous errors
     
     try {
+      console.log('Verifying email with:', { 
+        email: verificationEmail,
+        otpLength: otpCode.length
+      });
+      
       const result = await verifyEmail(verificationEmail, otpCode);
+      
+      console.log('Verification result:', result);
       
       if (result.success) {
         // Clear form after successful verification
@@ -356,23 +372,31 @@ const SignUp = () => {
           password: '',
           confirmPassword: ''
         });
+        
+        // Reset verification state and show success message
         setIsVerifying(false);
         setOtpCode('');
         setSignupSuccess(result.message || 'Registration completed successfully! You can now log in.');
+        
+        // Redirect to login page after a short delay
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
       } else {
         setOtpError(result.message || 'Verification failed. Please try again.');
       }
     } catch (err) {
-      setOtpError('An unexpected error occurred. Please try again.');
+      console.error('Verification error:', err);
+      setOtpError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
   
   // Updated common label class for consistent styling
-  const labelClass = "block mb-2 text-sm font-medium text-gray-300 h-5";
+  const labelClass = "block mb-2 text-sm font-medium text-gray-300";
 
-  // Updated input classes with consistent height
+  // Updated input classes with consistent height and improved focus state
   const inputClasses = (fieldName) => `w-full pl-12 pr-4 py-3 h-[50px] border ${
     errors[fieldName] ? 'border-red-500' : 'border-gray-700'
   } rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-100 bg-gray-800 bg-opacity-70 transition-all duration-200 shadow-sm`;
@@ -384,7 +408,7 @@ const SignUp = () => {
   // Create a separate OTP verification form
   if (isVerifying) {
     return (
-      <div className="h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
            style={{
              backgroundImage: 'url("/img/login and signup background.jpg")',
              backgroundSize: 'cover',
@@ -393,29 +417,29 @@ const SignUp = () => {
              backgroundAttachment: 'fixed'
            }}>
         {/* Dark overlay for text readability */}
-        <div className="absolute top-0 right-0 w-full h-full bg-black bg-opacity-50"></div>
+        <div className="absolute inset-0 bg-black bg-opacity-60"></div>
         
-        <div className="w-full max-w-md bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-sm">
-          <div className="px-10 pt-10 pb-6 text-center">
+        <div className="w-full max-w-md bg-black bg-opacity-85 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-md">
+          <div className="px-8 pt-8 pb-6 text-center">
             <h1 className="text-3xl font-bold text-white mb-3">Verify Your Email</h1>
-            <p className="text-gray-400">Enter the verification code sent to {verificationEmail}</p>
+            <p className="text-gray-300">Enter the verification code sent to <span className="text-red-400 font-medium">{verificationEmail}</span></p>
           </div>
           
           {signupSuccess && (
-            <div className="mx-10 mb-6 bg-green-900 bg-opacity-30 text-green-400 p-4 rounded-md text-sm border border-green-800 animate-pulse">
+            <div className="mx-8 mb-6 bg-green-900 bg-opacity-40 text-green-400 p-4 rounded-md text-sm border border-green-800 animate-pulse">
               <i className="fas fa-check-circle mr-2"></i>
               {signupSuccess}
             </div>
           )}
           
           {otpError && (
-            <div className="mx-10 mb-6 bg-red-900 bg-opacity-30 text-red-400 p-4 rounded-md text-sm border border-red-800 animate-pulse">
+            <div className="mx-8 mb-6 bg-red-900 bg-opacity-40 text-red-400 p-4 rounded-md text-sm border border-red-800 animate-pulse">
               <i className="fas fa-exclamation-triangle mr-2"></i>
               {otpError}
             </div>
           )}
           
-          <form className="px-10 pb-10 pt-2" onSubmit={handleVerifyOTP}>
+          <form className="px-8 pb-8 pt-2" onSubmit={handleVerifyOTP}>
             <div className="mb-6">
               <label htmlFor="otpCode" className={labelClass}>Verification Code</label>
               <div className="relative group">
@@ -430,6 +454,7 @@ const SignUp = () => {
                     setOtpError('');
                   }}
                   maxLength={6}
+                  autoFocus
                 />
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors">
                   <i className="fas fa-key"></i>
@@ -483,7 +508,7 @@ const SignUp = () => {
            backgroundAttachment: 'fixed'
          }}>
       {/* Fixed position overlay that covers the entire viewport */}
-      <div className="fixed inset-0 bg-black bg-opacity-50 pointer-events-none"></div>
+      <div className="fixed inset-0 bg-black bg-opacity-60 pointer-events-none"></div>
       
       {/* Back to Home Button - fixed position */}
       <Link 
@@ -495,32 +520,32 @@ const SignUp = () => {
       </Link>
       
       {/* Form container with improved z-index and positioning */}
-      <div className="w-full max-w-4xl bg-black bg-opacity-80 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-8 backdrop-blur-sm">
-        <div className="px-10 pt-10 pb-6 text-center sm:text-left">
+      <div className="w-full max-w-4xl bg-black bg-opacity-85 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-8 backdrop-blur-md">
+        <div className="px-8 pt-8 pb-6 text-center sm:text-left">
           <h1 className="text-4xl font-bold text-white mb-3">Create Account</h1>
-          <p className="text-gray-400">Join the Mahindra University community</p>
+          <p className="text-gray-300">Join the Mahindra University community</p>
         </div>
         
         {signupError && (
-          <div className="mx-10 mb-6 bg-red-900 bg-opacity-30 text-red-400 p-4 rounded-md text-sm border border-red-800 animate-pulse">
+          <div className="mx-8 mb-6 bg-red-900 bg-opacity-40 text-red-400 p-4 rounded-md text-sm border border-red-800 animate-pulse">
             <i className="fas fa-exclamation-triangle mr-2"></i>
             {signupError}
           </div>
         )}
         
         {signupSuccess && (
-          <div className="mx-10 mb-6 bg-green-900 bg-opacity-30 text-green-400 p-4 rounded-md text-sm border border-green-800 animate-pulse">
+          <div className="mx-8 mb-6 bg-green-900 bg-opacity-40 text-green-400 p-4 rounded-md text-sm border border-green-800 animate-pulse">
             <i className="fas fa-check-circle mr-2"></i>
             {signupSuccess}
           </div>
         )}
         
-        <form className="px-10 pb-10 pt-2" onSubmit={handleSubmit}>
+        <form className="px-8 pb-8 pt-2" onSubmit={handleSubmit}>
           {/* Personal Information Section */}
-          <div className="mb-8 pb-6 border-b border-gray-800">
-            <h3 className="text-lg font-semibold text-white mb-5 flex items-center">
-              <span className="form-section-icon">
-                <i className="fas fa-id-card text-white"></i>
+          <div className="mb-8 pb-6 border-b border-gray-700">
+            <h3 className="text-xl font-semibold text-white mb-5 flex items-center">
+              <span className="bg-red-600 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                <i className="fas fa-id-card text-white text-sm"></i>
               </span>
               Personal Information
             </h3>
@@ -634,10 +659,10 @@ const SignUp = () => {
           </div>
           
           {/* Academic Information Section */}
-          <div className="mb-8 pb-6 border-b border-gray-800">
-            <h3 className="text-lg font-semibold text-white mb-5 flex items-center">
-              <span className="form-section-icon">
-                <i className="fas fa-university text-white"></i>
+          <div className="mb-8 pb-6 border-b border-gray-700">
+            <h3 className="text-xl font-semibold text-white mb-5 flex items-center">
+              <span className="bg-red-600 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                <i className="fas fa-university text-white text-sm"></i>
               </span>
               Academic Information
             </h3>
@@ -807,16 +832,14 @@ const SignUp = () => {
                   )}
                 </div>
               </div>
-              
-              {/* Other academic fields continue... */}
             </div>
           </div>
           
           {/* Account Security Section */}
           <div className="mb-8">
-            <h3 className="text-lg font-semibold text-white mb-5 flex items-center">
-              <span className="form-section-icon">
-                <i className="fas fa-fingerprint text-white"></i>
+            <h3 className="text-xl font-semibold text-white mb-5 flex items-center">
+              <span className="bg-red-600 w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                <i className="fas fa-fingerprint text-white text-sm"></i>
               </span>
               Account Security
             </h3>
@@ -912,8 +935,8 @@ const SignUp = () => {
           </div>
           
           <div className="text-center mt-8">
-            <p className="mb-3 text-gray-400">Already have an account?</p>
-            <Link to="/login" className="w-full inline-block border border-gray-600 text-gray-300 font-medium py-4 px-4 rounded-md hover:bg-gray-700 transition-all duration-200 text-center text-lg bg-gray-900 hover:text-white">
+            <p className="mb-3 text-gray-300">Already have an account?</p>
+            <Link to="/login" className="w-full inline-block border border-gray-600 text-gray-300 font-medium py-4 px-4 rounded-md hover:bg-gray-800 transition-all duration-200 text-center text-lg bg-gray-900 hover:text-white">
               <i className="fas fa-sign-in-alt mr-2"></i>
               Sign in instead
             </Link>

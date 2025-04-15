@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../../../../contexts/AuthContext';
 import PresentationService from '../../../../services/PresentationService';
@@ -41,32 +41,8 @@ const PresentationSlot = () => {
     fetchData();
   }, []);
   
-  // Filter slots when filters change
-  useEffect(() => {
-    filterSlots();
-  }, [filters, slots]);
-  
-  // Fetch all necessary data
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch available presentation slots
-      const availableSlots = await PresentationService.getAvailableSlots();
-      setSlots(availableSlots);
-      
-      // Fetch user's bookings
-      const userBookings = await PresentationService.getUserBookings();
-      setMyBookings(userBookings);
-    } catch (error) {
-      console.error('Error fetching data:', error);
-      toast.error('Failed to load presentation slots');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   // Filter slots based on search and filters
-  const filterSlots = () => {
+  const filterSlots = useCallback(() => {
     let results = [...slots];
     
     // Filter by search term
@@ -106,6 +82,30 @@ const PresentationSlot = () => {
     }
     
     setFilteredSlots(results);
+  }, [filters, slots]);
+
+  // Filter slots when filters change
+  useEffect(() => {
+    filterSlots();
+  }, [filterSlots]);
+  
+  // Fetch all necessary data
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      // Fetch available presentation slots
+      const availableSlots = await PresentationService.getAvailableSlots();
+      setSlots(availableSlots);
+      
+      // Fetch user's bookings
+      const userBookings = await PresentationService.getUserBookings();
+      setMyBookings(userBookings);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load presentation slots');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Reset filters

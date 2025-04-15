@@ -166,14 +166,21 @@ export const AuthProvider = ({ children }) => {
       const response = await api.post('/api/auth/register', userData);
       
       if (response.data.success) {
-        return { success: true, message: response.data.message };
+        return { 
+          success: true, 
+          message: response.data.message,
+          email: userData.email // Always include the email used for registration
+        };
       } else {
         throw new Error(response.data.message || 'Registration failed');
       }
     } catch (err) {
       console.error('Register error:', err);
       setError(err.response?.data?.message || err.message || 'Registration failed');
-      return { success: false, error: err.response?.data?.message || err.message || 'Registration failed' };
+      return { 
+        success: false, 
+        error: err.response?.data?.message || err.message || 'Registration failed' 
+      };
     }
   };
   
@@ -284,6 +291,28 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Verify email with OTP function
+  const verifyEmail = async (email, otp) => {
+    try {
+      setError('');
+      const response = await api.post('/api/auth/verify-email', { email, otp });
+      
+      if (response.data.success) {
+        return { 
+          success: true, 
+          message: response.data.message || 'Email verified successfully. You can now log in.'
+        };
+      } else {
+        throw new Error(response.data.message || 'Failed to verify email');
+      }
+    } catch (err) {
+      console.error('Email verification error:', err);
+      const errorMsg = err.response?.data?.message || err.message || 'Failed to verify email';
+      setError(errorMsg);
+      return { success: false, message: errorMsg };
+    }
+  };
+  
   // Role-based access control functions
   const isAdmin = () => {
     return currentUser?.role === 'admin';
@@ -319,7 +348,8 @@ export const AuthProvider = ({ children }) => {
     forgotPassword,
     verifyResetOTP,
     resetPassword,
-    updatePassword
+    updatePassword,
+    verifyEmail  // Add the verifyEmail function to the context value
   };
   
   return (

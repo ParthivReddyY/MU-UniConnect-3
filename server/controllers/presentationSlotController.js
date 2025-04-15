@@ -1,4 +1,5 @@
 const PresentationSlot = require('../models/PresentationSlot');
+const mongoose = require('mongoose'); // Add this import at the top
 
 // Create a new presentation slot
 exports.createPresentationSlot = async (req, res) => {
@@ -64,24 +65,53 @@ exports.createBatchPresentationSlots = async (req, res) => {
       return res.status(400).json({ message: 'Dates and time slots are required' });
     }
 
+    // Process the team presentation data to ensure minTeamMembers is valid
+    let processedCommonData = { ...commonData };
+    
+    // Handle team presentation specific validation
+    if (processedCommonData.presentationType === 'team') {
+      // Ensure minTeamMembers is at least 2 (to satisfy mongoose validation)
+      if (!processedCommonData.minTeamMembers || processedCommonData.minTeamMembers < 2) {
+        processedCommonData.minTeamMembers = 2;
+      }
+      
+      // Ensure maxTeamMembers is at least equal to minTeamMembers
+      if (!processedCommonData.maxTeamMembers || processedCommonData.maxTeamMembers < processedCommonData.minTeamMembers) {
+        processedCommonData.maxTeamMembers = processedCommonData.minTeamMembers;
+      }
+    } else {
+      // If not a team presentation, remove team-specific fields
+      delete processedCommonData.minTeamMembers;
+      delete processedCommonData.maxTeamMembers;
+    }
+
+    // Add a unique event ID to group slots together
+    const eventId = new mongoose.Types.ObjectId();
+    processedCommonData.eventId = eventId;
+
+    // Create slots individually to avoid Cartesian product
     const slotsToCreate = [];
     
-    // Generate a slot for each date and time combination
-    dates.forEach(date => {
-      timeSlots.forEach(timeSlot => {
-        slotsToCreate.push({
-          ...commonData,
-          date,
-          startTime: timeSlot.startTime,
-          endTime: timeSlot.endTime,
-          host: {
-            user: req.user.userId || req.user._id, // Fix: Use either userId or _id from the authenticated user
-            name: req.user.name,
-            email: req.user.email
-          }
-        });
+    // Use a direct one-to-one mapping, not a Cartesian product
+    const slotCount = Math.max(dates.length, timeSlots.length);
+    
+    for (let i = 0; i < slotCount; i++) {
+      // Use modulo to handle cases where one array is longer than the other
+      const dateIndex = i % dates.length;
+      const timeIndex = i % timeSlots.length;
+      
+      slotsToCreate.push({
+        ...processedCommonData,
+        date: dates[dateIndex],
+        startTime: timeSlots[timeIndex].startTime,
+        endTime: timeSlots[timeIndex].endTime,
+        host: {
+          user: req.user.userId || req.user._id,
+          name: req.user.name,
+          email: req.user.email
+        }
       });
-    });
+    }
 
     const createdSlots = await PresentationSlot.insertMany(slotsToCreate);
     res.status(201).json(createdSlots);
@@ -94,9 +124,54 @@ exports.createBatchPresentationSlots = async (req, res) => {
 // Get all presentation slots created by a host
 exports.getHostPresentationSlots = async (req, res) => {
   try {
-    const userId = req.user.userId || req.user._id; // Fix: Use either userId or _id
-    const slots = await PresentationSlot.find({ 'host.user': userId })
-      .sort({ date: 1, startTime: 1 });
+    const userId = req.user.userId || req.user._id;
+    
+    // Check if we need to filter by title
+    const titleFilter = req.query.title ? { title: req.query.title } : {};
+    
+    // Get all slots created by this host
+    const slots = await PresentationSlot.find({ 
+      'host.user': userId,
+      ...titleFilter 
+    }).sort({ date: 1, startTime: 1 });
+    
+    // If we want to group by events, we can process the slots here
+    if (req.query.grouped === 'true') {
+      // Group slots by event title (or eventId if implemented)
+      const eventsMap = new Map();
+      
+      slots.forEach(slot => {
+        const key = slot.title;
+        if (!eventsMap.has(key)) {
+          // Create a new event entry
+          eventsMap.set(key, {
+            _id: slot._id, // Use the first slot's ID as event ID
+            title: slot.title,
+            description: slot.description,
+            targetYear: slot.targetYear,
+            targetSchool: slot.targetSchool,
+            targetDepartment: slot.targetDepartment,
+            presentationType: slot.presentationType,
+            minTeamMembers: slot.minTeamMembers,
+            maxTeamMembers: slot.maxTeamMembers,
+            venue: slot.venue,
+            duration: slot.duration,
+            bufferTime: slot.bufferTime,
+            slots: [],
+            createdAt: slot.createdAt
+          });
+        }
+        
+        // Add this slot to the event
+        eventsMap.get(key).slots.push(slot);
+      });
+      
+      // Convert map to array
+      const events = Array.from(eventsMap.values());
+      return res.json(events);
+    }
+    
+    // Otherwise return the flat list of slots
     res.json(slots);
   } catch (err) {
     console.error('Error fetching host presentation slots:', err);
@@ -182,29 +257,43 @@ exports.updatePresentationSlot = async (req, res) => {
   }
 };
 
-// Delete a presentation slot
+// Delete a presentation slot - improved with better error handling and confirmation
 exports.deletePresentationSlot = async (req, res) => {
   try {
-    const slot = await PresentationSlot.findById(req.params.id);
+    const slotId = req.params.id;
+    console.log(`Server received request to delete slot: ${slotId}`);
+    
+    // First verify the slot exists
+    const slot = await PresentationSlot.findById(slotId);
     
     if (!slot) {
+      console.log(`Slot not found with ID: ${slotId}`);
       return res.status(404).json({ message: 'Presentation slot not found' });
     }
     
-    // Check if the user is the host of the presentation slot
-    const userId = req.user.userId || req.user._id; // Fix: Use either userId or _id
+    // Check authorization
+    const userId = req.user.userId || req.user._id;
     if (slot.host.user.toString() !== userId.toString()) {
+      console.log(`Authorization failed: User ${userId} is not the host of slot ${slotId}`);
       return res.status(403).json({ message: 'Not authorized to delete this presentation slot' });
     }
     
     // Check if the slot is already booked
     if (slot.status === 'booked') {
+      console.log(`Cannot delete booked slot: ${slotId}`);
       return res.status(400).json({ message: 'Cannot delete a booked presentation slot' });
     }
     
-    await slot.remove();
+    // Delete the slot and get the result
+    const result = await PresentationSlot.findByIdAndDelete(slotId);
     
-    res.json({ message: 'Presentation slot deleted successfully' });
+    if (!result) {
+      console.log(`Database deletion operation returned no result for ID: ${slotId}`);
+      return res.status(500).json({ message: 'Deletion operation failed' });
+    }
+    
+    console.log(`Successfully deleted slot: ${slotId}`);
+    res.json({ message: 'Presentation slot deleted successfully', deletedSlot: slotId });
   } catch (err) {
     console.error('Error deleting presentation slot:', err);
     res.status(500).json({ message: 'Server error', error: err.message });

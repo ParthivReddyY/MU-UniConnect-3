@@ -1,0 +1,58 @@
+/* Custom styles for forms */
+
+/* Form section icons */
+.form-section-icon {
+  background-color: var(--primary-red);
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+  box-shadow: 0 3px 5px rgba(211, 47, 47, 0.3);
+  transition: all 0.3s ease;
+}
+
+.form-section-icon i {
+  font-size: 0.875rem;
+}
+
+h3:hover .form-section-icon {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(211, 47, 47, 0.4);
+}
+
+/* Input hover effects */
+.form-input-group {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.form-input-group:hover .form-input-icon,
+.form-input-group:focus-within .form-input-icon {
+  color: var(--primary-red);
+}
+
+/* Date input styling adjustments */
+input[type="date"] {
+  /* Modern browsers */
+  background-color: #333;
+  color: #fff;
+  border-color: #555;
+  -webkit-appearance: none; /* Safari compatibility */
+  appearance: none; /* Standard property */
+}
+
+/* Select dropdown styling */
+select {
+  background-color: #333;
+  color: #fff;
+  border-color: #555;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}

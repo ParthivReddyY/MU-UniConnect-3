@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticateUser } = require('../../middleware/auth');
 const presentationSlotController = require('../../controllers/presentationSlotController');
+const PresentationSlot = require('../../models/PresentationSlot'); // Add this import for the delete-by-title route
 
 // Route to create a single presentation slot
 // POST /api/presentation-slots
@@ -42,5 +43,44 @@ router.post('/:id/book', authenticateUser, presentationSlotController.bookPresen
 // Route to cancel a booked presentation slot
 // POST /api/presentation-slots/:id/cancel
 router.post('/:id/cancel', authenticateUser, presentationSlotController.cancelBooking);
+
+// Add a new route for bulk deletion by title
+router.post('/delete-by-title', authenticateUser, async (req, res) => {
+  try {
+    const { title } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ message: 'Title is required' });
+    }
+    
+    const userId = req.user.userId || req.user._id;
+    
+    // Find all slots with matching title and host
+    const slots = await PresentationSlot.find({ 
+      title, 
+      'host.user': userId,
+      status: 'available' // Only delete available slots
+    });
+    
+    if (slots.length === 0) {
+      return res.status(404).json({ message: 'No available slots found with this title' });
+    }
+    
+    // Delete all matching slots
+    const result = await PresentationSlot.deleteMany({ 
+      title, 
+      'host.user': userId,
+      status: 'available'
+    });
+    
+    res.json({ 
+      message: `Successfully deleted ${result.deletedCount} presentation slots`,
+      deletedCount: result.deletedCount
+    });
+  } catch (err) {
+    console.error('Error deleting slots by title:', err);
+    res.status(500).json({ message: 'Server error', error: err.message });
+  }
+});
 
 module.exports = router;
