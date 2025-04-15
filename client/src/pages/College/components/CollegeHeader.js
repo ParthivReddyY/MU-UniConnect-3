@@ -31,14 +31,24 @@ const CollegeHeader = () => {
           </p>
           
           <div className="flex flex-wrap justify-center gap-4">
-            <button className="bg-primary-red hover:bg-red-600 text-white font-medium px-6 py-3 rounded-lg transition-colors flex items-center">
+            <a 
+              href="https://admission.mahindrauniversity.edu.in" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="bg-primary-red hover:bg-red-600 text-white font-medium px-6 py-3 rounded-lg transition-colors flex items-center"
+            >
               <i className="fas fa-user-plus mr-2"></i>
               Apply Now
-            </button>
-            <button className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/30 font-medium px-6 py-3 rounded-lg transition-colors flex items-center">
+            </a>
+            <a 
+              href="https://www.mahindrauniversity.edu.in/sites/virtual-tour-of-mu-campus.html" 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="bg-white/10 backdrop-blur-sm hover:bg-white/20 text-white border border-white/30 font-medium px-6 py-3 rounded-lg transition-colors flex items-center"
+            >
               <i className="fas fa-video mr-2"></i>
               Watch Campus Tour
-            </button>
+            </a>
           </div>
         </motion.div>
       </div>

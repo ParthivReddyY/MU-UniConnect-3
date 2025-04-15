@@ -693,22 +693,22 @@ const Overview = () => {
             </div>
             
             <div className="flex flex-wrap gap-3">
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#3b5998] text-white rounded-lg hover:bg-opacity-90">
+              <a href="https://www.facebook.com/MahindraUni" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#3b5998] text-white rounded-lg hover:bg-opacity-90">
                 <i className="fab fa-facebook-f"></i>
                 Facebook
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#1da1f2] text-white rounded-lg hover:bg-opacity-90">
+              </a>
+              <a href="https://x.com/MahindraUni" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#1da1f2] text-white rounded-lg hover:bg-opacity-90">
                 <i className="fab fa-twitter"></i>
-                Twitter
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#0077b5] text-white rounded-lg hover:bg-opacity-90">
+                X (Twitter)
+              </a>
+              <a href="https://www.linkedin.com/school/mahindra-unversity/posts/?feedView=all" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#0077b5] text-white rounded-lg hover:bg-opacity-90">
                 <i className="fab fa-linkedin-in"></i>
                 LinkedIn
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-[#ff0000] text-white rounded-lg hover:bg-opacity-90">
+              </a>
+              <a href="https://www.youtube.com/c/MahindraecolecentraleEduIn14/featured" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-4 py-2 bg-[#ff0000] text-white rounded-lg hover:bg-opacity-90">
                 <i className="fab fa-youtube"></i>
                 YouTube
-              </button>
+              </a>
             </div>
           </div>
           <div className="bg-gradient-to-br from-primary-red to-primary-teal text-white p-8 flex flex-col justify-center">
