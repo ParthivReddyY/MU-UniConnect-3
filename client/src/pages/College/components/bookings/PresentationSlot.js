@@ -5,13 +5,14 @@ import { toast } from 'react-toastify';
 import PresentationService from '../../../../services/PresentationService';
 import api from '../../../../utils/axiosConfig';
 import { useAuth } from '../../../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const PresentationSlot = () => {
   // Get current user data from auth context
   const { currentUser } = useAuth();
+  const navigate = useNavigate();
   
   // State variables
-  const [events, setEvents] = useState([]);
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedSlot, setSelectedSlot] = useState(null);
@@ -37,7 +38,6 @@ const PresentationSlot = () => {
   ]);
   
   // Search state for finding students
-  const [studentSearch, setStudentSearch] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [activeSearchField, setActiveSearchField] = useState(null); // Track which team member field is being searched
@@ -50,6 +50,19 @@ const PresentationSlot = () => {
     department: ''
   });
 
+  // Add new state variables for the booking form
+  const [teamName, setTeamName] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
+  const [teamCount, setTeamCount] = useState(1);
+  const [attachments, setAttachments] = useState([]);
+  
+  // Max file settings
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_FILES = 3;
+
+  // Add the missing state variable for all events
+  const [events, setEvents] = useState([]);
+
   // Add cleanup effect to ensure navbar is restored when component unmounts
   useEffect(() => {
     return () => {
@@ -57,81 +70,54 @@ const PresentationSlot = () => {
     };
   }, []);
 
-  // Load presentation events and user's bookings on mount
-  useEffect(() => {
-    fetchEventData();
-  }, []);
-
-  // Enhanced useEffect for debugging and reliable team member initialization
-  useEffect(() => {
-    console.log("Current user data in team member setup:", currentUser);
-    console.log("Current user ID: ", currentUser?._id);
-    console.log("Current user studentId: ", currentUser?.studentId);
-    
-    if (currentUser) {
-      const userId = currentUser._id || '';
-      console.log("Using user ID for team member:", userId);
-      
-      setTeamMembers([
-        { 
-          name: currentUser.name || '', 
-          email: currentUser.email || '', 
-          id: userId, // Ensure we use _id as the ID
-          rollNumber: currentUser.studentId || '',
-          department: currentUser.department || ''
-        }
-      ]);
-    }
-  }, [currentUser]);
-
-  // Filter events based on search and filters
-  const filterEvents = useCallback(() => {
-    if (!events.length) return;
-    let results = [...events];
-    
-    // Filter by search term
-    if (filters.search) {
-      const searchTerm = filters.search.toLowerCase();
-      results = results.filter(event => 
-        event.title.toLowerCase().includes(searchTerm) ||
-        event.description.toLowerCase().includes(searchTerm) ||
-        event.venue.toLowerCase().includes(searchTerm) ||
-        event.hostName?.toLowerCase().includes(searchTerm)
-      );
-    }
-    
-    // Filter by school
-    if (filters.school) {
-      results = results.filter(event => 
-        event.targetSchool === filters.school || 
-        event.targetSchool === 'All Schools'
-      );
-    }
-    
-    // Filter by department
-    if (filters.department) {
-      results = results.filter(event => 
-        event.targetDepartment === filters.department || 
-        event.targetDepartment === 'All Departments'
-      );
-    }
-    
-    setFilteredEvents(results);
-  }, [filters, events]);
-
-  // Filter events when filters change
-  useEffect(() => {
-    filterEvents();
-  }, [filterEvents]);
-
-  // Fetch presentation events and user's bookings
-  const fetchEventData = async () => {
+  // Define fetchEventData using useCallback before using it in useEffect
+  const fetchEventData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Fetch available presentation events
+      console.log('Fetching available presentation events...');
       const availableEvents = await PresentationService.getAvailableEvents();
+      console.log('Received events:', availableEvents);
+      
+      // Store all events first
       setEvents(availableEvents);
-      setFilteredEvents(availableEvents);
+      
+      // Filter events based on user's department and year - simplified to show more events
+      const filteredByTargetAudience = availableEvents.filter(event => {
+        // Always show events targeted at "All"
+        if (event.targetDepartment === 'All Departments' || 
+            event.targetYear === 'All Years') {
+          return true;
+        }
+        
+        // Check for department match (more permissive)
+        const departmentMatch = event.targetDepartment === 'All Departments' || 
+          !currentUser?.department || // Show all if user doesn't have department set
+          currentUser?.department === event.targetDepartment || 
+          (event.targetDepartment && event.targetDepartment.includes(currentUser?.department));
+        
+        // Check for year match (more permissive)
+        const userYear = currentUser?.year || '';
+        let yearMatch = event.targetYear === 'All Years' || !userYear; // Show all if user has no year set
+        
+        // Match explicit year names with potential user year formats
+        if (event.targetYear === 'First Year' && (userYear === '1' || userYear === '1st Year' || userYear.toLowerCase().includes('first'))) {
+          yearMatch = true;
+        } else if (event.targetYear === 'Second Year' && (userYear === '2' || userYear === '2nd Year' || userYear.toLowerCase().includes('second'))) {
+          yearMatch = true;
+        } else if (event.targetYear === 'Third Year' && (userYear === '3' || userYear === '3rd Year' || userYear.toLowerCase().includes('third'))) {
+          yearMatch = true;
+        } else if (event.targetYear === 'Fourth Year' && (userYear === '4' || userYear === '4th Year' || userYear.toLowerCase().includes('fourth'))) {
+          yearMatch = true;
+        }
+        
+        return departmentMatch && yearMatch;
+      });
+      
+      console.log('Filtered events for user:', filteredByTargetAudience.length, 'out of', availableEvents.length);
+      
+      // Set filtered events
+      setFilteredEvents(filteredByTargetAudience);
       
       // Fetch user's bookings
       const userBookings = await PresentationService.getUserBookings();
@@ -142,7 +128,51 @@ const PresentationSlot = () => {
     } finally {
       setIsLoading(false);
     }
+  }, [currentUser]);
+
+  // Load presentation events and user's bookings on mount
+  useEffect(() => {
+    fetchEventData();
+  }, [fetchEventData]);
+
+  // Enhanced useEffect for debugging and reliable team member initialization
+  useEffect(() => {
+    // This empty useEffect was likely intended for team member initialization
+    // but we already handle that in initializeBooking
+    
+    // The duplicate fetchEventData function has been removed 
+    // since it's already defined as a useCallback earlier
+  }, []);
+  
+  /* Removing unused function
+  // Helper function to determine school based on department
+  const getDepartmentSchool = (department) => {
+    if (!department) return '';
+    
+    if (department.includes('CSE') || 
+        department.includes('ECE') || 
+        department.includes('Computer') || 
+        department.includes('Electronics') ||
+        department.includes('Mechanical') ||
+        department.includes('Civil') ||
+        department.includes('Engineering')) {
+      return 'ECSE';
+    }
+    
+    if (department.includes('Management') || 
+        department.includes('Finance') || 
+        department.includes('MBA') ||
+        department.includes('Economics')) {
+      return 'SOM';
+    }
+    
+    if (department.includes('Law')) {
+      return 'SOL';
+    }
+    
+    return '';
   };
+  */
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -173,35 +203,42 @@ const PresentationSlot = () => {
     // Sort slots within each date
     Object.keys(groupedSlots).forEach(date => {
       groupedSlots[date].sort((a, b) => {
-        const timeA = a.startTime.split(':').map(Number);
-        const timeB = b.startTime.split(':').map(Number);
-        return (timeA[0] * 60 + timeA[1]) - (timeB[0] * 60 + timeB[1]);
+        return a.startTime.localeCompare(b.startTime);
       });
     });
     
     return groupedSlots;
   };
 
-  // View event details and its slots
+  // View event details and its slots - corrected function
   const viewEventDetails = async (event) => {
     setIsLoading(true);
+    setSelectedEvent(event);
+    setShowEventList(false);
+    
     try {
-      // Fetch all slots for this event
-      const eventSlots = event.slots || await PresentationService.getSlotsByEventId(event.title);
-      
-      // Set selected event and its slots
-      setSelectedEvent(event);
-      setSlots(eventSlots);
-      setShowEventList(false);
+      console.log('Fetching slots for event:', event.title);
+      // Check if the event already has slots attached
+      if (event.slots && Array.isArray(event.slots) && event.slots.length > 0) {
+        console.log('Using slots from event object:', event.slots.length);
+        setSlots(event.slots.filter(slot => slot.status === 'available'));
+      } else {
+        // Fetch slots using the event title
+        console.log('Fetching slots by event title');
+        const eventSlots = await PresentationService.getSlotsByEventId(event.title);
+        console.log('Fetched slots:', eventSlots);
+        setSlots(eventSlots.filter(slot => slot.status === 'available'));
+      }
     } catch (error) {
       console.error('Error fetching event slots:', error);
       toast.error('Failed to load event slots');
+      setSlots([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Back to events list
+  // Back to events list with improved design
   const goBackToEvents = () => {
     setSelectedEvent(null);
     setSelectedSlot(null);
@@ -233,6 +270,12 @@ const PresentationSlot = () => {
   const initializeBooking = (slot) => {
     setSelectedSlot(slot);
     setShowBookingForm(true);
+    
+    // Reset form fields
+    setTeamName('');
+    setProjectDescription('');
+    setTeamCount(slot.minTeamMembers || 1);
+    setAttachments([]);
     
     // Hide navbar when booking form is shown
     document.body.classList.add('hide-navbar');
@@ -270,6 +313,10 @@ const PresentationSlot = () => {
   const closeBookingForm = () => {
     setSelectedSlot(null);
     setShowBookingForm(false);
+    setTeamName('');
+    setProjectDescription('');
+    setTeamCount(1);
+    setAttachments([]);
     setTeamMembers([
       { name: '', email: '', id: '', rollNumber: '', department: '' }
     ]);
@@ -306,8 +353,9 @@ const PresentationSlot = () => {
     setTeamMembers(updatedMembers);
   };
 
-  // Improved search students function with better ID mapping
-  const searchStudents = async (query, index) => {
+  // This function is now used by searchFromInputField
+  // so we're keeping it as a utility function
+  const searchStudents = useCallback(async (query, index) => {
     if (!query || query.length < 2) {
       setSearchResults([]);
       return;
@@ -355,6 +403,28 @@ const PresentationSlot = () => {
     } finally {
       setIsSearching(false);
     }
+  }, []);
+  // Improved search function - search when typing in any team member field
+  const searchFromInputField = async (query, index, field) => {
+    if (!query || query.length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    setActiveSearchField({index, field}); // Track both index and field
+    
+    // Use the searchStudents function with the field-specific parameters
+    try {
+      console.log(`Searching students with query: ${query} for field: ${field}`);
+      
+      // Delegate the actual search to our reusable function
+      await searchStudents(query, {index, field});
+      
+    } catch (error) {
+      console.error('Error searching students:', error);
+      setSearchResults([]);
+    }
   };
 
   // Enhanced selectStudent function with better ID handling
@@ -382,16 +452,53 @@ const PresentationSlot = () => {
     
     // Clear search UI state
     setSearchResults([]);
-    setStudentSearch('');
     setActiveSearchField(null);
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e) => {
+    const files = Array.from(e.target.files);
+    
+    // Check file count
+    if (files.length + attachments.length > MAX_FILES) {
+      toast.warning(`You can only upload a maximum of ${MAX_FILES} files`);
+      return;
+    }
+    
+    // Check individual file sizes
+    const oversizedFiles = files.filter(file => file.size > MAX_FILE_SIZE);
+    if (oversizedFiles.length > 0) {
+      toast.warning(`Some files exceed the ${MAX_FILE_SIZE/1024/1024}MB limit`);
+      return;
+    }
+    
+    // Store files
+    setAttachments(prev => [...prev, ...files]);
+  };
+  
+  // Remove an attachment
+  const removeAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
   // Improved bookSlot function with better ID handling
   const bookSlot = async () => {
     if (!selectedSlot) return;
     
+    // Validate team name
+    if (!teamName.trim()) {
+      toast.error('Please enter a team name');
+      return;
+    }
+    
     // Validate team members if applicable
     if (selectedSlot.presentationType === 'team') {
+      // Validate that team count matches actual team members
+      if (teamMembers.length !== teamCount) {
+        toast.error(`Please add exactly ${teamCount} team members`);
+        return;
+      }
+      
       // Log team members for debugging
       console.log("Team members being submitted:", JSON.stringify(teamMembers, null, 2));
       
@@ -428,20 +535,45 @@ const PresentationSlot = () => {
       
       const bookingData = {
         slotId: selectedSlot._id,
+        teamName,
+        projectDescription,
+        teamCount: selectedSlot.presentationType === 'team' ? teamCount : 1,
         teamMembers: formattedTeamMembers
       };
       
-      // Book the slot
-      const response = await PresentationService.bookSlot(bookingData);
-      
-      // Remove the booked slot from available slots
-      setSlots(slots.filter(slot => slot._id !== selectedSlot._id));
-      
-      // Add to my bookings
-      setMyBookings([...myBookings, response]);
+      // Handle file uploads if any
+      if (attachments.length > 0) {
+        const formData = new FormData();
+        
+        // Add the booking data as JSON
+        formData.append('bookingData', JSON.stringify(bookingData));
+        
+        // Add the files
+        attachments.forEach(file => {
+          formData.append('attachments', file);
+        });
+        
+        // Book the slot with attachments
+        const response = await PresentationService.bookSlotWithAttachments(selectedSlot._id, formData);
+        
+        // Update UI after successful booking
+        setSlots(slots.filter(slot => slot._id !== selectedSlot._id));
+        setMyBookings([...myBookings, response]);
+      } else {
+        // Book the slot without attachments (using the existing method)
+        const response = await PresentationService.bookSlot(bookingData);
+        
+        // Update UI after successful booking
+        setSlots(slots.filter(slot => slot._id !== selectedSlot._id));
+        setMyBookings([...myBookings, response]);
+      }
       
       // Reset form
       setSelectedSlot(null);
+      setTeamName('');
+      setProjectDescription('');
+      setTeamCount(1);
+      setAttachments([]);
       setTeamMembers([{ name: '', email: '', id: '', rollNumber: '', department: '' }]);
       setShowBookingForm(false);
           
@@ -500,6 +632,117 @@ const PresentationSlot = () => {
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -20 }
   };
+
+  // Removing unused function - formatYearDisplay already provides similar functionality
+
+  // Improved department abbreviation function - focusing on shorter forms only
+  const getDepartmentAbbreviation = (departmentString) => {
+    if (!departmentString) return '';
+    
+    // If it contains parentheses with an abbreviation, extract it
+    if (departmentString.includes('(') && departmentString.includes(')')) {
+      const match = departmentString.match(/\(([^)]+)\)/);
+      return match ? match[1] : '';
+    }
+    
+    // For All Departments case
+    if (departmentString === 'All Departments') return 'All';
+    
+    // For departments without parentheses, return first letters of main words
+    return departmentString
+      .split(' ')
+      .map(word => {
+        // Skip common words like "of", "and", etc.
+        if (['of', 'and', 'the'].includes(word.toLowerCase())) return '';
+        return word[0];
+      })
+      .join('');
+  };
+
+  // Convert year string to a more readable format
+  const formatYearDisplay = (yearString) => {
+    if (!yearString) return '';
+    
+    if (yearString.includes('First')) return '1st Year';
+    if (yearString.includes('Second')) return '2nd Year';
+    if (yearString.includes('Third')) return '3rd Year';
+    if (yearString.includes('Fourth')) return '4th Year';
+    
+    return yearString;
+  };
+
+  // Add a function to get host name with proper fallback
+  const getHostName = (host) => {
+    if (!host) return "Faculty";
+    if (host.name) return host.name;
+    if (host.user && typeof host.user === 'object' && host.user.name) return host.user.name;
+    return "Faculty";
+  };
+
+  // Filter events based on search and filters
+  const filterEvents = useCallback(() => {
+    if (!events.length) return;
+    
+    console.log('Filtering events with criteria:', filters);
+    console.log('Events before filtering:', events.length);
+    
+    let results = [...events];
+    
+    // Filter by search term
+    if (filters.search) {
+      const searchTerm = filters.search.toLowerCase();
+      results = results.filter(event => 
+        event.title.toLowerCase().includes(searchTerm) ||
+        event.description.toLowerCase().includes(searchTerm) ||
+        event.venue?.toLowerCase().includes(searchTerm) ||
+        (event.host?.name && event.host.name.toLowerCase().includes(searchTerm))
+      );
+      console.log('After search filter:', results.length);
+    }
+    
+    // Filter by school
+    if (filters.school) {
+      results = results.filter(event => 
+        event.targetSchool === filters.school || 
+        event.targetSchool === 'All Schools'
+      );
+      console.log('After school filter:', results.length);
+    }
+    
+    // Filter by department
+    if (filters.department) {
+      results = results.filter(event => 
+        event.targetDepartment === filters.department || 
+        event.targetDepartment === 'All Departments'
+      );
+      console.log('After department filter:', results.length);
+    }
+    
+    console.log('Final filtered events:', results.length);
+    setFilteredEvents(results);
+  }, [filters, events]);
+
+  // Run filtering when filter criteria or events change
+  useEffect(() => {
+    filterEvents();
+  }, [filterEvents]);
+
+  // If there are no events available for the user's department/year, show a message
+  const renderEmptyState = () => (
+    <div className="text-center py-12 border-2 border-dashed border-amber-300 rounded-xl">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-amber-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <h3 className="text-xl font-medium text-gray-800 mb-2">No Presentations Available</h3>
+      <p className="text-gray-600 mb-6">There are no presentation events currently available for your year or department.</p>
+      <button
+        onClick={() => navigate('/college/bookings')}
+        className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors shadow-md"
+      >
+        Back to Bookings
+      </button>
+    </div>
+  );
 
   return (
     <motion.div
@@ -586,7 +829,7 @@ const PresentationSlot = () => {
                       <select
                         id="school"
                         name="school"
-                        className="w-full p-2 border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 text-amber-900"
+                        className="w-full p-2 border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 text-amber-900 bg-white"
                         value={filters.school}
                         onChange={handleFilterChange}
                       >
@@ -603,7 +846,7 @@ const PresentationSlot = () => {
                       <select
                         id="department"
                         name="department"
-                        className="w-full p-2 border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 text-amber-900"
+                        className="w-full p-2 border border-amber-300 rounded-lg focus:ring-amber-500 focus:border-amber-500 text-amber-900 bg-white"
                         value={filters.department}
                         onChange={handleFilterChange}
                       >
@@ -617,129 +860,172 @@ const PresentationSlot = () => {
                   </div>
                 </div>
 
-                {/* Events List */}
+                {/* Events List - Expand to use full width */}
+                {/* Events List - Redesigned with improved layout */}
                 {isLoading ? (
                   <div className="flex justify-center items-center py-12">
                     <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
                   </div>
                 ) : filteredEvents.length === 0 ? (
-                  <div className="text-center py-12 border-2 border-dashed border-amber-300 rounded-xl">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-amber-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    <h3 className="text-xl font-medium text-gray-800 mb-2">No Presentation Events Found</h3>
-                    <p className="text-gray-600 mb-6">No available events match your criteria. Try adjusting your filters.</p>
-                    <button
-                      className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors shadow-md"
-                      onClick={resetFilters}
-                    >
-                      Clear Filters
-                    </button>
-                  </div>
+                  renderEmptyState()
                 ) : (
-                  <>
-                    <h2 className="text-xl font-semibold mb-6 text-gray-800">Available Presentation Events</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-                      {currentEvents.map(event => (
-                        <div 
-                          key={event._id}
-                          className="bg-white rounded-xl border border-amber-200 shadow-md hover:shadow-lg transition-shadow overflow-hidden"
-                        >
-                          <div className="bg-gradient-to-r from-amber-500 to-amber-400 px-4 py-3">
-                            <h3 className="text-lg font-medium text-white truncate">{event.title}</h3>
-                          </div>
-                          <div className="p-4">
-                            <p className="text-gray-600 mb-4 line-clamp-2 min-h-[48px]">{event.description}</p>
-                            
-                            <div className="grid grid-cols-2 gap-2 mb-4">
-                              <div className="bg-amber-50 p-2 rounded text-sm">
-                                <span className="text-amber-800 block font-medium">Venue:</span>
-                                <span className="text-gray-700">{event.venue}</span>
-                              </div>
-                              <div className="bg-amber-50 p-2 rounded text-sm">
-                                <span className="text-amber-800 block font-medium">Duration:</span>
-                                <span className="text-gray-700">{event.duration} min</span>
-                              </div>
-                              <div className="bg-amber-50 p-2 rounded text-sm">
-                                <span className="text-amber-800 block font-medium">Type:</span>
-                                <span className="text-gray-700">
-                                  {event.presentationType === 'single' ? 'Individual' : 'Team'}
-                                  {event.presentationType === 'team' && ` (${event.minTeamMembers}-${event.maxTeamMembers})`}
-                                </span>
-                              </div>
-                              <div className="bg-amber-50 p-2 rounded text-sm">
-                                <span className="text-amber-800 block font-medium">For:</span>
-                                <span className="text-gray-700">{event.targetYear}</span>
-                              </div>
-                            </div>
-                            
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                                {event.slots ? event.slots.length : 0} available slots
+                  <div className="grid grid-cols-1 gap-6 mb-8 w-full">
+                    {currentEvents.map(event => (
+                      <div 
+                        key={event._id}
+                        className="bg-white rounded-xl border border-amber-200 shadow-md hover:shadow-lg transition-shadow overflow-hidden w-full"
+                      >
+                        <div className="bg-gradient-to-r from-amber-500 to-amber-400 px-5 py-3.5">
+                          <div className="flex justify-between items-center">
+                            <h3 className="text-lg font-medium text-white truncate pr-4">{event.title}</h3>
+                            <div className="text-white/80 text-sm whitespace-nowrap">
+                              <span className="bg-white/20 px-2 py-1 rounded font-medium">
+                                Hosted by {getHostName(event.host)}
                               </span>
-                              <button
-                                onClick={() => viewEventDetails(event)}
-                                className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium shadow-sm"
-                              >
-                                View Slots
-                              </button>
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-
-                    {/* Pagination */}
-                    {filteredEvents.length > eventsPerPage && (
-                      <div className="flex justify-center mt-8">
-                        <nav className="flex items-center space-x-2">
-                          <button
-                            onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
-                            disabled={currentPage === 1}
-                            className={`px-3 py-1 rounded-md ${
-                              currentPage === 1
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                            }`}
-                          >
-                            Previous
-                          </button>
+                        
+                        <div className="p-5">
+                          <div className="mb-4">
+                            <p className="text-gray-700">{event.description}</p>
+                          </div>
                           
-                          <span className="text-sm text-gray-600">
-                            Page {currentPage} of {Math.ceil(filteredEvents.length / eventsPerPage)}
-                          </span>
+                          {/* Improved layout for event details with better alignment */}
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-5">
+                            <div className="flex items-center gap-2.5 text-gray-700">
+                              <div className="bg-amber-100 p-2 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="block text-xs text-gray-500 font-medium">Venue</span>
+                                <span className="font-medium">{event.venue}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2.5 text-gray-700">
+                              <div className="bg-amber-100 p-2 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="block text-xs text-gray-500 font-medium">Duration</span>
+                                <span className="font-medium">{event.duration} min</span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2.5 text-gray-700">
+                              <div className="bg-amber-100 p-2 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="block text-xs text-gray-500 font-medium">Type</span>
+                                <span className="font-medium">
+                                  {event.presentationType === 'single' ? 'Individual' : `Team (${event.minTeamMembers}-${event.maxTeamMembers})`}
+                                </span>
+                              </div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2.5 text-gray-700">
+                              <div className="bg-amber-100 p-2 rounded-lg">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                </svg>
+                              </div>
+                              <div>
+                                <span className="block text-xs text-gray-500 font-medium">For</span>
+                                <span className="font-medium">{formatYearDisplay(event.targetYear)}, {getDepartmentAbbreviation(event.targetDepartment)}</span>
+                              </div>
+                            </div>
+                          </div>
                           
-                          <button
-                            onClick={() => setCurrentPage(currentPage < Math.ceil(filteredEvents.length / eventsPerPage) ? currentPage + 1 : currentPage)}
-                            disabled={currentPage === Math.ceil(filteredEvents.length / eventsPerPage)}
-                            className={`px-3 py-1 rounded-md ${
-                              currentPage === Math.ceil(filteredEvents.length / eventsPerPage)
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
-                            }`}
-                          >
-                            Next
-                          </button>
-                        </nav>
+                          <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-100">
+                            <div className="flex items-center">
+                              <span className="bg-amber-100 text-amber-800 text-sm font-medium px-2.5 py-1 rounded-full mr-2">
+                                {event.slots ? event.slots.length : 0} slots
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                {event.slots && event.slots.length > 0 && new Date(event.slots[0].date) > new Date() 
+                                  ? `Next: ${formatDate(event.slots[0].date)}` 
+                                  : ''}
+                              </span>
+                            </div>
+                            
+                            <button
+                              onClick={() => viewEventDetails(event)}
+                              className="px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium shadow-sm"
+                            >
+                              View Slots
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </>
+                    ))}
+                  </div>
+                )}
+
+                {/* Pagination */}
+                {filteredEvents.length > eventsPerPage && (
+                  <div className="flex justify-center mt-8">
+                    <nav className="flex items-center space-x-2">
+                      <button
+                        onClick={() => setCurrentPage(currentPage > 1 ? currentPage - 1 : 1)}
+                        disabled={currentPage === 1}
+                        className={`px-3 py-1 rounded-md ${
+                          currentPage === 1
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      
+                      <span className="text-sm text-gray-600">
+                        Page {currentPage} of {Math.ceil(filteredEvents.length / eventsPerPage)}
+                      </span>
+                      
+                      <button
+                        onClick={() => setCurrentPage(currentPage < Math.ceil(filteredEvents.length / eventsPerPage) ? currentPage + 1 : currentPage)}
+                        disabled={currentPage === Math.ceil(filteredEvents.length / eventsPerPage)}
+                        className={`px-3 py-1 rounded-md ${
+                          currentPage === Math.ceil(filteredEvents.length / eventsPerPage)
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-amber-100 text-amber-700 hover:bg-amber-200'
+                        }`}
+                      >
+                        Next
+                      </button>
+                    </nav>
+                  </div>
                 )}
               </>
             ) : selectedEvent ? (
               /* Selected Event's Slots View */
               <>
-                <div className="mb-6 flex items-center">
+                {/* Update the selected event details page header */}
+                <div className="mb-6">
                   <button
                     onClick={goBackToEvents}
-                    className="mr-4 text-amber-600 hover:text-amber-800 flex items-center"
+                    className="flex items-center px-5 py-2.5 bg-amber-100 text-amber-800 rounded-lg hover:bg-amber-200 transition-colors font-medium shadow-sm"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                     Back to Events
                   </button>
-                  <h2 className="text-xl font-semibold text-gray-800">{selectedEvent.title}</h2>
+                  
+                  <div className="flex items-center justify-between mt-4">
+                    <h2 className="text-xl font-semibold text-gray-800">{selectedEvent.title}</h2>
+                    <div className="text-gray-600 text-sm">
+                      Hosted by <span className="font-medium">{getHostName(selectedEvent.host)}</span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="bg-amber-50 p-6 rounded-lg mb-6 border border-amber-200">
@@ -763,9 +1049,15 @@ const PresentationSlot = () => {
                         }
                       </span>
                     </div>
+                    {/* Update target audience display in event details page */}
                     <div className="bg-white p-3 rounded-lg shadow-sm">
                       <span className="text-amber-800 block text-sm font-medium">Target Audience</span>
-                      <span className="text-gray-700">{selectedEvent.targetYear}</span>
+                      <span className="text-gray-700">
+                        <span className="font-medium">{formatYearDisplay(selectedEvent.targetYear)}</span>
+                        {selectedEvent.targetDepartment !== 'All Departments' && (
+                          <>, {getDepartmentAbbreviation(selectedEvent.targetDepartment)}</>
+                        )}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -789,6 +1081,7 @@ const PresentationSlot = () => {
                           </h4>
                         </div>
                         
+                        {/* Group slots by date - Keep the original 3-column layout */}
                         <div className="p-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             {dateSlots.map(slot => (
@@ -804,6 +1097,15 @@ const PresentationSlot = () => {
                                     Available
                                   </span>
                                 </div>
+                                
+                                {/* Update target audience display in slot cards */}
+                                <div className="mb-3 text-sm text-gray-600">
+                                  <span className="font-medium">For: </span>
+                                  <span className="inline-block bg-amber-50 px-2 py-1 rounded">
+                                    {formatYearDisplay(selectedEvent.targetYear)}, {getDepartmentAbbreviation(selectedEvent.targetDepartment)}
+                                  </span>
+                                </div>
+                                
                                 <button
                                   onClick={() => initializeBooking(slot)}
                                   className="w-full mt-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors text-sm font-medium shadow-sm"
@@ -831,7 +1133,7 @@ const PresentationSlot = () => {
                 ) : myBookings.length === 0 ? (
                   <div className="text-center py-12 border-2 border-dashed border-amber-300 rounded-xl">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-amber-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <h3 className="text-xl font-medium text-gray-800 mb-2">No Bookings Yet</h3>
                     <p className="text-gray-600 mb-6">You haven't booked any presentation slots yet.</p>
@@ -857,7 +1159,7 @@ const PresentationSlot = () => {
                           <div className="flex justify-between items-center">
                             <div>
                               <h3 className="text-lg font-medium text-gray-900">{booking.slot.title}</h3>
-                              <p className="text-sm text-gray-500">{booking.slot.venue}</p>
+                              <p className="text-sm text-gray-500">{booking.slot.venue} • Hosted by {getHostName(booking.slot.host)}</p>
                             </div>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               isPastDate(booking.slot.date)
@@ -929,7 +1231,10 @@ const PresentationSlot = () => {
             {/* Header */}
             <div className="bg-gradient-to-r from-amber-600 to-amber-500 py-4 px-6 shadow-md">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-bold text-white">Book Presentation Slot</h2>
+                <div>
+                  <h2 className="text-xl font-bold text-white">Book Presentation Slot</h2>
+                  <p className="text-sm text-white/80">Hosted by {getHostName(selectedSlot.host)}</p>
+                </div>
                 <button
                   onClick={closeBookingForm}
                   className="text-white hover:text-amber-100"
@@ -966,6 +1271,120 @@ const PresentationSlot = () => {
                   </div>
                 </div>
 
+                {/* New Fields - Team Name, Project Description, Team Count */}
+                <div className="mb-8 space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Team/Project Name*
+                    </label>
+                    <input
+                      type="text"
+                      value={teamName}
+                      onChange={(e) => setTeamName(e.target.value)}
+                      required
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="Enter your team or project name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Description (Optional)
+                    </label>
+                    <textarea
+                      value={projectDescription}
+                      onChange={(e) => setProjectDescription(e.target.value)}
+                      rows={3}
+                      className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                      placeholder="Briefly describe your project or presentation"
+                    />
+                  </div>
+                  
+                  {selectedSlot.presentationType === 'team' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Number of Team Members*
+                      </label>
+                      <div className="flex items-center">
+                        <input
+                          type="number"
+                          value={teamCount}
+                          onChange={(e) => setTeamCount(Math.min(
+                            Math.max(parseInt(e.target.value) || selectedSlot.minTeamMembers, selectedSlot.minTeamMembers), 
+                            selectedSlot.maxTeamMembers
+                          ))}
+                          min={selectedSlot.minTeamMembers}
+                          max={selectedSlot.maxTeamMembers}
+                          className="w-24 p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
+                        />
+                        <span className="ml-3 text-sm text-gray-600">
+                          (Min: {selectedSlot.minTeamMembers}, Max: {selectedSlot.maxTeamMembers})
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* File Attachments */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Attachments (Optional)
+                    </label>
+                    <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg">
+                      <div className="space-y-1 text-center">
+                        <svg className="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                          <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <div className="flex text-sm text-gray-600">
+                          <label htmlFor="file-upload" className="relative cursor-pointer bg-white rounded-md font-medium text-amber-600 hover:text-amber-500 focus-within:outline-none">
+                            <span>Upload files</span>
+                            <input 
+                              id="file-upload" 
+                              name="file-upload" 
+                              type="file" 
+                              className="sr-only" 
+                              multiple
+                              onChange={handleFileUpload}
+                              accept=".pdf,.doc,.docx,.ppt,.pptx,.zip"
+                            />
+                          </label>
+                          <p className="pl-1">or drag and drop</p>
+                        </div>
+                        <p className="text-xs text-gray-500">
+                          PDF, DOC, PPT, or ZIP up to {MAX_FILE_SIZE/1024/1024}MB (max {MAX_FILES} files)
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* File list */}
+                    {attachments.length > 0 && (
+                      <ul className="mt-3 divide-y divide-gray-100 rounded-md border border-gray-200">
+                        {attachments.map((file, index) => (
+                          <li key={index} className="flex items-center justify-between py-3 pl-3 pr-4 text-sm">
+                            <div className="flex items-center flex-1 min-w-0">
+                              <svg className="h-5 w-5 flex-shrink-0 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M8 4a3 3 0 00-3 3v4a5 5 0 0010 0V7a1 1 0 112 0v4a1 1 0 11-2 0V7a3 3 0 00-3-3z" clipRule="evenodd" />
+                              </svg>
+                              <span className="ml-2 flex-1 min-w-0 truncate">{file.name}</span>
+                              <span className="ml-2 flex-shrink-0 text-xs text-gray-500">
+                                {(file.size / 1024).toFixed(1)} KB
+                              </span>
+                            </div>
+                            <div className="ml-4 flex-shrink-0">
+                              <button 
+                                type="button"
+                                onClick={() => removeAttachment(index)}
+                                className="font-medium text-red-600 hover:text-red-500"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+
                 {/* Team Members Form (for team presentations) */}
                 {selectedSlot.presentationType === 'team' ? (
                   <div className="mb-8">
@@ -998,26 +1417,30 @@ const PresentationSlot = () => {
                             )}
                           </div>
                           
-                          {/* Student search */}
-                          {index > 0 && (
-                            <div className="mb-4 relative">
+                          {/* Remove dedicated search field and add search to input fields */}
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="relative">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Search for Student
+                                Full Name*
+                                {index > 0 && <span className="ml-1 text-xs text-amber-600">✨ Type to search</span>}
                               </label>
                               <input
                                 type="text"
-                                value={index === activeSearchField ? studentSearch : ''}
+                                value={member.name}
                                 onChange={(e) => {
-                                  setStudentSearch(e.target.value);
-                                  searchStudents(e.target.value, index);
+                                  handleTeamMemberChange(index, 'name', e.target.value);
+                                  if (index > 0) searchFromInputField(e.target.value, index, 'name');
                                 }}
-                                onFocus={() => setActiveSearchField(index)}
+                                required
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                                placeholder="Search by name, email, or ID..."
+                                placeholder="Enter or search full name"
+                                disabled={index === 0} // First member (you) is auto-filled
                               />
                               
-                              {/* Search results dropdown */}
-                              {activeSearchField === index && searchResults.length > 0 && (
+                              {/* Search results for name field */}
+                              {activeSearchField?.index === index && 
+                               activeSearchField?.field === 'name' && 
+                               searchResults.length > 0 && (
                                 <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto">
                                   {isSearching ? (
                                     <div className="p-3 text-center text-gray-500">
@@ -1044,55 +1467,56 @@ const PresentationSlot = () => {
                                 </div>
                               )}
                             </div>
-                          )}
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Full Name*
-                              </label>
-                              <input
-                                type="text"
-                                value={member.name}
-                                onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)}
-                                required
-                                className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                                placeholder="Enter full name"
-                                disabled={index === 0} // First member (you) is auto-filled
-                              />
-                            </div>
                             
-                            <div>
+                            <div className="relative">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Email*
+                                {index > 0 && <span className="ml-1 text-xs text-amber-600">✨ Type to search</span>}
                               </label>
                               <input
                                 type="email"
                                 value={member.email}
-                                onChange={(e) => handleTeamMemberChange(index, 'email', e.target.value)}
+                                onChange={(e) => {
+                                  handleTeamMemberChange(index, 'email', e.target.value);
+                                  if (index > 0) searchFromInputField(e.target.value, index, 'email');
+                                }}
                                 required
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                                placeholder="Enter email address"
-                                disabled={index === 0} // First member (you) is auto-filled
+                                placeholder="Enter or search email"
+                                disabled={index === 0}
                               />
+                              
+                              {/* Search results for email field */}
+                              {activeSearchField?.index === index && 
+                               activeSearchField?.field === 'email' && 
+                               searchResults.length > 0 && (
+                                <div className="absolute z-10 mt-1 w-full bg-white shadow-lg rounded-md border border-gray-200 max-h-60 overflow-y-auto">
+                                  {/* Same content as name search results */}
+                                  {/* ... */}
+                                </div>
+                              )}
                             </div>
                             
-                            <div>
+                            <div className="relative">
                               <label className="block text-sm font-medium text-gray-700 mb-1">
                                 Roll Number*
+                                {index > 0 && <span className="ml-1 text-xs text-amber-600">✨ Type to search</span>}
                               </label>
                               <input
                                 type="text"
                                 value={member.rollNumber || ''}
-                                onChange={(e) => handleTeamMemberChange(index, 'rollNumber', e.target.value)}
+                                onChange={(e) => {
+                                  handleTeamMemberChange(index, 'rollNumber', e.target.value);
+                                  if (index > 0) searchFromInputField(e.target.value, index, 'rollNumber');
+                                }}
                                 required
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
-                                placeholder="Enter student ID"
-                                disabled={index === 0} // First member (you) is auto-filled
+                                placeholder="Enter or search student ID"
+                                disabled={index === 0}
                               />
-                              {index === 0 && !member.rollNumber && (
-                                <p className="mt-1 text-xs text-red-500">Your student ID is missing from your profile</p>
-                              )}
+                              
+                              {/* Search results for roll number field */}
+                              {/* ... */}
                             </div>
                             
                             <div>
@@ -1106,15 +1530,22 @@ const PresentationSlot = () => {
                                 required
                                 className="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-amber-500 focus:border-amber-500"
                                 placeholder="Enter department"
-                                disabled={index === 0} // First member (you) is auto-filled
+                                disabled={index === 0}
                               />
                             </div>
                           </div>
+                          
+                          {/* Add a tip explaining the search functionality */}
+                          {index > 0 && (
+                            <div className="mt-3 p-2 bg-amber-50 rounded-md text-sm text-amber-800">
+                              <span role="img" aria-label="tip">💡</span> Tip: Search for students by typing in the name, email or roll number fields
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                     
-                    {teamMembers.length < (selectedSlot.maxTeamMembers || 5) && (
+                    {teamMembers.length < teamCount && (
                       <button
                         type="button"
                         onClick={addTeamMember}

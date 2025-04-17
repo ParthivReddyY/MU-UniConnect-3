@@ -1,15 +1,19 @@
 import api from '../utils/axiosConfig';
 
 class PresentationService {
-  // Get all available presentation events
+  // Get all available presentation events - improved with better error handling and logging
   async getAvailableEvents() {
     try {
+      console.log('Fetching available events with grouping');
       const response = await api.get('/api/presentation-slots/available', {
         params: { grouped: 'true' }
       });
-      return response.data;
+      console.log('Available events response:', response.status);
+      console.log('Event count:', response.data ? response.data.length : 0);
+      return response.data || [];
     } catch (error) {
       console.error('Error fetching available events:', error);
+      console.error('Error details:', error.response?.data || 'No response data');
       throw error;
     }
   }
@@ -17,12 +21,16 @@ class PresentationService {
   // Get all slots for an event by event title (used as grouping identifier)
   async getSlotsByEventId(eventTitle) {
     try {
+      console.log(`Fetching slots for event "${eventTitle}"`);
       const response = await api.get('/api/presentation-slots/available', {
-        params: { title: eventTitle }
+        params: { title: eventTitle, status: 'available' }
       });
-      return response.data;
+      console.log('Slots response:', response.status);
+      console.log('Slots count:', response.data ? response.data.length : 0);
+      return response.data || [];
     } catch (error) {
       console.error(`Error fetching slots for event "${eventTitle}":`, error);
+      console.error('Error details:', error.response?.data || 'No response data');
       throw error;
     }
   }
@@ -48,6 +56,27 @@ class PresentationService {
       return response.data;
     } catch (error) {
       console.error('Error booking slot:', error);
+      throw error;
+    }
+  }
+  
+  // New method to book a presentation slot with file attachments
+  async bookSlotWithAttachments(slotId, formData) {
+    try {
+      console.log('Booking slot with attachments, slot ID:', slotId);
+      const response = await api.post(
+        `/api/presentation-slots/${slotId}/book-with-attachments`, 
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        }
+      );
+      console.log('Booking with attachments response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Error booking slot with attachments:', error);
       throw error;
     }
   }
