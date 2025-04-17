@@ -749,3 +749,81 @@ body.modal-open main {
   padding-top: 0 !important;
   padding-bottom: 0 !important;
 }
+
+/* Add this to your existing CSS */
+body.hide-navbar .navbar {
+  display: none;
+}
+
+/* Add or update this CSS rule to ensure it correctly hides the navbar */
+body.hide-navbar .navbar {
+  display: none !important; /* Added !important to ensure this rule takes precedence */
+}
+
+/* Add this to make sure the full-screen modal works correctly */
+.presentation-booking-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.95);
+}
+
+.presentation-booking-form {
+  background-color: #fff9ed;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.presentation-booking-form input,
+.presentation-booking-form select,
+.presentation-booking-form textarea {
+  border-color: #f3c06b;
+}
+
+.presentation-booking-form input:focus,
+.presentation-booking-form select:focus,
+.presentation-booking-form textarea:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+/* Add these CSS rules to your existing styles */
+
+/* Hide navbar when booking form is active */
+body.hide-navbar .navbar {
+  display: none !important; /* Important is used to ensure this takes precedence */
+}
+
+/* Full-screen modal for presentation booking */
+.presentation-booking-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.95);
+}
+
+/* Form styling for presentation slot booking */
+.presentation-booking-form {
+  background-color: #fff;
+  border-radius: 0.75rem;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.presentation-booking-form input,
+.presentation-booking-form select,
+.presentation-booking-form textarea {
+  border-color: #f3c06b;
+}
+
+.presentation-booking-form input:focus,
+.presentation-booking-form select:focus,
+.presentation-booking-form textarea:focus {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}

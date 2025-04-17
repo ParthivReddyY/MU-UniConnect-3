@@ -31,18 +31,40 @@ export const AuthProvider = ({ children }) => {
           // Try to parse stored user
           try {
             const user = JSON.parse(storedUser);
+            
+            // Add debug logging
+            console.log('Loaded user from localStorage:', {
+              id: user._id,
+              name: user.name,
+              studentId: user.studentId || 'not set'
+            });
+            
             setCurrentUser(user);
+            
+            // Refresh user data from server to ensure we have the latest data including studentId
+            try {
+              const response = await api.get('/api/auth/me');
+              if (response.data && response.data.success && response.data.user) {
+                console.log('Refreshed user data from server:', {
+                  id: response.data.user._id,
+                  name: response.data.user.name,
+                  studentId: response.data.user.studentId || 'not set'
+                });
+                
+                // Update localStorage with fresh data
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+                
+                // Update state
+                setCurrentUser(response.data.user);
+              }
+            } catch (refreshError) {
+              console.error('Error refreshing user data:', refreshError);
+            }
           } catch (e) {
             console.error('Error parsing stored user:', e);
             // Clear invalid user data
             localStorage.removeItem('user');
           }
-          
-          // Optionally verify token with backend
-          // const response = await api.get('/api/auth/verify');
-          // if (!response.data.success) {
-          //   handleLogout();
-          // }
         }
       } catch (err) {
         console.error('Auth verification error:', err);
@@ -88,6 +110,13 @@ export const AuthProvider = ({ children }) => {
       });
       
       if (response.data.success && response.data.token && response.data.user) {
+        // Log the received user data with studentId
+        console.log('Login successful - received user data:', {
+          id: response.data.user._id,
+          name: response.data.user.name,
+          studentId: response.data.user.studentId || 'not set'
+        });
+        
         // Set auth token to axios default headers
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         
@@ -313,6 +342,45 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
+  // Update user profile function
+  const updateProfile = async (userData) => {
+    try {
+      setError('');
+      console.log('Updating profile with data:', userData);
+      
+      // Make sure studentId is included in the request
+      if (userData.studentId !== undefined) {
+        console.log('Updating student ID to:', userData.studentId);
+      }
+      
+      const response = await api.put('/api/auth/update-profile', userData);
+      
+      if (response.data.success) {
+        // Update the user in local storage
+        const updatedUser = { ...currentUser, ...response.data.user };
+        
+        console.log('Profile updated. New user data:', {
+          id: updatedUser._id,
+          name: updatedUser.name,
+          studentId: updatedUser.studentId || 'not set'
+        });
+        
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        // Update the current user state
+        setCurrentUser(updatedUser);
+        
+        return { success: true, message: response.data.message, user: updatedUser };
+      } else {
+        throw new Error(response.data.message || 'Failed to update profile');
+      }
+    } catch (err) {
+      console.error('Update profile error:', err);
+      setError(err.response?.data?.message || err.message || 'Failed to update profile');
+      return { success: false, error: err.response?.data?.message || err.message || 'Failed to update profile' };
+    }
+  };
+
   // Role-based access control functions
   const isAdmin = () => {
     return currentUser?.role === 'admin';
@@ -349,7 +417,8 @@ export const AuthProvider = ({ children }) => {
     verifyResetOTP,
     resetPassword,
     updatePassword,
-    verifyEmail  // Add the verifyEmail function to the context value
+    verifyEmail,
+    updateProfile  // Add the updateProfile function to context
   };
   
   return (

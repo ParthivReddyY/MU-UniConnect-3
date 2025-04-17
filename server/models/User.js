@@ -113,4 +113,45 @@ UserSchema.methods.createJWT = function() {
   );
 };
 
+// Add an enhanced search method to properly return studentId
+UserSchema.statics.searchStudents = async function(query, limit = 10, currentUserId) {
+  if (!query || query.length < 2) {
+    return [];
+  }
+  
+  try {
+    console.log(`Searching students with query: ${query}, limit: ${limit}`);
+    
+    // Only return student users for team formation
+    const users = await this.find({
+      role: 'student',
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } },
+        { studentId: { $regex: query, $options: 'i' } }
+      ]
+    })
+    .select('name email studentId department')
+    .limit(parseInt(limit))
+    .lean();
+    
+    console.log('Search found users:', users.length);
+    
+    // Log the fields to verify studentId is included
+    if (users.length > 0) {
+      console.log('Sample user fields:', Object.keys(users[0]));
+    }
+    
+    // Don't include the current user in results if provided
+    const filteredUsers = currentUserId 
+      ? users.filter(user => user._id.toString() !== currentUserId.toString())
+      : users;
+    
+    return filteredUsers;
+  } catch (err) {
+    console.error('Error in user search:', err);
+    return [];
+  }
+};
+
 module.exports = mongoose.model('User', UserSchema);

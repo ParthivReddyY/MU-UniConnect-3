@@ -107,19 +107,21 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+// Import middleware and controllers (make sure User model is properly imported in authController)
+const { authenticateUser } = require('./middleware/auth');
+const authController = require('./controllers/authController');
+
 // IMPORTANT: API Routes must be defined BEFORE static file serving
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/presentation-slots', require('./routes/api/presentationSlots'));
-// Add other API routes here
 
-// Comment out or remove problematic routes that don't exist
+// Add the search route directly here instead of through users.js
+app.get('/api/users/search', authenticateUser, authController.searchUsers);
+
+// No longer need this line since we've moved the route
 // app.use('/api/users', require('./routes/api/users'));
-// app.use('/api/auth', require('./routes/api/auth'));
-// app.use('/api/posts', require('./routes/api/posts'));
-// app.use('/api/appointments', require('./routes/api/appointments'));
-// app.use('/api/faculty', require('./routes/api/faculty'));
 
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {

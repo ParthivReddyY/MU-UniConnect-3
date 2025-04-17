@@ -33,7 +33,8 @@ const Profile = () => {
     name: false,
     bio: false,
     mobileNumber: false,
-    socialLinks: false
+    socialLinks: false,
+    studentId: false
   });
   
   const bioRef = useRef(null);

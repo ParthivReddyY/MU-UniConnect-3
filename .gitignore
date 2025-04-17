@@ -56,3 +56,6 @@ debug.log
 
 # Tailwind generated files
 **/tailwind.output.css
+
+# Ignore the users.js route file since functionality has been moved to the User model
+server/routes/api/users.js

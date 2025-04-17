@@ -450,65 +450,74 @@ const resetPassword = async (req, res) => {
   }
 };
 
-// Get current user
+// Get current user with improved debugging and explicit studentId handling
 const getCurrentUser = async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId);
+    console.log('Getting current user data for userId:', req.user.userId);
+    
+    // Make sure we select all fields including studentId
+    const user = await User.findById(req.user.userId).select('+password +studentId');
     
     if (!user) {
+      console.log('No user found with ID:', req.user.userId);
       return res.status(404).json({ message: 'User not found' });
     }
     
+    console.log(`Found user: ${user.name}, studentId: ${user.studentId || 'not set'}`);
+    
+    // Create the response object explicitly including studentId 
+    const responseUser = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage || null,
+      department: user.department || '',
+      studentId: user.studentId || '', // Ensure we always send a value even if empty
+      clubManaging: user.clubManaging || '',
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin,
+      bio: user.bio || '',
+      socialLinks: user.socialLinks || {}
+    };
+    console.log('Sending user data to client:', responseUser);
+    console.log('Sending user data to client with studentId:', responseUser.studentId);
+    
     res.status(200).json({
       success: true,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        profileImage: user.profileImage || null,
-        department: user.department,
-        studentId: user.studentId,
-        clubManaging: user.clubManaging,
-        createdAt: user.createdAt,
-        lastLogin: user.lastLogin
-      }
+      user: responseUser
     });
   } catch (error) {
-    console.error(error);
+    console.error('Error fetching current user:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
-
 // Check if email exists (for two-step login)
-// Removing the duplicate declaration that was here
-
-// Check if email exists
+// Check if email exists (for two-step login)
 const checkEmail = async (req, res) => {
   try {
     const { email } = req.body;
-
+    
     if (!email) {
       return res.status(400).json({ 
         message: 'Email is required' 
       });
     }
-
+    
     const user = await User.findOne({ email });
     
-    return res.status(200).json({ 
+    return res.status(200).json({
       exists: !!user,
       email
     });
   } catch (error) {
     console.error('Error in checkEmail:', error);
     return res.status(500).json({ 
-      message: 'Server error', 
-      error: error.message 
+      message: 'Server error',
+      error: error.message
     });
   }
 };
-
 // Request OTP for password change (for logged-in users)
 const requestPasswordChangeOTP = async (req, res) => {
   try {
@@ -574,16 +583,17 @@ const changePassword = async (req, res) => {
   try {
     const { otp, newPassword } = req.body;
     const userId = req.user.userId;
-
+    
     // Get user
     const user = await User.findById(userId);
+    
     if (!user) {
       return res.status(404).json({
         success: false,
         message: 'User not found'
       });
     }
-
+    
     // Hash the OTP for comparison
     const hashedOTP = crypto
       .createHash('sha256')
@@ -597,13 +607,13 @@ const changePassword = async (req, res) => {
         message: 'Invalid or expired verification code'
       });
     }
-
+    
     // Update password
     user.password = newPassword;
     user.resetPasswordToken = undefined;
     user.resetPasswordExpires = undefined;
     await user.save();
-
+    
     res.status(200).json({
       success: true,
       message: 'Password updated successfully'
@@ -613,6 +623,115 @@ const changePassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'An error occurred while changing password'
+    });
+  }
+};
+// Add this function to handle user search - replaces the route in users.js
+const searchUsers = async (req, res) => {
+  try {
+    console.log(`Search request from user: ${req.user.userId}`);
+    const { query, limit = 10 } = req.query;
+    
+    // Use the static method we added to the User model
+    const users = await User.searchStudents(query, limit, req.user.userId); 
+    
+    if (users.length > 0) {
+      const sampleUser = { ...users[0] };
+      // Remove sensitive fields before logging
+      delete sampleUser.password;
+      console.log('Sample search result:', sampleUser);
+    }
+    
+    // Mapped version that explicitly includes studentId
+    const mappedUsers = users.map(user => ({
+      _id: user._id,
+      name: user.name || '',
+      email: user.email || '',
+      studentId: user.studentId || '',
+      department: user.department || ''
+    }));
+    
+    res.json(mappedUsers);
+  } catch (error) {
+    console.error('Error searching users:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+// Add a new function to update user profile including studentId
+const updateProfile = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Fields that can be updated
+    const updateableFields = [
+      'name',
+      'studentId',
+      'department',
+      'bio',
+      'mobileNumber',
+      'socialLinks',
+      'profileImage'
+    ];
+    
+    // Update allowed fields
+    updateableFields.forEach(field => {
+      if (req.body[field] !== undefined) {
+        // Log updates for debugging, especially for studentId
+        if (field === 'studentId') {
+          console.log(`Updating studentId for user ${userId} from '${user.studentId || 'none'}' to '${req.body.studentId}'`);
+        }
+        
+        // Handle nested fields like socialLinks
+        if (field === 'socialLinks' && typeof req.body[field] === 'object') {
+          user.socialLinks = {
+            ...user.socialLinks,
+            ...req.body[field]
+          };
+        } else {
+          user[field] = req.body[field];
+        }
+      }
+    });
+    
+    // Save the updated user
+    await user.save();
+    
+    // Create a sanitized user object for response
+    const responseUser = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      profileImage: user.profileImage,
+      department: user.department,
+      studentId: user.studentId,
+      bio: user.bio,
+      mobileNumber: user.mobileNumber,
+      socialLinks: user.socialLinks,
+      clubManaging: user.clubManaging,
+      createdAt: user.createdAt,
+      lastLogin: user.lastLogin
+    };
+    
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: responseUser
+    });
+  } catch (error) {
+    console.error('Error updating profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while updating your profile',
+      error: error.message
     });
   }
 };
@@ -628,5 +747,7 @@ module.exports = {
   getCurrentUser,
   checkEmail,
   requestPasswordChangeOTP,
-  changePassword
+  changePassword,
+  searchUsers,
+  updateProfile
 };

@@ -182,7 +182,7 @@ exports.getHostPresentationSlots = async (req, res) => {
 // Get available presentation slots for students based on filters
 exports.getAvailablePresentationSlots = async (req, res) => {
   try {
-    const { year, school, department, date, status } = req.query;
+    const { year, school, department, date, status, grouped } = req.query;
     
     const filter = { status: status || 'available' };
     
@@ -194,6 +194,41 @@ exports.getAvailablePresentationSlots = async (req, res) => {
     
     const slots = await PresentationSlot.find(filter)
       .sort({ date: 1, startTime: 1 });
+    
+    // If grouped=true, group slots by title/event
+    if (grouped === 'true') {
+      const eventsMap = new Map();
+      
+      slots.forEach(slot => {
+        const key = slot.title;
+        if (!eventsMap.has(key)) {
+          // Create a new event entry
+          eventsMap.set(key, {
+            _id: slot._id, // Use the first slot's ID as event ID
+            title: slot.title,
+            description: slot.description,
+            targetYear: slot.targetYear,
+            targetSchool: slot.targetSchool,
+            targetDepartment: slot.targetDepartment,
+            presentationType: slot.presentationType,
+            minTeamMembers: slot.minTeamMembers,
+            maxTeamMembers: slot.maxTeamMembers,
+            venue: slot.venue,
+            duration: slot.duration,
+            bufferTime: slot.bufferTime,
+            slots: [],
+            createdAt: slot.createdAt
+          });
+        }
+        
+        // Add this slot to the event
+        eventsMap.get(key).slots.push(slot);
+      });
+      
+      // Convert map to array
+      const events = Array.from(eventsMap.values());
+      return res.json(events);
+    }
     
     res.json(slots);
   } catch (err) {
@@ -300,49 +335,85 @@ exports.deletePresentationSlot = async (req, res) => {
   }
 };
 
-// Book a presentation slot
-exports.bookPresentationSlot = async (req, res) => {
+// Book a presentation slot - Enhanced to handle team members with better logging
+exports.bookSlot = async (req, res) => {
   try {
-    const slot = await PresentationSlot.findById(req.params.id);
+    const slotId = req.params.id;
+    console.log(`Attempting to book slot ${slotId}`);
+    console.log('User ID:', req.user.userId || req.user._id);
+    console.log('Request body:', JSON.stringify(req.body, null, 2));
+    
+    const slot = await PresentationSlot.findById(slotId);
     
     if (!slot) {
+      console.log(`Slot not found: ${slotId}`);
       return res.status(404).json({ message: 'Presentation slot not found' });
     }
     
     // Check if the slot is already booked
     if (slot.status !== 'available') {
+      console.log(`Slot ${slotId} is not available (status: ${slot.status})`);
       return res.status(400).json({ message: 'This presentation slot is not available for booking' });
     }
     
     // Extract booking information
     const { teamMembers } = req.body;
+    console.log('Team members received:', teamMembers);
     
     // Validate team members if it's a team presentation
     if (slot.presentationType === 'team') {
       if (!teamMembers || !Array.isArray(teamMembers)) {
+        console.log('Team members missing or not an array');
         return res.status(400).json({ message: 'Team members are required for team presentations' });
       }
       
       if (teamMembers.length < slot.minTeamMembers || teamMembers.length > slot.maxTeamMembers) {
+        console.log(`Invalid team size: ${teamMembers.length}. Required: ${slot.minTeamMembers}-${slot.maxTeamMembers}`);
         return res.status(400).json({ 
           message: `Team size must be between ${slot.minTeamMembers} and ${slot.maxTeamMembers} members` 
         });
       }
+      
+      // Validate that each team member has the required fields
+      const invalidMembers = teamMembers.filter(member => 
+        !member.name || !member.email || !member.rollNumber || !member.department
+      );
+      
+      if (invalidMembers.length > 0) {
+        console.log('Invalid team members:', invalidMembers);
+        return res.status(400).json({ message: 'All team members must have name, email, rollNumber, and department' });
+      }
     }
     
     // Update the slot status and booking info
-    const userId = req.user.userId || req.user._id; // Fix: Use either userId or _id
+    const userId = req.user.userId || req.user._id;
+    console.log(`Using user ID for booking: ${userId}`);
+    
+    // Prepare team members data, ensuring correct structure
+    const formattedTeamMembers = slot.presentationType === 'team' 
+      ? teamMembers.map(member => ({
+          name: member.name,
+          email: member.email,
+          id: member.id || member._id || '',
+          rollNumber: member.rollNumber || '',
+          department: member.department || ''
+        }))
+      : [];
+    
+    console.log('Formatted team members:', formattedTeamMembers);
+    
     slot.status = 'booked';
     slot.bookedBy = {
       user: userId,
-      name: req.user.name,
-      email: req.user.email,
-      rollNumber: req.user.studentId,
-      teamMembers: slot.presentationType === 'team' ? teamMembers : []
+      name: req.user.name || teamMembers?.[0]?.name || '',
+      email: req.user.email || teamMembers?.[0]?.email || '',
+      rollNumber: req.user.studentId || teamMembers?.[0]?.rollNumber || '',
+      teamMembers: formattedTeamMembers
     };
     slot.updatedAt = Date.now();
     
     const updatedSlot = await slot.save();
+    console.log(`Slot ${slotId} booked successfully`);
     
     res.json(updatedSlot);
   } catch (err) {

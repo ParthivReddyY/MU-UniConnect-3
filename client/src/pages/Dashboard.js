@@ -339,6 +339,45 @@ const Dashboard = () => {
       return "Access your courses, clubs, and campus resources.";
     }
   };
+
+  // Add a useEffect to log the current user data when the component mounts
+  useEffect(() => {
+    console.log('Dashboard - Current user data:', currentUser);
+  }, [currentUser]);
+
+  // Add this debugging effect to log user data
+  useEffect(() => {
+    if (currentUser) {
+      console.log('Dashboard - Current user data:', {
+        ...currentUser,
+        // Remove potential sensitive fields
+        password: currentUser.password ? '[REDACTED]' : undefined
+      });
+    }
+  }, [currentUser]);
+
+  // Add this debugging useEffect to the component
+  useEffect(() => {
+    if (currentUser) {
+      console.log('Dashboard - Current user data:', currentUser);
+      console.log('Student ID:', currentUser.studentId || 'Not available');
+    }
+  }, [currentUser]);
+
+  // Add more detailed logging when component mounts
+  useEffect(() => {
+    if (currentUser) {
+      console.log('Dashboard - Current user data:', currentUser);
+      console.log('Student ID:', currentUser.studentId || 'Not available');
+      
+      // Log the user object to see its structure and verify studentId
+      const userCopy = {
+        ...currentUser,
+        password: currentUser.password ? '[REDACTED]' : undefined
+      };
+      console.log('Full user object:', userCopy);
+    }
+  }, [currentUser]);
   
   return (
     <div className="bg-gray-50 min-h-screen dashboard-page">
@@ -476,12 +515,17 @@ const Dashboard = () => {
                 <span className="text-xs text-gray-500 mb-1">Role</span>
                 <span className="text-gray-800 font-medium capitalize">{currentUser.role}</span>
               </div>
-              {currentUser.studentId && (
-                <div className="flex flex-col">
-                  <span className="text-xs text-gray-500 mb-1">Student ID</span>
-                  <span className="text-gray-800 font-medium">{currentUser.studentId}</span>
-                </div>
-              )}
+              <div className="flex flex-col">
+                <span className="text-xs text-gray-500 mb-1">Student ID</span>
+                <span className="text-gray-800 font-medium">
+                  {currentUser.studentId || 'Not available'}
+                  {currentUser.role === 'student' && !currentUser.studentId && (
+                    <Link to="/profile" className="ml-2 text-xs text-red-500 hover:text-red-700">
+                      (Add in Profile)
+                    </Link>
+                  )}
+                </span>
+              </div>
               {currentUser.department && (
                 <div className="flex flex-col">
                   <span className="text-xs text-gray-500 mb-1">Department</span>

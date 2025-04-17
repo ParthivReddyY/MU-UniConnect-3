@@ -38,7 +38,8 @@ router.delete('/:id', authenticateUser, presentationSlotController.deletePresent
 
 // Route to book a presentation slot
 // POST /api/presentation-slots/:id/book
-router.post('/:id/book', authenticateUser, presentationSlotController.bookPresentationSlot);
+// FIXED: Changed from bookPresentationSlot to bookSlot to match the controller function name
+router.post('/:id/book', authenticateUser, presentationSlotController.bookSlot);
 
 // Route to cancel a booked presentation slot
 // POST /api/presentation-slots/:id/cancel

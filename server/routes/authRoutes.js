@@ -8,10 +8,11 @@ const {
   forgotPassword,
   verifyResetOTP,
   resetPassword,
-  requestPasswordChangeOTP,
   getCurrentUser,
   checkEmail,
-  changePassword
+  changePassword,
+  requestPasswordChangeOTP,
+  updateProfile // Add this new controller function
 } = require('../controllers/authController');
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
@@ -35,5 +36,8 @@ router.get('/me', authenticateUser, getCurrentUser);
 
 // Admin-only routes
 router.post('/create-user', authenticateUser, isAdmin, createUser);
+
+// Add the update profile endpoint
+router.put('/update-profile', authenticateUser, updateProfile);
 
 module.exports = router;

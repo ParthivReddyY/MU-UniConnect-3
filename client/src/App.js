@@ -45,14 +45,40 @@ function ScrollToTop() {
 // NavbarWrapper component to conditionally render the Navbar
 function NavbarWrapper() {
   const location = useLocation();
+  const [hideNavbarState, setHideNavbarState] = useState(false);
+  
+  // Check for hide-navbar class and update state accordingly
+  useEffect(() => {
+    const checkBodyClass = () => {
+      const hasHideNavbarClass = document.body.classList.contains('hide-navbar');
+      setHideNavbarState(hasHideNavbarClass);
+    };
+    
+    // Initial check
+    checkBodyClass();
+    
+    // Set up a mutation observer to detect class changes on body element
+    const observer = new MutationObserver(mutations => {
+      mutations.forEach(mutation => {
+        if (mutation.attributeName === 'class') {
+          checkBodyClass();
+        }
+      });
+    });
+    
+    observer.observe(document.body, { attributes: true });
+    
+    return () => observer.disconnect();
+  }, []);
   
   // List of paths where Navbar should be hidden
   const noNavbarPaths = ['/login', '/signup', '/forgot-password', '/reset-password'];
   
   // Check if the current path starts with any of the paths where Navbar should be hidden
+  // or if the body has the hide-navbar class
   const hideNavbar = noNavbarPaths.some(path => 
     location.pathname === path || location.pathname.startsWith(`${path}/`)
-  );
+  ) || hideNavbarState;
   
   return hideNavbar ? null : <Navbar />;
 }
