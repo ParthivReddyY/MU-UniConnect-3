@@ -284,6 +284,39 @@ const Dashboard = () => {
       );
     }
     
+    // Admin menu cards
+    if (isAdmin()) {
+      return (
+        <>
+          <MenuCard 
+            title="User Management"
+            icon="fa-users-cog"
+            description="Manage users and permissions"
+            path="/admin/users"
+            color="primary"
+          />
+          
+          {/* Add this new card */}
+          <MenuCard 
+            title="Feedback Management"
+            icon="fa-comment-dots"
+            description="Review and respond to user feedback"
+            path="/admin/feedback"
+            color="secondary"
+            badge="New"
+          />
+          
+          <MenuCard 
+            title="System Settings"
+            icon="fa-cogs"
+            description="Configure system settings and preferences"
+            path="/admin/settings"
+            color="info"
+          />
+        </>
+      );
+    }
+    
     // Default menu cards for students
     return (
       <>
@@ -410,6 +443,12 @@ const Dashboard = () => {
               label="Settings" 
               onClick={() => {}}
               color="primary" 
+            />
+            <QuickAction 
+              icon="fa-comment-alt" 
+              label="Submit Feedback" 
+              onClick={() => navigate('/feedback')}
+              color="secondary" 
             />
           </div>
         </div>

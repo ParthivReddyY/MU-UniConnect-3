@@ -11,10 +11,12 @@ dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const facultyRoutes = require('./routes/facultyRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const routes = require('./routes');
+
 // Import other routes as needed
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001; // Changed from 5000 to 5001
 
 // MongoDB Connection
 const connectDB = async () => {
@@ -116,12 +118,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/presentation-slots', require('./routes/api/presentationSlots'));
+// Remove duplicate feedback route registration
 
 // Add the search route directly here instead of through users.js
 app.get('/api/users/search', authenticateUser, authController.searchUsers);
 
-// No longer need this line since we've moved the route
-// app.use('/api/users', require('./routes/api/users'));
+// Mount all routes from index.js
+app.use('/api', routes);
 
 // Serve static files from the React app in production
 if (process.env.NODE_ENV === 'production') {
@@ -138,13 +141,27 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// Simplified error handling middleware
+// Error handler for 404s - keep at the end
+app.use((req, res, next) => {
+  const error = new Error(`Not Found - ${req.originalUrl}`);
+  res.status(404);
+  next(error);
+});
+
+// Consolidated global error handler
 app.use((err, req, res, next) => {
+  const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+  
+  // Log the error
   console.error('Error:', err.message);
   
-  res.status(500).json({
-    error: 'Server Error',
-    message: process.env.NODE_ENV === 'production' ? 'An unexpected error occurred' : err.message
+  // Send appropriate response
+  res.status(statusCode).json({
+    success: false,
+    message: process.env.NODE_ENV === 'production' && statusCode === 500 
+      ? 'An unexpected error occurred' 
+      : err.message,
+    stack: process.env.NODE_ENV === 'production' ? undefined : err.stack,
   });
 });
 

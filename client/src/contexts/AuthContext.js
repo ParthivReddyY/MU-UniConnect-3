@@ -398,6 +398,12 @@ export const AuthProvider = ({ children }) => {
     return currentUser?.role === 'clubHead';
   };
   
+  // Add hasRole function to check if user has any of the specified roles
+  const hasRole = (roles) => {
+    if (!currentUser || !currentUser.role) return false;
+    return roles.includes(currentUser.role);
+  };
+  
   // Context value
   const value = {
     currentUser,
@@ -413,6 +419,7 @@ export const AuthProvider = ({ children }) => {
     isFaculty,
     isStudent,
     isClubHead,
+    hasRole,
     forgotPassword,
     verifyResetOTP,
     resetPassword,

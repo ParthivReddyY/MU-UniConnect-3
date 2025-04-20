@@ -23,6 +23,8 @@ import FacultyDetail from './pages/FacultyDetail';
 import ChangePassword from './pages/ChangePassword';
 import Profile from './pages/Profile'; // Import the new Profile page
 import FacultyAppointments from './pages/FacultyAppointments'; // Import the Faculty Appointments page
+import Feedback from './pages/Feedback';
+import AdminFeedback from './pages/Admin/AdminFeedback'; // Import AdminFeedback page
 
 // Import components
 import Navbar from './components/Navbar';
@@ -260,6 +262,18 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
+                {/* Admin Feedback page */}
+                <Route
+                  path="/admin/feedback"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <PageContainer>
+                        <AdminFeedback />
+                      </PageContainer>
+                    </ProtectedRoute>
+                  }
+                />
+                
                 {/* Faculty routes */}
                 <Route path="/faculty-portal/*" element={
                   <ProtectedRoute allowedRoles={['faculty', 'admin']}>
@@ -293,6 +307,13 @@ function App() {
                     <PageContainer fullWidth>
                       <Profile />
                     </PageContainer>
+                  </ProtectedRoute>
+                } />
+                
+                {/* Feedback page */}
+                <Route path="/feedback" element={
+                  <ProtectedRoute>
+                    <Feedback />
                   </ProtectedRoute>
                 } />
                 
