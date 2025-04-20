@@ -37,20 +37,20 @@ h3:hover .form-section-icon {
 /* Date input styling adjustments */
 input[type="date"] {
   /* Modern browsers */
-  background-color: #333;
-  color: #fff;
-  border-color: #555;
+  background-color: #fff; /* Changed from #333 to white */
+  color: #333; /* Changed from #fff to dark text for contrast */
+  border-color: #ddd;
   -webkit-appearance: none; /* Safari compatibility */
   appearance: none; /* Standard property */
 }
 
 /* Select dropdown styling */
 select {
-  background-color: #333;
-  color: #fff;
-  border-color: #555;
+  background-color: #fff; /* Changed from #333 to white */
+  color: #333; /* Changed from #fff to dark text for contrast */
+  border-color: #ddd;
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23333333'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E"); /* Changed SVG color to dark */
   background-repeat: no-repeat;
   background-position: right 1rem center;
   background-size: 1rem;

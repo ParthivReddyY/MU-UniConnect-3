@@ -949,7 +949,7 @@ const FacultyAppointmentComponent = () => {
                     value={formData.appointment_date}
                     onChange={handleChange}
                     min={setMinDate()}
-                    className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                    className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                       errors.appointment_date ? 'border-red-500' : ''
                     }`}
                     required
@@ -992,7 +992,7 @@ const FacultyAppointmentComponent = () => {
                       name="duration"
                       value={formData.duration}
                       onChange={handleChange}
-                      className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                      className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                         errors.duration ? 'border-red-500' : ''
                       }`}
                       required
@@ -1092,7 +1092,7 @@ const FacultyAppointmentComponent = () => {
                     name="priority"
                     value={formData.priority}
                     onChange={handleChange}
-                    className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                    className={`shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 bg-white leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                       errors.priority ? 'border-red-500' : ''
                     }`}
                     required
@@ -1192,7 +1192,7 @@ const FacultyAppointmentComponent = () => {
                       value={formData.alt_date_1}
                       onChange={handleChange}
                       min={setMinDate()}
-                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white text-sm leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                         errors.alt_date_1 ? 'border-red-500' : ''
                       }`}
                     />
@@ -1212,7 +1212,7 @@ const FacultyAppointmentComponent = () => {
                       onChange={handleChange}
                       min="09:00"
                       max="17:00"
-                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                         errors.alt_time_1 ? 'border-red-500' : ''
                       }`}
                     />
@@ -1231,7 +1231,7 @@ const FacultyAppointmentComponent = () => {
                       value={formData.alt_date_2}
                       onChange={handleChange}
                       min={setMinDate()}
-                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 bg-white text-sm leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                         errors.alt_date_2 ? 'border-red-500' : ''
                       }`}
                     />
@@ -1251,7 +1251,7 @@ const FacultyAppointmentComponent = () => {
                       onChange={handleChange}
                       min="09:00"
                       max="17:00"
-                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 text-sm leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
+                      className={`shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline focus:border-blue-500 ${
                         errors.alt_time_2 ? 'border-red-500' : ''
                       }`}
                     />
