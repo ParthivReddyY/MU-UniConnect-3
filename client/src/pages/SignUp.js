@@ -12,7 +12,7 @@ const SignUp = () => {
     program: '',
     department: '',
     studentId: '',
-    accommodationType: '', // Add new field for day scholar/hosteller
+    accommodationType: '',
     password: '',
     confirmPassword: ''
   });
@@ -177,14 +177,7 @@ const SignUp = () => {
     }
   }), []);
 
-  // Get current year for the academic year dropdown - updating to include up to current year
   const currentYear = new Date().getFullYear();
-  const startYear = 2015; // Starting year for options
-  const academicYears = Array.from(
-    { length: currentYear - startYear + 1 }, 
-    (_, i) => `${startYear + i}`
-  ).reverse(); // Reverse so most recent years appear first
-  
   const { register, verifyEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   
@@ -225,12 +218,22 @@ const SignUp = () => {
     }
   }, [formData.program, formData.school, academicData]);
   
+  // Function to validate form inputs
   const validateForm = () => {
     const newErrors = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = 'Name is required';
-    }
+    const requiredFields = {
+      name: 'Name',
+      email: 'Email',
+      password: 'Password',
+      confirmPassword: 'Confirm Password',
+      yearOfJoining: 'Year of joining',
+      dateOfBirth: 'Date of birth',
+      school: 'School',
+      program: 'Program',
+      department: 'Department/Specialization',
+      studentId: 'Student ID',
+      accommodationType: 'Accommodation type'
+    };
     
     if (!formData.email.trim()) {
       newErrors.email = 'Email is required';
@@ -238,22 +241,21 @@ const SignUp = () => {
       newErrors.email = 'Email must be a valid Mahindra University email (@mahindrauniversity.edu.in)';
     }
     
-    // Simplified validation checks - combining similar patterns
-    const requiredFields = {
-      dateOfBirth: 'Date of birth',
-      yearOfJoining: 'Year of joining',
-      school: 'School',
-      program: 'Program',
-      department: 'Department/Specialization',
-      studentId: 'Student ID',
-      accommodationType: 'Accommodation type' // Add validation for new field
-    };
-    
+    // Check all required fields
     Object.entries(requiredFields).forEach(([field, label]) => {
       if (!formData[field]) {
         newErrors[field] = `${label} is required`;
       }
     });
+    
+    // Add specific validation for yearOfJoining to match server schema validation
+    if (formData.yearOfJoining) {
+      const year = parseInt(formData.yearOfJoining, 10);
+      const currentYear = new Date().getFullYear();
+      if (isNaN(year) || year < 1990 || year > currentYear) {
+        newErrors.yearOfJoining = `Year must be between 1990 and ${currentYear}`;
+      }
+    }
     
     if (!formData.password) {
       newErrors.password = 'Password is required';
@@ -268,7 +270,7 @@ const SignUp = () => {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-  
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData({
@@ -284,7 +286,7 @@ const SignUp = () => {
       });
     }
     
-    // Simplify - use single if statement instead of two separate ones
+    // Clear any global messages
     if (signupError || signupSuccess) {
       setSignupError('');
       setSignupSuccess('');
@@ -308,12 +310,11 @@ const SignUp = () => {
         program: formData.program,
         department: formData.department,
         studentId: formData.studentId,
-        accommodationType: formData.accommodationType, // Include new field in submission
+        accommodationType: formData.accommodationType,
         password: formData.password
       });
       
       if (result.success) {
-        // Instead of showing success message, show OTP verification screen
         setVerificationEmail(result.email || formData.email);
         setIsVerifying(true);
         setSignupSuccess('Verification code sent to your email. Please enter it below to complete registration.');
@@ -328,34 +329,25 @@ const SignUp = () => {
     }
   };
   
-  // Improved OTP verification handler with better validation
+  // OTP verification handler
   const handleVerifyOTP = async (e) => {
     e.preventDefault();
     
-    // Validate OTP code is present
     if (!otpCode.trim()) {
       setOtpError('Please enter the verification code');
       return;
     }
     
-    // Validate email address is present
     if (!verificationEmail || verificationEmail.trim() === '') {
       setOtpError('Email address is missing. Please go back and try registering again.');
       return;
     }
     
     setIsSubmitting(true);
-    setOtpError(''); // Clear any previous errors
+    setOtpError('');
     
     try {
-      console.log('Verifying email with:', { 
-        email: verificationEmail,
-        otpLength: otpCode.length
-      });
-      
       const result = await verifyEmail(verificationEmail, otpCode);
-      
-      console.log('Verification result:', result);
       
       if (result.success) {
         // Clear form after successful verification
@@ -373,7 +365,6 @@ const SignUp = () => {
           confirmPassword: ''
         });
         
-        // Reset verification state and show success message
         setIsVerifying(false);
         setOtpCode('');
         setSignupSuccess(result.message || 'Registration completed successfully! You can now log in.');
@@ -386,17 +377,14 @@ const SignUp = () => {
         setOtpError(result.message || 'Verification failed. Please try again.');
       }
     } catch (err) {
-      console.error('Verification error:', err);
       setOtpError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
   
-  // Updated common label class for consistent styling
+  // Style classes
   const labelClass = "block mb-2 text-sm font-medium text-gray-300";
-
-  // Updated input classes with consistent height and improved focus state
   const inputClasses = (fieldName) => `w-full pl-12 pr-4 py-3 h-[50px] border ${
     errors[fieldName] ? 'border-red-500' : 'border-gray-700'
   } rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent text-gray-100 bg-gray-800 bg-opacity-70 transition-all duration-200 shadow-sm`;
@@ -405,7 +393,79 @@ const SignUp = () => {
     disabled ? 'opacity-50 cursor-not-allowed' : ''
   }`;
 
-  // Create a separate OTP verification form
+  // Helper function to render form field with icon
+  const renderField = (id, label, type, icon, placeholder = "", options = null, disabled = false) => (
+    <div className="w-full md:w-1/2 px-2 mb-6">
+      <div className="h-full">
+        <label htmlFor={id} className={labelClass}>{label}</label>
+        <div className="relative group">
+          {type === "select" ? (
+            <select
+              id={id}
+              name={id}
+              className={selectClasses(id, disabled)}
+              value={formData[id]}
+              onChange={handleChange}
+              disabled={disabled}
+            >
+              <option value="">{placeholder}</option>
+              {options && options.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <input
+              id={id}
+              name={id}
+              type={type === "password" && showPassword ? "text" : type}
+              className={inputClasses(id)}
+              placeholder={placeholder}
+              value={formData[id]}
+              onChange={handleChange}
+            />
+          )}
+          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
+            <i className={`fas ${icon}`}></i>
+          </div>
+          {type === "select" && (
+            <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
+              <i className="fas fa-chevron-down"></i>
+            </div>
+          )}
+          {type === "password" && (
+            <button
+              type="button"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex="-1"
+            >
+              <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
+            </button>
+          )}
+        </div>
+        {errors[id] && (
+          <div className="mt-1 text-xs text-red-500 flex items-center">
+            <i className="fas fa-exclamation-circle mr-1"></i>
+            {errors[id]}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  // Generate year options for the select dropdown
+  const generateYearOptions = () => {
+    const years = [];
+    for (let i = 0; i <= 10; i++) {
+      const year = currentYear - i;
+      years.push(year.toString());
+    }
+    return years;
+  };
+
+  // Render OTP verification form
   if (isVerifying) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4 py-12 relative overflow-hidden"
@@ -416,7 +476,6 @@ const SignUp = () => {
              backgroundRepeat: 'no-repeat',
              backgroundAttachment: 'fixed'
            }}>
-        {/* Dark overlay for text readability */}
         <div className="absolute inset-0 bg-black bg-opacity-60"></div>
         
         <div className="w-full max-w-md bg-black bg-opacity-85 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 mx-auto backdrop-blur-md">
@@ -498,6 +557,7 @@ const SignUp = () => {
     );
   }
 
+  // Main signup form
   return (
     <div className="min-h-screen w-full flex flex-col items-center justify-center px-4 py-8 relative"
          style={{
@@ -507,10 +567,8 @@ const SignUp = () => {
            backgroundRepeat: 'no-repeat',
            backgroundAttachment: 'fixed'
          }}>
-      {/* Fixed position overlay that covers the entire viewport */}
       <div className="fixed inset-0 bg-black bg-opacity-60 pointer-events-none"></div>
       
-      {/* Back to Home Button - fixed position */}
       <Link 
         to="/" 
         className="fixed top-6 left-6 bg-black bg-opacity-70 text-white font-medium py-2 px-4 rounded-md hover:bg-opacity-90 transition-all duration-200 flex items-center group z-20"
@@ -519,7 +577,6 @@ const SignUp = () => {
         Back to Home
       </Link>
       
-      {/* Form container with improved z-index and positioning */}
       <div className="w-full max-w-4xl bg-black bg-opacity-85 rounded-xl shadow-2xl transition-all duration-300 overflow-hidden border border-gray-800 relative z-10 my-8 backdrop-blur-md">
         <div className="px-8 pt-8 pb-6 text-center sm:text-left">
           <h1 className="text-4xl font-bold text-white mb-3">Create Account</h1>
@@ -550,111 +607,10 @@ const SignUp = () => {
               Personal Information
             </h3>
             <div className="flex flex-wrap -mx-2">
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="name" className={labelClass}>Full Name</label>
-                  <div className="relative group">
-                    <input
-                      id="name"
-                      name="name"
-                      type="text"
-                      className={inputClasses('name')}
-                      placeholder="John Doe"
-                      value={formData.name}
-                      onChange={handleChange}
-                    />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-user"></i>
-                    </div>
-                  </div>
-                  {errors.name && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.name}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Email field */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="email" className={labelClass}>College Email Address</label>
-                  <div className="relative group">
-                    <input
-                      id="email"
-                      name="email"
-                      type="email"
-                      className={inputClasses('email')}
-                      placeholder="yourname@mahindrauniversity.edu.in"
-                      value={formData.email}
-                      onChange={handleChange}
-                    />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-envelope"></i>
-                    </div>
-                  </div>
-                  {errors.email && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.email}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Date of Birth field */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="dateOfBirth" className={labelClass}>Date of Birth</label>
-                  <div className="relative group">
-                    <input
-                      id="dateOfBirth"
-                      name="dateOfBirth"
-                      type="date"
-                      className={inputClasses('dateOfBirth')}
-                      value={formData.dateOfBirth}
-                      onChange={handleChange}
-                    />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-calendar-alt"></i>
-                    </div>
-                  </div>
-                  {errors.dateOfBirth && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.dateOfBirth}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Student ID field */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="studentId" className={labelClass}>Student ID</label>
-                  <div className="relative group">
-                    <input
-                      id="studentId"
-                      name="studentId"
-                      type="text"
-                      className={inputClasses('studentId')}
-                      placeholder="SE22UCSE000"
-                      value={formData.studentId}
-                      onChange={handleChange}
-                    />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-id-card"></i>
-                    </div>
-                  </div>
-                  {errors.studentId && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.studentId}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderField("name", "Full Name", "text", "fa-user", "John Doe")}
+              {renderField("email", "College Email Address", "email", "fa-envelope", "yourname@mahindrauniversity.edu.in")}
+              {renderField("dateOfBirth", "Date of Birth", "date", "fa-calendar-alt")}
+              {renderField("studentId", "Student ID", "text", "fa-id-card", "SE22UCSE000")}
             </div>
           </div>
           
@@ -667,171 +623,11 @@ const SignUp = () => {
               Academic Information
             </h3>
             <div className="flex flex-wrap -mx-2">
-              {/* Apply the same structure to all other form fields */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="yearOfJoining" className={labelClass}>Academic Year of Joining</label>
-                  <div className="relative group">
-                    <select
-                      id="yearOfJoining"
-                      name="yearOfJoining"
-                      className={selectClasses('yearOfJoining')}
-                      value={formData.yearOfJoining}
-                      onChange={handleChange}
-                    >
-                      <option value="">Select year of Joining</option>
-                      {academicYears.map((year) => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-calendar-check"></i>
-                    </div>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                      <i className="fas fa-chevron-down"></i>
-                    </div>
-                  </div>
-                  {errors.yearOfJoining && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.yearOfJoining}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* School select */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="school" className={labelClass}>School</label>
-                  <div className="relative group">
-                    <select
-                      id="school"
-                      name="school"
-                      className={selectClasses('school')}
-                      value={formData.school}
-                      onChange={handleChange}
-                    >
-                      <option value="">Select your school</option>
-                      {Object.keys(academicData).map((school) => (
-                        <option key={school} value={school}>{school}</option>
-                      ))}
-                    </select>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-university"></i>
-                    </div>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                      <i className="fas fa-chevron-down"></i>
-                    </div>
-                  </div>
-                  {errors.school && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.school}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Program select */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="program" className={labelClass}>Program</label>
-                  <div className="relative group">
-                    <select
-                      id="program"
-                      name="program"
-                      className={selectClasses('program', !formData.school)}
-                      value={formData.program}
-                      onChange={handleChange}
-                      disabled={!formData.school}
-                    >
-                      <option value="">Select your program</option>
-                      {availablePrograms.map((program) => (
-                        <option key={program} value={program}>{program}</option>
-                      ))}
-                    </select>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-book"></i>
-                    </div>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                      <i className="fas fa-chevron-down"></i>
-                    </div>
-                  </div>
-                  {errors.program && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.program}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              {/* Department select */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="department" className={labelClass}>Department/Specialization</label>
-                  <div className="relative group">
-                    <select
-                      id="department"
-                      name="department"
-                      className={selectClasses('department', !formData.program)}
-                      value={formData.department}
-                      onChange={handleChange}
-                      disabled={!formData.program}
-                    >
-                      <option value="">Select your department/specialization</option>
-                      {availableDepartments.map((department) => (
-                        <option key={department} value={department}>{department}</option>
-                      ))}
-                    </select>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-flask"></i>
-                    </div>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                      <i className="fas fa-chevron-down"></i>
-                    </div>
-                  </div>
-                  {errors.department && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.department}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Add Accommodation Type field after Department field */}
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="accommodationType" className={labelClass}>Accommodation Type</label>
-                  <div className="relative group">
-                    <select
-                      id="accommodationType"
-                      name="accommodationType"
-                      className={selectClasses('accommodationType')}
-                      value={formData.accommodationType}
-                      onChange={handleChange}
-                    >
-                      <option value="">Select accommodation type</option>
-                      <option value="dayScholar">Day Scholar</option>
-                      <option value="hosteller">Hosteller</option>
-                    </select>
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-home"></i>
-                    </div>
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
-                      <i className="fas fa-chevron-down"></i>
-                    </div>
-                  </div>
-                  {errors.accommodationType && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.accommodationType}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderField("yearOfJoining", "Academic Year of Joining", "select", "fa-calendar-check", "Select Year", generateYearOptions())}
+              {renderField("school", "School", "select", "fa-university", "Select your school", Object.keys(academicData))}
+              {renderField("program", "Program", "select", "fa-book", "Select your program", availablePrograms, !formData.school)}
+              {renderField("department", "Department/Specialization", "select", "fa-flask", "Select your department/specialization", availableDepartments, !formData.program)}
+              {renderField("accommodationType", "Accommodation Type", "select", "fa-home", "Select accommodation type", ["dayScholar", "hosteller"])}
             </div>
           </div>
           
@@ -844,73 +640,8 @@ const SignUp = () => {
               Account Security
             </h3>
             <div className="flex flex-wrap -mx-2">
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="password" className={labelClass}>Password</label>
-                  <div className="relative group">
-                    <input
-                      id="password"
-                      name="password"
-                      type={showPassword ? "text" : "password"}
-                      className={inputClasses('password')}
-                      placeholder="Minimum 6 characters"
-                      value={formData.password}
-                      onChange={handleChange}
-                    />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-lock"></i>
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex="-1"
-                    >
-                      <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                    </button>
-                  </div>
-                  {errors.password && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.password}
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div className="w-full md:w-1/2 px-2 mb-6">
-                <div className="h-full">
-                  <label htmlFor="confirmPassword" className={labelClass}>Confirm Password</label>
-                  <div className="relative group">
-                    <input
-                      id="confirmPassword"
-                      name="confirmPassword"
-                      type={showPassword ? "text" : "password"}
-                      className={inputClasses('confirmPassword')}
-                      placeholder="Confirm your password"
-                      value={formData.confirmPassword}
-                      onChange={handleChange}
-                    />
-                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors w-5 h-5 flex items-center justify-center">
-                      <i className="fas fa-lock"></i>
-                    </div>
-                    <button
-                      type="button"
-                      className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-200"
-                      onClick={() => setShowPassword(!showPassword)}
-                      tabIndex="-1"
-                    >
-                      <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
-                    </button>
-                  </div>
-                  {errors.confirmPassword && (
-                    <div className="mt-1 text-xs text-red-500 flex items-center">
-                      <i className="fas fa-exclamation-circle mr-1"></i>
-                      {errors.confirmPassword}
-                    </div>
-                  )}
-                </div>
-              </div>
+              {renderField("password", "Password", "password", "fa-lock", "Minimum 6 characters")}
+              {renderField("confirmPassword", "Confirm Password", "password", "fa-lock", "Confirm your password")}
             </div>
           </div>
           

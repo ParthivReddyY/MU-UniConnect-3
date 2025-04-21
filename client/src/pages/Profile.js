@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../utils/axiosConfig';
 import ImageUploader from '../components/ImageUploader';
+import { calculateAcademicProgress, formatAcademicYear } from '../utils/academicUtils';
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const Profile = () => {
     clubManaging: '',
     bio: '',
     mobileNumber: '',
+    yearOfJoining: '', // Added yearOfJoining to formData
     socialLinks: {
       linkedin: '',
       twitter: '',
@@ -34,7 +36,8 @@ const Profile = () => {
     bio: false,
     mobileNumber: false,
     socialLinks: false,
-    studentId: false
+    studentId: false,
+    yearOfJoining: false  // Add edit mode for yearOfJoining
   });
   
   const bioRef = useRef(null);
@@ -48,6 +51,16 @@ const Profile = () => {
       day: 'numeric'
     });
   };
+  
+  // Format semester information
+  const formatSemesterInfo = (academicInfo) => {
+    if (!academicInfo || !academicInfo.isValidCalculation) return 'Not available';
+    
+    return `${academicInfo.year}${academicInfo.yearSuffix} Year, ${academicInfo.currentSemester}${academicInfo.semesterSuffix} Semester`;
+  };
+
+  // Add state for academic information
+  const [academicInfo, setAcademicInfo] = useState(null);
   
   // Load user data
   useEffect(() => {
@@ -65,6 +78,7 @@ const Profile = () => {
       clubManaging: currentUser.clubManaging || '',
       bio: currentUser.bio || '',
       mobileNumber: currentUser.mobileNumber || '',
+      yearOfJoining: currentUser.yearOfJoining || '',
       socialLinks: {
         linkedin: currentUser.socialLinks?.linkedin || '',
         twitter: currentUser.socialLinks?.twitter || '',
@@ -72,9 +86,35 @@ const Profile = () => {
       }
     });
     
+    // Calculate academic progress if yearOfJoining exists
+    if (currentUser.yearOfJoining) {
+      const academicProgress = calculateAcademicProgress(currentUser.yearOfJoining);
+      setAcademicInfo(academicProgress);
+    }
+    
     setIsLoading(false);
   }, [currentUser, navigate]);
   
+  // Toggle edit mode for student ID specifically for students
+  const toggleStudentIdEdit = () => {
+    if (currentUser.role === 'student') {
+      setEditMode(prev => ({
+        ...prev,
+        studentId: !prev.studentId
+      }));
+    }
+  };
+
+  // Toggle edit mode for year of joining specifically for students
+  const toggleYearOfJoiningEdit = () => {
+    if (currentUser.role === 'student') {
+      setEditMode(prev => ({
+        ...prev,
+        yearOfJoining: !prev.yearOfJoining
+      }));
+    }
+  };
+
   // Auto-focus on editing fields
   useEffect(() => {
     if (editMode.bio && bioRef.current) {
@@ -182,6 +222,11 @@ const Profile = () => {
     if (formData.department !== undefined) {
       total++;
       if (formData.department) completed++;
+    }
+    
+    if (formData.yearOfJoining !== undefined) {
+      total++;
+      if (formData.yearOfJoining) completed++;
     }
     
     if (formData.clubManaging !== undefined) {
@@ -569,11 +614,141 @@ const Profile = () => {
                     <span className="text-gray-800 font-medium text-sm">{formatDate(currentUser.createdAt)}</span>
                   </div>
                   
-                  {formData.studentId && (
+                  {formData.studentId ? (
                     <div className="flex justify-between">
                       <span className="text-gray-500 text-sm">Student ID</span>
-                      <span className="text-gray-800 font-medium text-sm">{formData.studentId}</span>
+                      {editMode.studentId ? (
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            name="studentId"
+                            value={formData.studentId}
+                            onChange={handleInputChange}
+                            className="w-24 px-2 py-1 text-sm border border-gray-300 rounded"
+                            autoFocus
+                          />
+                          <button 
+                            onClick={() => saveField('studentId')}
+                            className="ml-2 text-green-600 hover:text-green-700"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className="text-gray-800 font-medium text-sm">{formData.studentId}</span>
+                          {currentUser.role === 'student' && (
+                            <button 
+                              onClick={toggleStudentIdEdit}
+                              className="ml-2 text-gray-400 hover:text-indigo-600 text-xs"
+                            >
+                              <i className="fas fa-pencil-alt"></i>
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
+                  ) : currentUser.role === 'student' && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 text-sm">Student ID</span>
+                      {editMode.studentId ? (
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            name="studentId"
+                            value={formData.studentId}
+                            onChange={handleInputChange}
+                            className="w-24 px-2 py-1 text-sm border border-gray-300 rounded"
+                            autoFocus
+                            placeholder="Enter ID"
+                          />
+                          <button 
+                            onClick={() => saveField('studentId')}
+                            className="ml-2 text-green-600 hover:text-green-700"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className="text-red-500 text-xs italic">Not set</span>
+                          <button 
+                            onClick={toggleStudentIdEdit}
+                            className="ml-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded text-xs"
+                          >
+                            Add ID
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Academic Year information with edit option */}
+                  {currentUser.role === 'student' && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-500 text-sm">Joining Year</span>
+                      {editMode.yearOfJoining ? (
+                        <div className="flex items-center">
+                          <select
+                            name="yearOfJoining"
+                            value={formData.yearOfJoining}
+                            onChange={handleInputChange}
+                            className="w-28 px-2 py-1 text-sm border border-gray-300 rounded"
+                          >
+                            <option value="">Select Year</option>
+                            {/* Generate options for the last 10 years */}
+                            {Array.from({ length: 10 }, (_, i) => {
+                              const year = new Date().getFullYear() - i;
+                              return (
+                                <option key={year} value={year.toString()}>
+                                  {year}
+                                </option>
+                              );
+                            })}
+                          </select>
+                          <button 
+                            onClick={() => saveField('yearOfJoining')}
+                            className="ml-2 text-green-600 hover:text-green-700"
+                          >
+                            <i className="fas fa-check"></i>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center">
+                          {formData.yearOfJoining ? (
+                            <span className="text-gray-800 font-medium text-sm">
+                              {formatAcademicYear(formData.yearOfJoining)}
+                            </span>
+                          ) : (
+                            <span className="text-red-500 text-xs italic">Not set</span>
+                          )}
+                          <button 
+                            onClick={toggleYearOfJoiningEdit}
+                            className="ml-2 text-gray-400 hover:text-indigo-600 text-xs"
+                          >
+                            <i className="fas fa-pencil-alt"></i>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Academic Status with more detailed information */}
+                  {academicInfo && academicInfo.isValidCalculation && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Academic Status</span>
+                        <span className="text-gray-800 font-medium text-sm">
+                          {formatSemesterInfo(academicInfo)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 text-sm">Program Progress</span>
+                        <span className="text-gray-800 font-medium text-sm">
+                          {academicInfo.progressPercentage}% Complete
+                        </span>
+                      </div>
+                    </>
                   )}
                   
                   {formData.department && (

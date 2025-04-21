@@ -66,7 +66,43 @@ const UserSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  lastLogin: Date
+  lastLogin: Date,
+  dateOfBirth: {
+    type: Date,
+    // Not required but useful for students
+  },
+  school: {
+    type: String,
+    // Optional field for academic information
+  },
+  program: {
+    type: String,
+    // Optional field for academic information
+  },
+  accommodationType: {
+    type: String,
+    enum: ['dayScholar', 'hosteller', ''],
+    default: ''
+  },
+  yearOfJoining: {
+    type: String,
+    // Store as String to make comparisons easier
+    // Not required but recommended for students
+    validate: {
+      validator: function(val) {
+        // If empty, that's fine
+        if (!val) return true;
+        
+        // Otherwise it should be a valid year
+        const year = parseInt(val, 10);
+        const currentYear = new Date().getFullYear();
+        return !isNaN(year) && 
+               year >= 1990 && 
+               year <= currentYear;
+      },
+      message: props => `${props.value} is not a valid year!`
+    }
+  }
 }, { timestamps: true });
 
 // Hash password before saving

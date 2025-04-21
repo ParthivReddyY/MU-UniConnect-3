@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { calculateAcademicProgress, formatAcademicYear } from '../utils/academicUtils';
 
 const Dashboard = () => {
   const { currentUser, isAdmin, isFaculty, isClubHead } = useAuth();
   const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
+  
+  // Add state for academic info
+  const [academicInfo, setAcademicInfo] = useState(null);
   
   // Stats for different user types
   const [stats] = useState({
@@ -373,44 +377,20 @@ const Dashboard = () => {
     }
   };
 
-  // Add a useEffect to log the current user data when the component mounts
+  // Calculate academic info when user data is loaded - consolidated from multiple hooks
   useEffect(() => {
-    console.log('Dashboard - Current user data:', currentUser);
-  }, [currentUser]);
-
-  // Add this debugging effect to log user data
-  useEffect(() => {
-    if (currentUser) {
-      console.log('Dashboard - Current user data:', {
-        ...currentUser,
-        // Remove potential sensitive fields
-        password: currentUser.password ? '[REDACTED]' : undefined
-      });
+    if (currentUser && currentUser.role === 'student' && currentUser.yearOfJoining) {
+      const progress = calculateAcademicProgress(currentUser.yearOfJoining);
+      setAcademicInfo(progress);
     }
   }, [currentUser]);
 
-  // Add this debugging useEffect to the component
-  useEffect(() => {
-    if (currentUser) {
-      console.log('Dashboard - Current user data:', currentUser);
-      console.log('Student ID:', currentUser.studentId || 'Not available');
-    }
-  }, [currentUser]);
-
-  // Add more detailed logging when component mounts
-  useEffect(() => {
-    if (currentUser) {
-      console.log('Dashboard - Current user data:', currentUser);
-      console.log('Student ID:', currentUser.studentId || 'Not available');
-      
-      // Log the user object to see its structure and verify studentId
-      const userCopy = {
-        ...currentUser,
-        password: currentUser.password ? '[REDACTED]' : undefined
-      };
-      console.log('Full user object:', userCopy);
-    }
-  }, [currentUser]);
+  // Format academic year and semester info for better display
+  const formatAcademicInfo = (academicInfo) => {
+    if (!academicInfo || !academicInfo.isValidCalculation) return 'Not available';
+    
+    return `${academicInfo.year}${academicInfo.yearSuffix} Year, ${academicInfo.currentSemester}${academicInfo.semesterSuffix} Semester`;
+  };
   
   return (
     <div className="bg-gray-50 min-h-screen dashboard-page">
@@ -556,15 +536,51 @@ const Dashboard = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">Student ID</span>
-                <span className="text-gray-800 font-medium">
-                  {currentUser.studentId || 'Not available'}
-                  {currentUser.role === 'student' && !currentUser.studentId && (
-                    <Link to="/profile" className="ml-2 text-xs text-red-500 hover:text-red-700">
-                      (Add in Profile)
-                    </Link>
+                <div className="flex items-center">
+                  {currentUser.studentId ? (
+                    <span className="text-gray-800 font-medium">{currentUser.studentId}</span>
+                  ) : currentUser.role === 'student' ? (
+                    <div className="flex items-center">
+                      <span className="text-red-500 text-sm">Not set</span>
+                      <Link 
+                        to="/profile" 
+                        className="ml-2 bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded-md text-xs font-medium transition-all"
+                      >
+                        Add ID
+                      </Link>
+                    </div>
+                  ) : (
+                    <span className="text-gray-500 italic">N/A</span>
                   )}
-                </span>
+                </div>
               </div>
+              
+              {/* Add Academic Year Information for Students */}
+              {currentUser.role === 'student' && (
+                <>
+                  <div className="flex flex-col">
+                    <span className="text-xs text-gray-500 mb-1">Academic Year of Joining</span>
+                    <span className="text-gray-800 font-medium">
+                      {currentUser.yearOfJoining ? formatAcademicYear(currentUser.yearOfJoining) : 'Not available'}
+                      {!currentUser.yearOfJoining && (
+                        <Link to="/profile" className="ml-2 text-xs text-red-500 hover:text-red-700">
+                          (Add in Profile)
+                        </Link>
+                      )}
+                    </span>
+                  </div>
+                  
+                  {academicInfo && academicInfo.isValidCalculation && (
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 mb-1">Current Academic Status</span>
+                      <span className="text-gray-800 font-medium">
+                        {formatAcademicInfo(academicInfo)}
+                      </span>
+                    </div>
+                  )}
+                </>
+              )}
+              
               {currentUser.department && (
                 <div className="flex flex-col">
                   <span className="text-xs text-gray-500 mb-1">Department</span>

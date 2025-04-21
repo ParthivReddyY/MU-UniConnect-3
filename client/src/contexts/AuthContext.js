@@ -192,6 +192,14 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       setError('');
+      
+      // Log registration attempt with sensitive data removed
+      console.log('Registration attempt:', {
+        ...userData,
+        password: userData.password ? '[REDACTED]' : undefined,
+        confirmPassword: '[REDACTED]'
+      });
+      
       const response = await api.post('/api/auth/register', userData);
       
       if (response.data.success) {
@@ -324,9 +332,12 @@ export const AuthProvider = ({ children }) => {
   const verifyEmail = async (email, otp) => {
     try {
       setError('');
+      console.log(`Verifying email ${email} with provided OTP`);
+      
       const response = await api.post('/api/auth/verify-email', { email, otp });
       
       if (response.data.success) {
+        console.log('Email verification successful');
         return { 
           success: true, 
           message: response.data.message || 'Email verified successfully. You can now log in.'
@@ -353,6 +364,11 @@ export const AuthProvider = ({ children }) => {
         console.log('Updating student ID to:', userData.studentId);
       }
       
+      // Make sure yearOfJoining is included in the request
+      if (userData.yearOfJoining !== undefined) {
+        console.log('Updating academic year of joining to:', userData.yearOfJoining);
+      }
+      
       const response = await api.put('/api/auth/update-profile', userData);
       
       if (response.data.success) {
@@ -362,7 +378,8 @@ export const AuthProvider = ({ children }) => {
         console.log('Profile updated. New user data:', {
           id: updatedUser._id,
           name: updatedUser.name,
-          studentId: updatedUser.studentId || 'not set'
+          studentId: updatedUser.studentId || 'not set',
+          yearOfJoining: updatedUser.yearOfJoining || 'not set'
         });
         
         localStorage.setItem('user', JSON.stringify(updatedUser));

@@ -9,7 +9,23 @@ const pendingRegistrations = new Map();
 // Register a new student - first step
 const register = async (req, res) => {
   try {
-    const { name, email, password, studentId } = req.body;
+    // Extract all necessary fields
+    const { 
+      name, email, password, studentId, yearOfJoining,
+      dateOfBirth, school, program, department, accommodationType 
+    } = req.body;
+    
+    console.log("Registration request received:", {
+      email,
+      hasPassword: !!password,
+      studentId: studentId || 'Not provided',
+      yearOfJoining: yearOfJoining || 'Not provided',
+      school: school || 'Not provided',
+      program: program || 'Not provided',
+      department: department || 'Not provided',
+      hasDateOfBirth: !!dateOfBirth,
+      accommodationType: accommodationType || 'Not provided'
+    });
     
     // Check if email already exists
     const emailExists = await User.findOne({ email });
@@ -29,7 +45,7 @@ const register = async (req, res) => {
     
     // Store user data temporarily with OTP
     pendingRegistrations.set(email, {
-      userData: req.body,
+      userData: req.body, // This will include all form fields
       verificationOTP,
       otpExpires
     });
@@ -92,11 +108,17 @@ const verifyEmail = async (req, res) => {
     
     // Create user with verified status
     const userData = registration.userData;
+    
+    // Simplified log - only log essential information
+    console.log(`Creating verified user: ${userData.email}, studentId: ${userData.studentId || 'Not provided'}, role: student`);
+    
     const user = await User.create({
       ...userData,
       role: 'student',
       isVerified: true // User is now pre-verified since they completed OTP verification
     });
+    
+    console.log(`User created with ID: ${user._id}`);
     
     // Send welcome email using Brevo template
     try {
@@ -453,17 +475,15 @@ const resetPassword = async (req, res) => {
 // Get current user with improved debugging and explicit studentId handling
 const getCurrentUser = async (req, res) => {
   try {
-    console.log('Getting current user data for userId:', req.user.userId);
+    // Simplified logging
+    console.log(`Getting user data for ID: ${req.user.userId}`);
     
     // Make sure we select all fields including studentId
     const user = await User.findById(req.user.userId).select('+password +studentId');
     
     if (!user) {
-      console.log('No user found with ID:', req.user.userId);
       return res.status(404).json({ message: 'User not found' });
     }
-    
-    console.log(`Found user: ${user.name}, studentId: ${user.studentId || 'not set'}`);
     
     // Create the response object explicitly including studentId 
     const responseUser = {
@@ -474,14 +494,13 @@ const getCurrentUser = async (req, res) => {
       profileImage: user.profileImage || null,
       department: user.department || '',
       studentId: user.studentId || '', // Ensure we always send a value even if empty
+      yearOfJoining: user.yearOfJoining || '',
       clubManaging: user.clubManaging || '',
       createdAt: user.createdAt,
       lastLogin: user.lastLogin,
       bio: user.bio || '',
       socialLinks: user.socialLinks || {}
     };
-    console.log('Sending user data to client:', responseUser);
-    console.log('Sending user data to client with studentId:', responseUser.studentId);
     
     res.status(200).json({
       success: true,
@@ -674,6 +693,7 @@ const updateProfile = async (req, res) => {
     const updateableFields = [
       'name',
       'studentId',
+      'yearOfJoining',
       'department',
       'bio',
       'mobileNumber',
@@ -684,9 +704,9 @@ const updateProfile = async (req, res) => {
     // Update allowed fields
     updateableFields.forEach(field => {
       if (req.body[field] !== undefined) {
-        // Log updates for debugging, especially for studentId
-        if (field === 'studentId') {
-          console.log(`Updating studentId for user ${userId} from '${user.studentId || 'none'}' to '${req.body.studentId}'`);
+        // Only log important field changes
+        if (['studentId', 'yearOfJoining'].includes(field)) {
+          console.log(`Updating ${field} for user ${userId}: '${user[field] || 'none'}' -> '${req.body[field]}'`);
         }
         
         // Handle nested fields like socialLinks
@@ -713,6 +733,7 @@ const updateProfile = async (req, res) => {
       profileImage: user.profileImage,
       department: user.department,
       studentId: user.studentId,
+      yearOfJoining: user.yearOfJoining,
       bio: user.bio,
       mobileNumber: user.mobileNumber,
       socialLinks: user.socialLinks,
