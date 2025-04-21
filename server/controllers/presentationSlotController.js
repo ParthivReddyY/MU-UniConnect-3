@@ -192,14 +192,27 @@ exports.getAvailablePresentationSlots = async (req, res) => {
     if (department) filter.targetDepartment = department;
     if (date) filter.date = new Date(date);
     
+    // Get all slots matching filter
     const slots = await PresentationSlot.find(filter)
       .sort({ date: 1, startTime: 1 });
+      
+    // Process slots to ensure host data is properly structured
+    const processedSlots = slots.map(slot => {
+      const slotObj = slot.toObject();
+      // Ensure host has a name property
+      if (slotObj.host && !slotObj.host.name && slotObj.host.email) {
+        // If no name but email exists, use email username as fallback
+        const emailUsername = slotObj.host.email.split('@')[0];
+        slotObj.host.name = emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
+      }
+      return slotObj;
+    });
     
     // If grouped=true, group slots by title/event
     if (grouped === 'true') {
       const eventsMap = new Map();
       
-      slots.forEach(slot => {
+      processedSlots.forEach(slot => {
         const key = slot.title;
         if (!eventsMap.has(key)) {
           // Create a new event entry
@@ -216,6 +229,7 @@ exports.getAvailablePresentationSlots = async (req, res) => {
             venue: slot.venue,
             duration: slot.duration,
             bufferTime: slot.bufferTime,
+            host: slot.host, // Ensure host data is included
             slots: [],
             createdAt: slot.createdAt
           });
@@ -230,7 +244,7 @@ exports.getAvailablePresentationSlots = async (req, res) => {
       return res.json(events);
     }
     
-    res.json(slots);
+    res.json(processedSlots);
   } catch (err) {
     console.error('Error fetching available presentation slots:', err);
     res.status(500).json({ message: 'Server error', error: err.message });
@@ -465,7 +479,19 @@ exports.getStudentBookings = async (req, res) => {
       'bookedBy.user': userId
     }).sort({ date: 1, startTime: 1 });
     
-    res.json(slots);
+    // Process slots to ensure host data is properly structured
+    const processedBookings = slots.map(slot => {
+      const slotObj = slot.toObject();
+      // Ensure host has a name property
+      if (slotObj.host && !slotObj.host.name && slotObj.host.email) {
+        // If no name but email exists, use email username as fallback
+        const emailUsername = slotObj.host.email.split('@')[0];
+        slotObj.host.name = emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
+      }
+      return slotObj;
+    });
+    
+    res.json(processedBookings);
   } catch (err) {
     console.error('Error fetching student bookings:', err);
     res.status(500).json({ message: 'Server error', error: err.message });

@@ -205,6 +205,13 @@ const Faculty = () => {
   const endIndex = Math.min(startIndex + pageSize, filteredFacultyData.length);
   const currentPageData = filteredFacultyData.slice(startIndex, endIndex);
 
+  // Consolidate the repeated filter labels by creating a helper component
+  const FilterLabel = ({ value, filterClass, label }) => (
+    <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600">
+      <input type="checkbox" value={value} className={`${filterClass} mr-2`} /> {label || value}
+    </label>
+  );
+
   return (
     <div className="text-gray-800 font-sans">
       <main className="w-full">
@@ -317,28 +324,28 @@ const Faculty = () => {
               <div className="mb-5">
                 <h3 className="text-lg font-semibold mb-3 text-gray-800">School</h3>
                 <div className="flex flex-wrap gap-2.5">
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="ECSE" className="school-filter mr-2" /> ECSE</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SOL" className="school-filter mr-2" /> SOL</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SOM" className="school-filter mr-2" /> SOM</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="IMSOE" className="school-filter mr-2" /> IMSOE</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SDMC" className="school-filter mr-2" /> SDMC</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SODI" className="school-filter mr-2" /> SODI</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="SOHM" className="school-filter mr-2" /> SOHM</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CEI" className="school-filter mr-2" /> CEI</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CEE" className="school-filter mr-2" /> CEE</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CLS" className="school-filter mr-2" /> CLS</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="CS" className="school-filter mr-2" /> CS</label>
+                  <FilterLabel value="ECSE" filterClass="school-filter" />
+                  <FilterLabel value="SOL" filterClass="school-filter" />
+                  <FilterLabel value="SOM" filterClass="school-filter" />
+                  <FilterLabel value="IMSOE" filterClass="school-filter" />
+                  <FilterLabel value="SDMC" filterClass="school-filter" />
+                  <FilterLabel value="SODI" filterClass="school-filter" />
+                  <FilterLabel value="SOHM" filterClass="school-filter" />
+                  <FilterLabel value="CEI" filterClass="school-filter" />
+                  <FilterLabel value="CEE" filterClass="school-filter" />
+                  <FilterLabel value="CLS" filterClass="school-filter" />
+                  <FilterLabel value="CS" filterClass="school-filter" />
                 </div>
               </div>
               
               <div className="mb-5">
                 <h3 className="text-lg font-semibold mb-3 text-gray-800">Designation</h3>
                 <div className="flex flex-wrap gap-2.5">
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Professor" className="designation-filter mr-2" /> Professor</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Associate Professor" className="designation-filter mr-2" /> Associate Professor</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Assistant Professor" className="designation-filter mr-2" /> Assistant Professor</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Lecturer" className="designation-filter mr-2" /> Lecturer</label>
-                  <label className="flex items-center gap-1.5 bg-gray-100 px-3 py-2 rounded border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors text-gray-600"><input type="checkbox" value="Adjunct Faculty" className="designation-filter mr-2" /> Adjunct Faculty</label>
+                  <FilterLabel value="Professor" filterClass="designation-filter" />
+                  <FilterLabel value="Associate Professor" filterClass="designation-filter" />
+                  <FilterLabel value="Assistant Professor" filterClass="designation-filter" />
+                  <FilterLabel value="Lecturer" filterClass="designation-filter" />
+                  <FilterLabel value="Adjunct Faculty" filterClass="designation-filter" />
                 </div>
               </div>
               

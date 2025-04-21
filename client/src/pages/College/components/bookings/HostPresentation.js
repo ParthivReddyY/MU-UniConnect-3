@@ -5,8 +5,8 @@ import PresentationService from '../../../../services/PresentationService';
 import { toast } from 'react-toastify';
 
 const HostPresentation = () => {
-  // Remove unused currentUser from useAuth
-  useAuth(); // Keep the hook call if needed for authentication
+  // Keep auth context for authorization purposes
+  useAuth(); 
   const [isLoading, setIsLoading] = useState(true);
   const [events, setEvents] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -155,6 +155,11 @@ const HostPresentation = () => {
     return `${endHours}:${endMinutes}`;
   };
 
+  // Get day label from day value
+  const getDayLabel = useCallback((dayValue) => {
+    return daysOfWeek.find(day => day.value === dayValue)?.label || '';
+  }, [daysOfWeek]);
+
   // Define functions before they're used in useEffect dependencies
   const generateDatesFromRange = useCallback(() => {
     if (!daySlots.dateRange.startDate || !daySlots.dateRange.endDate || daySlots.dateRange.daysOfWeek.length === 0) {
@@ -185,7 +190,7 @@ const HostPresentation = () => {
     return dates;
   }, [daySlots.dateRange]);
 
-  // Add this validation function to check if selected days exist in the date range
+  // Validation function to check if selected days exist in the date range
   const validateSelectedDays = useCallback(() => {
     if (!daySlots.dateRange.startDate || !daySlots.dateRange.endDate || daySlots.dateRange.daysOfWeek.length === 0) {
       return true; // Skip validation if date range or days not selected yet
@@ -322,11 +327,6 @@ const HostPresentation = () => {
   }, [daySlots.dateRange.daysOfWeek, activeDay]);
 
   // Add validation when date range changes
-  // Get day label from day value
-  const getDayLabel = useCallback((dayValue) => {
-    return daysOfWeek.find(day => day.value === dayValue)?.label || '';
-  }, [daysOfWeek]);
-
   useEffect(() => {
     if (daySlots.dateRange.startDate && daySlots.dateRange.endDate && daySlots.dateRange.daysOfWeek.length > 0) {
       const validationResult = validateSelectedDays();
@@ -346,7 +346,7 @@ const HostPresentation = () => {
         }));
       }
     }
-  }, [daySlots.dateRange.startDate, daySlots.dateRange.endDate, daySlots.dateRange.daysOfWeek.length, validateSelectedDays, daysOfWeek, getDayLabel]);
+  }, [daySlots.dateRange.startDate, daySlots.dateRange.endDate, daySlots.dateRange.daysOfWeek.length, validateSelectedDays, getDayLabel]);
 
   // Fetch presentation events created by the host
   const fetchPresentationEvents = async () => {
@@ -380,47 +380,44 @@ const HostPresentation = () => {
   const handleDayOfWeekToggle = (dayValue) => {
     setDaySlots(prev => {
       const currentDays = prev.dateRange.daysOfWeek;
-      let updatedDays;
       
+      // If removing a day, just filter it out
       if (currentDays.includes(dayValue)) {
-        updatedDays = currentDays.filter(day => day !== dayValue);
-      } else {
-        // Before adding the day, validate if it exists in the date range
-        if (prev.dateRange.startDate && prev.dateRange.endDate) {
-          const startDate = new Date(prev.dateRange.startDate);
-          const endDate = new Date(prev.dateRange.endDate);
-          endDate.setHours(23, 59, 59, 999);
-          
-          // Check if this day occurs in the date range
-          let currentDate = new Date(startDate);
-          let dayExistsInRange = false;
-          
-          while (currentDate <= endDate) {
-            if (currentDate.getDay() === dayValue) {
-              dayExistsInRange = true;
-              break;
-            }
-            currentDate.setDate(currentDate.getDate() + 1);
+        return {
+          ...prev,
+          dateRange: {
+            ...prev.dateRange,
+            daysOfWeek: currentDays.filter(day => day !== dayValue)
           }
-          
-          if (!dayExistsInRange) {
-            toast.warning(`${getDayLabel(dayValue)} doesn't occur in your selected date range.`);
-            return prev; // Don't add the day if it's not in the range
-          }
-        }
+        };
+      }
+      
+      // Adding a day - validate it exists in the range first
+      if (prev.dateRange.startDate && prev.dateRange.endDate) {
+        // Check if this day occurs in the selected date range
+        const isDayInRange = checkDayInDateRange(
+          dayValue, 
+          new Date(prev.dateRange.startDate),
+          new Date(prev.dateRange.endDate)
+        );
         
-        updatedDays = [...currentDays, dayValue];
-        
-        // If this is the first day being added or there's no active day, set it as active
-        if (currentDays.length === 0 || !activeDay) {
-          setActiveDay(dayValue);
+        if (!isDayInRange) {
+          toast.warning(`${getDayLabel(dayValue)} doesn't occur in your selected date range.`);
+          return prev; // Don't add the day
         }
-        
-        // If this day doesn't have any time slots yet, add one as a suggestion
-        if (prev.slots[dayValue].length === 0) {
-          // We'll add a time slot in the useEffect that runs when days change
-          setTimeout(() => addTimeSlot(dayValue), 0);
-        }
+      }
+      
+      // Day is valid, add it
+      const updatedDays = [...currentDays, dayValue];
+      
+      // If this is the first day being added or there's no active day, set it as active
+      if (currentDays.length === 0 || !activeDay) {
+        setActiveDay(dayValue);
+      }
+      
+      // Add an initial time slot - using setTimeout to avoid state update within state update
+      if (prev.slots[dayValue].length === 0) {
+        setTimeout(() => addTimeSlot(dayValue), 0);
       }
       
       return {
@@ -433,6 +430,22 @@ const HostPresentation = () => {
     });
   };
   
+  // Helper function to check if a day exists within a date range
+  // This eliminates duplicate day-checking logic
+  const checkDayInDateRange = (dayValue, startDate, endDate) => {
+    endDate.setHours(23, 59, 59, 999); // Include the entire end date
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      if (currentDate.getDay() === dayValue) {
+        return true;
+      }
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+    
+    return false;
+  };
+
   // Suggest time slots for a specific day
   const suggestTimeSlotsForDay = (day) => {
     const suggestedStartTimes = timeSlotSuggestions[day] || [];
@@ -606,182 +619,67 @@ const HostPresentation = () => {
     setShowDeleteConfirm(true);
   };
   
-  // Execute the delete action - completely revised for reliability
-  const executeDelete = async () => {
+  // Simplify the deletion logic by reducing redundant console logs and improving the fallback mechanism
+  const handleDeleteEvent = async () => {
     if (!eventToDelete) return;
     
-    setIsSubmitting(true);
-    console.log(`Starting deletion process for event ID: ${eventToDelete}`);
-    
     try {
-      // First, try to find the event details to get the title
+      // Find the event details to get the title
       const eventToDeleteObj = events.find(event => event._id === eventToDelete);
       if (!eventToDeleteObj) {
         throw new Error('Could not find event to delete');
       }
       
-      console.log(`Found event to delete: ${eventToDeleteObj.title}`);
-      
-      // Track deletion success
       let deletionSuccessful = false;
       
-      // First attempt: Use the deleteSlotsByTitle method (more reliable for multiple slots)
+      // Try bulk deletion first
       try {
         const result = await PresentationService.deleteSlotsByTitle(eventToDeleteObj.title);
-        console.log('Bulk deletion result:', result);
-        
-        if (result && result.deletedCount > 0) {
-          deletionSuccessful = true;
-          console.log(`Successfully deleted ${result.deletedCount} slots by title`);
-        } else {
-          console.warn('Bulk deletion returned zero slots deleted');
-        }
+        deletionSuccessful = result && result.deletedCount > 0;
       } catch (bulkDeleteError) {
-        console.error('Bulk deletion failed:', bulkDeleteError);
-        
         // Fallback: Delete each slot individually
-        console.log('Attempting individual slot deletion as fallback...');
         try {
-          // Get all slots for this event
           const eventSlots = await PresentationService.getSlotsByEventId(eventToDeleteObj.title);
-          console.log(`Found ${eventSlots.length} slots to delete individually`);
           
           if (eventSlots && eventSlots.length > 0) {
             let successCount = 0;
             
-            // Delete slots one by one (not using Promise.all to avoid overwhelming the server)
             for (const slot of eventSlots) {
               try {
                 await PresentationService.deleteSlot(slot._id);
                 successCount++;
-                console.log(`Successfully deleted slot ${slot._id} (${successCount}/${eventSlots.length})`);
               } catch (err) {
-                console.error(`Failed to delete individual slot ${slot._id}:`, err);
+                // Continue with next slot
               }
             }
             
-            // Set success if at least one slot was deleted
             deletionSuccessful = successCount > 0;
-            console.log(`Individual deletion completed: ${successCount}/${eventSlots.length} slots deleted`);
             
             if (successCount > 0 && successCount < eventSlots.length) {
               toast.warning(`Partially deleted: ${successCount} out of ${eventSlots.length} slots removed.`);
             }
           }
         } catch (fallbackError) {
-          console.error('Fallback individual deletion failed:', fallbackError);
+          // Final fallback failed
         }
       }
       
-      // Only update UI if at least some deletion was successful
       if (deletionSuccessful) {
-        // First update the UI immediately for better user experience
         setEvents(prev => prev.filter(event => event._id !== eventToDelete));
         toast.success('Presentation event deleted successfully');
-        
-        // Then refresh data from server to ensure UI is in sync
         setTimeout(() => fetchPresentationEvents(), 500);
       } else {
         throw new Error('Could not delete any slots for this event');
       }
     } catch (error) {
-      console.error('Error in deletion process:', error);
-      toast.error(error.message || 'Failed to delete event. It may have bookings or be in use.');
-    } finally {
-      setShowDeleteConfirm(false);
-      setEventToDelete(null);
-      setIsSubmitting(false);
+      toast.error('Failed to delete presentation event');
     }
   };
   
-  // Create or update a presentation event with multiple slots - only change the batch data preparation
+  // Create or update a presentation event with multiple slots
   const createPresentationEvent = async () => {
-    // Validate form
-    if (!formData.title || !formData.description || !formData.venue || 
-        !formData.targetYear || !formData.targetSchool || !formData.targetDepartment) {
-      toast.error('Please fill all required fields');
-      return;
-    }
-    
-    // Validate date range
-    if (!daySlots.dateRange.startDate || !daySlots.dateRange.endDate) {
-      toast.error('Please select a date range');
-      return;
-    }
-    
-    // Validate days selection
-    if (daySlots.dateRange.daysOfWeek.length === 0) {
-      toast.error('Please select at least one day of the week');
-      return;
-    }
-    
-    // Check if there's at least one time slot for each selected day
-    const missingTimeSlots = daySlots.dateRange.daysOfWeek.filter(day => 
-      daySlots.slots[day].length === 0
-    );
-    
-    if (missingTimeSlots.length > 0) {
-      const missingDays = missingTimeSlots.map(day => 
-        daysOfWeek.find(d => d.value === day)?.label
-      ).join(', ');
-      
-      toast.error(`Please add at least one time slot for: ${missingDays}`);
-      return;
-    }
-
-    // Add extra validation for date range
-    if (new Date(daySlots.dateRange.startDate) > new Date(daySlots.dateRange.endDate)) {
-      toast.error('Start date must be before or equal to end date');
-      return;
-    }
-    
-    // Validate that selected days actually exist in the date range
-    const daysValidation = validateSelectedDays();
-    if (!daysValidation.valid) {
-      const invalidDayLabels = daysValidation.invalidDays.map(day => getDayLabel(day)).join(', ');
-      toast.error(`Selected days not in date range: ${invalidDayLabels}`);
-      return;
-    }
-    
-    // Validate that there are actual dates generated (the range isn't empty)
-    const generatedDates = generateDatesFromRange();
-    if (generatedDates.length === 0) {
-      toast.error('No dates were generated. Please check your date range and selected days.');
-      return;
-    }
-    
-    // Check overlapping time slots
-    let hasOverlappingSlots = false;
-    Object.entries(daySlots.slots).forEach(([day, slots]) => {
-      if (slots.length <= 1) return;
-      
-      slots.sort((a, b) => {
-        const [aHours, aMinutes] = a.startTime.split(':').map(Number);
-        const [bHours, bMinutes] = b.startTime.split(':').map(Number);
-        return aHours * 60 + aMinutes - (bHours * 60 + bMinutes);
-      });
-      
-      for (let i = 0; i < slots.length - 1; i++) {
-        const currentSlotEnd = slots[i].endTime;
-        const nextSlotStart = slots[i + 1].startTime;
-        
-        const [currentHours, currentMinutes] = currentSlotEnd.split(':').map(Number);
-        const [nextHours, nextMinutes] = nextSlotStart.split(':').map(Number);
-        
-        const currentEndMinutes = currentHours * 60 + currentMinutes;
-        const nextStartMinutes = nextHours * 60 + nextMinutes;
-        
-        if (currentEndMinutes > nextStartMinutes) {
-          hasOverlappingSlots = true;
-          break;
-        }
-      }
-    });
-    
-    if (hasOverlappingSlots) {
-      toast.error('Some time slots are overlapping. Please check your schedule.');
-      return;
-    }
+    // Combine validation steps
+    if (!validateFormBeforeSubmit()) return;
     
     setIsSubmitting(true);
     
@@ -792,28 +690,10 @@ const HostPresentation = () => {
       // Collect all date strings
       const allDates = datesByDay.map(({ date }) => date.toISOString());
       
-      // Collect time slots WITH their day of week association
-      const allTimeSlots = [];
-      daySlots.dateRange.daysOfWeek.forEach(dayOfWeek => {
-        const slotsForDay = daySlots.slots[dayOfWeek] || [];
-        
-        // Add each slot with its day of week
-        slotsForDay.forEach(slot => {
-          allTimeSlots.push({
-            startTime: slot.startTime,
-            endTime: slot.endTime,
-            dayOfWeek: dayOfWeek // Critical: Pass the day of week to maintain association
-          });
-        });
-      });
+      // Build time slots with day of week association
+      const allTimeSlots = buildTimeSlotArray();
       
       console.log(`Preparing to create slots for ${allDates.length} dates with ${allTimeSlots.length} time patterns`);
-      console.log('Time slots by day:', Object.fromEntries(
-        daySlots.dateRange.daysOfWeek.map(day => [
-          day, 
-          daySlots.slots[day] ? daySlots.slots[day].length : 0
-        ])
-      ));
       
       // Create batch data object for API
       const batchCreateData = {
@@ -831,38 +711,21 @@ const HostPresentation = () => {
           venue: formData.venue
         },
         dates: allDates,
-        timeSlots: allTimeSlots // Now includes dayOfWeek information
+        timeSlots: allTimeSlots
       };
       
-      // For editing, we need to first delete the existing event
+      // Delete existing slots if editing
       if (editingEvent) {
-        try {
-          // Delete all slots from the event we're editing
-          const existingSlots = await PresentationService.getEventSlots(editingEvent.title);
-          
-          if (existingSlots && existingSlots.length > 0) {
-            // Delete each slot individually
-            await Promise.all(
-              existingSlots
-                .filter(slot => slot.status === 'available') // Only delete available slots
-                .map(slot => PresentationService.deleteSlot(slot._id))
-            );
-          }
-        } catch (error) {
-          console.error('Error deleting existing slots:', error);
-          toast.warning('Some existing slots could not be deleted');
-        }
+        await deleteExistingSlots();
       }
       
-      // Create the new slots with our enhanced approach
+      // Create the new slots
       const createdSlots = await PresentationService.createBatchSlots(batchCreateData);
       
       console.log(`Created ${createdSlots.length} slots`);
       
-      // Refresh the events list
+      // Refresh, reset form and hide it
       await fetchPresentationEvents();
-      
-      // Reset form and hide it
       resetForm();
       setShowForm(false);
       
@@ -874,9 +737,8 @@ const HostPresentation = () => {
     } catch (error) {
       console.error('Error creating/updating presentation event:', error);
       
-      // Show a more specific error message
       let errorMessage = 'Failed to save presentation event';
-      if (error.response && error.response.data && error.response.data.message) {
+      if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
       } else if (error.message) {
         errorMessage = error.message;
@@ -886,6 +748,140 @@ const HostPresentation = () => {
     } finally {
       setIsSubmitting(false);
     }
+  };
+  
+  // Helper to create array of time slots with day of week
+  const buildTimeSlotArray = () => {
+    const allTimeSlots = [];
+    daySlots.dateRange.daysOfWeek.forEach(dayOfWeek => {
+      const slotsForDay = daySlots.slots[dayOfWeek] || [];
+      
+      // Add each slot with its day of week
+      slotsForDay.forEach(slot => {
+        allTimeSlots.push({
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          dayOfWeek: dayOfWeek
+        });
+      });
+    });
+    return allTimeSlots;
+  };
+  
+  // Delete existing slots when editing an event
+  const deleteExistingSlots = async () => {
+    try {
+      const existingSlots = await PresentationService.getEventSlots(editingEvent.title);
+      
+      if (existingSlots && existingSlots.length > 0) {
+        // Delete each slot individually
+        await Promise.all(
+          existingSlots
+            .filter(slot => slot.status === 'available')
+            .map(slot => PresentationService.deleteSlot(slot._id))
+        );
+      }
+    } catch (error) {
+      console.error('Error deleting existing slots:', error);
+      toast.warning('Some existing slots could not be deleted');
+    }
+  };
+  
+  // Validate form before submission - consolidated validation logic
+  const validateFormBeforeSubmit = () => {
+    // Check required fields
+    if (!formData.title || !formData.description || !formData.venue || 
+        !formData.targetYear || !formData.targetSchool || !formData.targetDepartment) {
+      toast.error('Please fill all required fields');
+      return false;
+    }
+    
+    // Validate date range
+    if (!daySlots.dateRange.startDate || !daySlots.dateRange.endDate) {
+      toast.error('Please select a date range');
+      return false;
+    }
+    
+    // Validate days selection
+    if (daySlots.dateRange.daysOfWeek.length === 0) {
+      toast.error('Please select at least one day of the week');
+      return false;
+    }
+    
+    // Check time slots for each day
+    const missingTimeSlots = daySlots.dateRange.daysOfWeek.filter(day => 
+      daySlots.slots[day].length === 0
+    );
+    
+    if (missingTimeSlots.length > 0) {
+      const missingDays = missingTimeSlots.map(day => getDayLabel(day)).join(', ');
+      toast.error(`Please add at least one time slot for: ${missingDays}`);
+      return false;
+    }
+
+    // Validate date order
+    if (new Date(daySlots.dateRange.startDate) > new Date(daySlots.dateRange.endDate)) {
+      toast.error('Start date must be before or equal to end date');
+      return false;
+    }
+    
+    // Validate selected days exist in the range
+    const daysValidation = validateSelectedDays();
+    if (!daysValidation.valid) {
+      const invalidDayLabels = daysValidation.invalidDays.map(day => getDayLabel(day)).join(', ');
+      toast.error(`Selected days not in date range: ${invalidDayLabels}`);
+      return false;
+    }
+    
+    // Validate dates were generated
+    const generatedDates = generateDatesFromRange();
+    if (generatedDates.length === 0) {
+      toast.error('No dates were generated. Please check your date range and selected days.');
+      return false;
+    }
+    
+    // Check for overlapping time slots
+    if (hasOverlappingTimeSlots()) {
+      toast.error('Some time slots are overlapping. Please check your schedule.');
+      return false;
+    }
+    
+    return true;
+  };
+  
+  // Check for overlapping time slots
+  const hasOverlappingTimeSlots = () => {
+    let hasOverlaps = false;
+    
+    Object.entries(daySlots.slots).forEach(([day, slots]) => {
+      if (slots.length <= 1) return;
+      
+      // Sort slots by start time
+      const sortedSlots = [...slots].sort((a, b) => {
+        const aMinutes = timeToMinutes(a.startTime);
+        const bMinutes = timeToMinutes(b.startTime);
+        return aMinutes - bMinutes;
+      });
+      
+      // Check for overlaps
+      for (let i = 0; i < sortedSlots.length - 1; i++) {
+        const currentEndMinutes = timeToMinutes(sortedSlots[i].endTime);
+        const nextStartMinutes = timeToMinutes(sortedSlots[i + 1].startTime);
+        
+        if (currentEndMinutes > nextStartMinutes) {
+          hasOverlaps = true;
+          break;
+        }
+      }
+    });
+    
+    return hasOverlaps;
+  };
+  
+  // Convert time string to minutes
+  const timeToMinutes = (timeString) => {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
   };
   
   // Format date for display
@@ -927,6 +923,8 @@ const HostPresentation = () => {
     animate: { opacity: 1, y: 0 },
     exit: { opacity: 0, y: -20 }
   };
+
+  // Page animation variants
 
   return (
     <motion.div
@@ -1688,7 +1686,7 @@ const HostPresentation = () => {
                 </button>
                 <button
                   className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium shadow-md disabled:opacity-75"
-                  onClick={executeDelete}
+                  onClick={handleDeleteEvent}
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? 'Deleting...' : 'Delete'}

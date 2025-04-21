@@ -412,6 +412,27 @@ const FacultyAppointmentComponent = () => {
     return true;
   };
 
+  // Consolidate the duplicate date/time validation logic
+  const validateDateTimeField = (dateField, timeField, dateValue, timeValue, dateLabel, timeLabel) => {
+    let isValid = true;
+    
+    if (dateValue || timeValue) {
+      if (!validateDate(dateField, dateValue, dateLabel, !!timeValue)) isValid = false;
+      if (!validateTime(timeField, timeValue, timeLabel, !!dateValue)) isValid = false;
+      
+      if (timeValue && !dateValue) {
+        setErrors(prev => ({ ...prev, [dateField]: 'Date required if time is set.' }));
+        isValid = false;
+      }
+      if (dateValue && !timeValue) {
+        setErrors(prev => ({ ...prev, [timeField]: 'Time required if date is set.' }));
+        isValid = false;
+      }
+    }
+    
+    return isValid;
+  };
+
   // Validate alternative slots
   const validateAlternativeSlots = () => {
     let isValid = true;
@@ -422,43 +443,17 @@ const FacultyAppointmentComponent = () => {
     
     // Reset specific alt slot errors
     setErrors(prev => ({
-      ...prev,
-      alt_date_1: '',
-      alt_time_1: '',
-      alt_date_2: '',
-      alt_time_2: '',
+      ...prev, 
+      alt_date_1: '', alt_time_1: '', 
+      alt_date_2: '', alt_time_2: '',
       alt_slots: ''
     }));
     
-    // Slot 1 validation (date and time must both be present or both empty)
-    if (date1 || time1) {
-      if (!validateDate('alt_date_1', date1, 'Alt. Date 1', !!time1)) isValid = false;
-      if (!validateTime('alt_time_1', time1, 'Alt. Time 1', !!date1)) isValid = false;
-      
-      if (time1 && !date1) {
-        setErrors(prev => ({ ...prev, alt_date_1: 'Date required if time is set.' }));
-        isValid = false;
-      }
-      if (date1 && !time1) {
-        setErrors(prev => ({ ...prev, alt_time_1: 'Time required if date is set.' }));
-        isValid = false;
-      }
-    }
+    // Validate slot 1
+    isValid = validateDateTimeField('alt_date_1', 'alt_time_1', date1, time1, 'Alt. Date 1', 'Alt. Time 1') && isValid;
     
-    // Slot 2 validation (date and time must both be present or both empty)
-    if (date2 || time2) {
-      if (!validateDate('alt_date_2', date2, 'Alt. Date 2', !!time2)) isValid = false;
-      if (!validateTime('alt_time_2', time2, 'Alt. Time 2', !!date2)) isValid = false;
-      
-      if (time2 && !date2) {
-        setErrors(prev => ({ ...prev, alt_date_2: 'Date required if time is set.' }));
-        isValid = false;
-      }
-      if (date2 && !time2) {
-        setErrors(prev => ({ ...prev, alt_time_2: 'Time required if date is set.' }));
-        isValid = false;
-      }
-    }
+    // Validate slot 2
+    isValid = validateDateTimeField('alt_date_2', 'alt_time_2', date2, time2, 'Alt. Date 2', 'Alt. Time 2') && isValid;
     
     // Check if Alt 2 is same as Alt 1 (only if both are fully entered)
     if (date1 && time1 && date2 && time2 && date1 === date2 && time1 === time2) {

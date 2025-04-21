@@ -67,8 +67,6 @@ const createAppointment = async (req, res) => {
       });
     }
     
-    console.log('Processed appointment data:', JSON.stringify(appointmentData, null, 2));
-    
     // Verify the presence of required fields before creating the appointment
     if (!appointmentData.student.userId) {
       return res.status(400).json({
@@ -295,6 +293,28 @@ const getAppointmentById = async (req, res) => {
   }
 };
 
+// Consolidate authorization checks
+const checkAppointmentAuthorization = (appointment, userId, role) => {
+  if (role === 'student') {
+    if (status !== 'cancelled') {
+      return { authorized: false, message: 'Students can only cancel appointments' };
+    }
+    
+    if (!compareIds(appointment.student.userId, userId)) {
+      return { authorized: false, message: 'You can only cancel your own appointments' };
+    }
+  } else if (role === 'faculty') {
+    const isFacultyMatch = compareIds(appointment.faculty.userId, userId) || 
+                          (req.user.email && appointment.faculty.email === req.user.email);
+    
+    if (!isFacultyMatch) {
+      return { authorized: false, message: 'You can only manage appointments assigned to you' };
+    }
+  }
+  
+  return { authorized: true };
+}
+
 // Update appointment status (approve, reject, cancel)
 const updateAppointmentStatus = async (req, res) => {
   try {
@@ -324,32 +344,12 @@ const updateAppointmentStatus = async (req, res) => {
     // 1. Student can only cancel their own appointments
     // 2. Faculty can approve/reject/complete appointments assigned to them
     // 3. Admin can perform any action
-    if (role === 'student') {
-      if (status !== 'cancelled') {
-        return res.status(403).json({
-          success: false,
-          message: 'Students can only cancel appointments'
-        });
-      }
-      
-      // Check if this appointment belongs to the student
-      if (!compareIds(appointment.student.userId, userId)) {
-        return res.status(403).json({
-          success: false,
-          message: 'You can only cancel your own appointments'
-        });
-      }
-    } else if (role === 'faculty') {
-      // Faculty authorization check - compare ID OR email as fallback
-      const isFacultyMatch = compareIds(appointment.faculty.userId, userId) || 
-                            (req.user.email && appointment.faculty.email === req.user.email);
-                            
-      if (!isFacultyMatch) {
-        return res.status(403).json({
-          success: false,
-          message: 'You can only manage appointments assigned to you'
-        });
-      }
+    const authorization = checkAppointmentAuthorization(appointment, userId, role);
+    if (!authorization.authorized) {
+      return res.status(403).json({
+        success: false,
+        message: authorization.message
+      });
     }
     
     // Update the appointment

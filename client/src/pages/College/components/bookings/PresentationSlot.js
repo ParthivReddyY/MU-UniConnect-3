@@ -79,6 +79,11 @@ const PresentationSlot = () => {
       const availableEvents = await PresentationService.getAvailableEvents();
       console.log('Received events:', availableEvents);
       
+      // Debug host data
+      if (availableEvents && availableEvents.length > 0) {
+        console.log('First event host data:', availableEvents[0].host);
+      }
+      
       // Store all events first
       setEvents(availableEvents);
       
@@ -144,36 +149,6 @@ const PresentationSlot = () => {
     // since it's already defined as a useCallback earlier
   }, []);
   
-  /* Removing unused function
-  // Helper function to determine school based on department
-  const getDepartmentSchool = (department) => {
-    if (!department) return '';
-    
-    if (department.includes('CSE') || 
-        department.includes('ECE') || 
-        department.includes('Computer') || 
-        department.includes('Electronics') ||
-        department.includes('Mechanical') ||
-        department.includes('Civil') ||
-        department.includes('Engineering')) {
-      return 'ECSE';
-    }
-    
-    if (department.includes('Management') || 
-        department.includes('Finance') || 
-        department.includes('MBA') ||
-        department.includes('Economics')) {
-      return 'SOM';
-    }
-    
-    if (department.includes('Law')) {
-      return 'SOL';
-    }
-    
-    return '';
-  };
-  */
-
   // Format date for display
   const formatDate = (dateString) => {
     return format(new Date(dateString), 'EEE, MMM d, yyyy');
@@ -633,8 +608,6 @@ const PresentationSlot = () => {
     exit: { opacity: 0, y: -20 }
   };
 
-  // Removing unused function - formatYearDisplay already provides similar functionality
-
   // Improved department abbreviation function - focusing on shorter forms only
   const getDepartmentAbbreviation = (departmentString) => {
     if (!departmentString) return '';
@@ -671,11 +644,43 @@ const PresentationSlot = () => {
     return yearString;
   };
 
-  // Add a function to get host name with proper fallback
+  // Improve the host name extraction function to handle more cases
   const getHostName = (host) => {
+    // Debug the host object structure
+    console.log('Host data in getHostName:', host);
+    
     if (!host) return "Faculty";
-    if (host.name) return host.name;
-    if (host.user && typeof host.user === 'object' && host.user.name) return host.user.name;
+    
+    // Direct name property - common case for non-populated hosts
+    if (host.name) {
+      console.log('Using host.name:', host.name);
+      return host.name;
+    }
+    
+    // If host is a string ID instead of an object
+    if (typeof host === 'string') {
+      console.log('Host is a string ID');
+      return "Faculty";
+    }
+    
+    // Name in the user object (if user is populated)
+    if (host.user) {
+      // If user object is populated
+      if (typeof host.user === 'object' && host.user.name) {
+        console.log('Using host.user.name:', host.user.name);
+        return host.user.name;
+      }
+    }
+    
+    // If email exists, extract username
+    if (host.email) {
+      const emailUsername = host.email.split('@')[0];
+      const formattedName = emailUsername.charAt(0).toUpperCase() + emailUsername.slice(1);
+      console.log('Using formatted email username:', formattedName);
+      return formattedName;
+    }
+    
+    console.log('No name found in host object, returning "Faculty"');
     return "Faculty";
   };
 
@@ -731,7 +736,7 @@ const PresentationSlot = () => {
   const renderEmptyState = () => (
     <div className="text-center py-12 border-2 border-dashed border-amber-300 rounded-xl">
       <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-amber-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v12a2 2 0 002 2z" />
       </svg>
       <h3 className="text-xl font-medium text-gray-800 mb-2">No Presentations Available</h3>
       <p className="text-gray-600 mb-6">There are no presentation events currently available for your year or department.</p>
@@ -1182,7 +1187,7 @@ const PresentationSlot = () => {
                             </div>
                             <div>
                               <dt className="text-sm font-medium text-gray-500">Host</dt>
-                              <dd className="mt-1 text-sm text-gray-900">{booking.slot.hostName || 'Faculty'}</dd>
+                              <dd className="mt-1 text-sm text-gray-900">{getHostName(booking.slot.host)}</dd>
                             </div>
                           </dl>
                           

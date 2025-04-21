@@ -233,8 +233,8 @@ export const EventBooking = () => {
   );
 };
 
-// Host Presentation Component (NEW)
-export const HostPresentation = () => {
+// Host Presentation Component (NEW) - renamed to HostPresentationCard
+export const HostPresentationCard = () => {
   const [isHovered, setIsHovered] = useState(false);
   const navigate = useNavigate();
   const { isFaculty, isClubHead, isAdmin } = useAuth();
@@ -350,7 +350,7 @@ const Bookings = () => {
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: 0.3 }}
           >
-            {isFaculty() || isClubHead() || isAdmin() ? <HostPresentation /> : <StudentAppointments />}
+            {isFaculty() || isClubHead() || isAdmin() ? <HostPresentationCard /> : <StudentAppointments />}
           </motion.div>
         </motion.div>
       </motion.div>

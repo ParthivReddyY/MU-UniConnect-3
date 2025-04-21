@@ -10,6 +10,12 @@ class PresentationService {
       });
       console.log('Available events response:', response.status);
       console.log('Event count:', response.data ? response.data.length : 0);
+      
+      // Debug host data in first event if available
+      if (response.data && response.data.length > 0) {
+        console.log('Sample event host data:', response.data[0].host);
+      }
+      
       return response.data || [];
     } catch (error) {
       console.error('Error fetching available events:', error);
@@ -85,6 +91,12 @@ class PresentationService {
   async getUserBookings() {
     try {
       const response = await api.get('/api/presentation-slots/student-bookings');
+      
+      // Debug host data in bookings
+      if (response.data && response.data.length > 0) {
+        console.log('Sample booking host data:', response.data[0].slot.host);
+      }
+      
       return response.data;
     } catch (error) {
       console.error('Error fetching user bookings:', error);
@@ -174,12 +186,9 @@ class PresentationService {
   // Delete slots by title (bulk delete)
   async deleteSlotsByTitle(title) {
     try {
-      console.log(`Attempting to delete slots with title: "${title}"`);
       const response = await api.post('/api/presentation-slots/delete-by-title', { title });
-      console.log('Delete response:', response.data);
       return response.data;
     } catch (error) {
-      console.error(`Error deleting slots with title "${title}":`, error);
       throw error;
     }
   }
