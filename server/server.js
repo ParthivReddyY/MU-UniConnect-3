@@ -12,6 +12,9 @@ const authRoutes = require('./routes/authRoutes');
 const facultyRoutes = require('./routes/facultyRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
 const routes = require('./routes');
+const feedbackRoutes = require('./routes/feedbackRoutes');
+const uploadRoutes = require('./routes/uploadRoutes');  // Add this line
+const proxyRoutes = require('./routes/proxyRoutes');
 
 // Import other routes as needed
 
@@ -118,6 +121,10 @@ app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/presentation-slots', require('./routes/api/presentationSlots'));
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/upload', uploadRoutes);  // Add this line
+app.use('/api/proxy', proxyRoutes);
+
 // Remove duplicate feedback route registration
 
 // Add the search route directly here instead of through users.js

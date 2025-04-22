@@ -28,11 +28,11 @@ const getFacultyById = async (req, res) => {
   }
 };
 
-// Create new faculty - The function is correct, just adding extra logging
+// Create new faculty
 const createFaculty = async (req, res) => {
   try {
     // Extract basic information for user account
-    const { name, emails, school, password } = req.body;
+    const { name, emails, school, password, image } = req.body;
     
     // Validate that emails array exists and has at least one email
     if (!emails || !Array.isArray(emails) || emails.length === 0) {
@@ -70,7 +70,7 @@ const createFaculty = async (req, res) => {
       return res.status(400).json({ message: 'Password must be at least 6 characters long' });
     }
     
-    // Create faculty record
+    // Create faculty record with image URL if provided
     const faculty = new Faculty({
       ...req.body,
       email: primaryEmail // Set primary email
@@ -78,19 +78,16 @@ const createFaculty = async (req, res) => {
     
     await faculty.save();
     
-    // Create user account for faculty - DO NOT HASH PASSWORD HERE
-    // Let the User model's pre-save middleware handle hashing
+    // Create user account for faculty
     const user = await User.create({
       name,
       email: emails[0], // Primary email
       role: 'faculty',
       department: school,
       password // Pass plaintext password - it will be hashed by the pre-save hook
-      // Removed forcePasswordChange flag
     });
     
     console.log(`Creating user account for faculty: ${name}, email: ${primaryEmail}`);
-    
     console.log(`Faculty user account created successfully: ${primaryEmail}`);
     
     res.status(201).json({
@@ -140,6 +137,20 @@ const updateFaculty = async (req, res) => {
       }
     }
     
+    // Handle image replacement - if image URL is changing and old image was from our server
+    if (req.body.image && req.body.image !== faculty.image && faculty.image) {
+      try {
+        // Only delete if it's an uploaded image (not external URL or default image)
+        if (faculty.image.includes('/uploads/images/')) {
+          const imageHandler = require('../utils/imageHandler');
+          await imageHandler.deleteImage(faculty.image);
+        }
+      } catch (imageError) {
+        console.error('Error deleting old image:', imageError);
+        // Continue with update even if image deletion fails
+      }
+    }
+    
     // Update faculty record
     const updatedFaculty = await Faculty.findByIdAndUpdate(
       facultyId,
@@ -164,6 +175,17 @@ const deleteFaculty = async (req, res) => {
     
     if (!faculty) {
       return res.status(404).json({ message: 'Faculty not found' });
+    }
+    
+    // Delete faculty image if it's a stored image
+    if (faculty.image && faculty.image.includes('/uploads/images/')) {
+      try {
+        const imageHandler = require('../utils/imageHandler');
+        await imageHandler.deleteImage(faculty.image);
+      } catch (imageError) {
+        console.error('Error deleting faculty image:', imageError);
+        // Continue with deletion even if image removal fails
+      }
     }
     
     // Delete faculty record

@@ -49,7 +49,42 @@ const FacultyDetail = () => {
 
   // Handle image change from ImageUploader component
   const handleImageChange = (data) => {
-    setImageData(data);
+    // Clear image data if null is passed
+    if (!data) {
+      setImageData(null);
+      return;
+    }
+  
+    try {
+      // Store image data based on type
+      if (data.type === 'file') {
+        // For file uploads
+        setImageData({
+          type: 'file',
+          file: data.file,
+          fileName: data.fileName,
+          fileType: data.fileType,
+          fileSize: data.fileSize,
+          // Just store a small preview to avoid large state objects
+          preview: data.dataUrl.substring(0, 100) + '...'
+        });
+        console.log("File image selected");
+      } else if (data.type === 'url') {
+        // For URL-based images - store complete URL data
+        setImageData({
+          type: 'url',
+          url: data.url,
+          width: data.width,
+          height: data.height,
+          hasCORSIssues: data.hasCORSIssues
+        });
+        
+        // Log for debugging
+        console.log("URL image selected:", data.url, data.hasCORSIssues ? "(CORS issues detected)" : "");
+      }
+    } catch (error) {
+      console.error("Error handling image change:", error);
+    }
   };
 
   // Fetch faculty data
@@ -111,14 +146,39 @@ const FacultyDetail = () => {
         department: data.school
       };
       
-      // Handle image data
+      // Handle image data separately
       if (imageData) {
         if (imageData.type === 'url' && imageData.url) {
+          // For URL images, just pass the URL directly
+          console.log("Submitting URL image:", imageData.url);
           formattedData.image = imageData.url;
-        } else if (imageData.type === 'file' && imageData.dataUrl) {
-          // For file uploads, send the data URL directly
-          // In a production app, you might want to upload to a storage service first
-          formattedData.image = imageData.dataUrl;
+          
+          // Add a note about CORS if applicable
+          if (imageData.hasCORSIssues) {
+            console.log("Note: This image URL may have CORS restrictions for preview");
+          }
+        } else if (imageData.type === 'file' && imageData.file) {
+          // For file uploads, use FormData to upload the file
+          const formData = new FormData();
+          formData.append('image', imageData.file);
+          
+          try {
+            console.log("Uploading file image");
+            // Upload the image first
+            const imageUploadResponse = await api.post('/api/upload/image', formData, {
+              headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            // If upload successful, get the image URL from response
+            if (imageUploadResponse.data && imageUploadResponse.data.imageUrl) {
+              formattedData.image = imageUploadResponse.data.imageUrl;
+              console.log("File uploaded successfully:", formattedData.image);
+            }
+          } catch (uploadError) {
+            console.error('Error uploading image:', uploadError);
+            setError(uploadError.response?.data?.message || 'Failed to upload image. Please try again.');
+            return;
+          }
         }
       }
       
@@ -344,6 +404,7 @@ const FacultyDetail = () => {
                         initialImage={faculty?.image} 
                         onImageChange={handleImageChange}
                         defaultImage="/img/default-faculty.png"
+                        buttonText="Select Image"
                       />
                     </div>
                   </div>
