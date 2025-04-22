@@ -125,14 +125,8 @@ const ImageUploader = forwardRef(({
       if (urlObj.origin !== window.location.origin && 
           !url.startsWith('data:') && 
           !url.startsWith('blob:')) {
-        // These are public CORS proxies - replace with your own proxy if needed
-        // Note: For production, you should implement your own proxy endpoint
-        const corsProxies = [
-          `https://corsproxy.io/?${encodeURIComponent(url)}`,
-          `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-          `https://proxy.cors.sh/${url}`
-        ];
-        return corsProxies[0]; // Use the first proxy option
+        // Use our own server proxy instead of public CORS proxies
+        return `/api/proxy/image?url=${encodeURIComponent(url)}`;
       }
       return url;
     } catch (e) {

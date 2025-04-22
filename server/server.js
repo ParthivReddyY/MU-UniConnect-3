@@ -14,6 +14,7 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const routes = require('./routes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');  // Add this line
+const proxyRoutes = require('./routes/proxyRoutes');
 
 // Import other routes as needed
 
@@ -122,6 +123,7 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/presentation-slots', require('./routes/api/presentationSlots'));
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/upload', uploadRoutes);  // Add this line
+app.use('/api/proxy', proxyRoutes);
 
 // Remove duplicate feedback route registration
 

@@ -7,6 +7,7 @@ const { pipeline } = require('stream');
 const streamPipeline = promisify(pipeline);
 const fetch = require('node-fetch');
 const config = require('../config/config');
+const unlinkAsync = promisify(fs.unlink);
 
 /**
  * Image Handler Utility
@@ -201,6 +202,51 @@ const imageHandler = {
     } catch (error) {
       console.error('Error deleting image:', error);
       return false;
+    }
+  },
+  
+  /**
+   * Fetch an image from a URL and save it locally
+   * @param {string} imageUrl - External image URL to fetch
+   * @returns {Promise<string|null>} - Local URL of saved image or null if failed
+   */
+  fetchAndSaveExternalImage: async (imageUrl) => {
+    try {
+      if (!imageUrl) return null;
+      
+      // Generate a unique filename
+      const timestamp = Date.now();
+      const randomString = Math.random().toString(36).substring(2, 10);
+      const extension = imageUrl.split('.').pop().split('?')[0] || 'jpg';
+      const filename = `external_${timestamp}_${randomString}.${extension}`;
+      
+      // Fetch the image
+      const response = await fetch(imageUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.statusText}`);
+      }
+      
+      // Create directory if it doesn't exist
+      const uploadDir = path.join(__dirname, '..', 'public', 'uploads', 'images');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+      
+      // Save the image to disk
+      const imagePath = path.join(uploadDir, filename);
+      const buffer = await response.buffer();
+      fs.writeFileSync(imagePath, buffer);
+      
+      // Return the new local URL
+      return `/uploads/images/${filename}`;
+    } catch (error) {
+      console.error('Error fetching external image:', error);
+      return null;
     }
   }
 };
