@@ -663,8 +663,8 @@ const ClubsEvents = () => {
             </div>
           </div>
           
-          {/* Add Club Button - Only show for admins and club heads */}
-          {currentUser && (currentUser.role === 'admin' || currentUser.role === 'clubs') && (
+          {/* Add Club Button - Only show for admins */}
+          {currentUser && currentUser.role === 'admin' && (
             <button 
               className="bg-primary-red text-white rounded-full px-6 py-3 font-medium flex items-center gap-2 shadow-md hover:bg-secondary-red hover:-translate-y-1 transition-all duration-300"
               onClick={() => setShowModal(true)}
@@ -1329,8 +1329,7 @@ const ClubsEvents = () => {
           onClose={() => setSelectedClub(null)}
           onDelete={() => handleDeleteClub(selectedClub._id)}
           onUpdate={handleUpdateClub}
-          canDelete={currentUser && (currentUser.role === 'admin' || 
-                      (currentUser.role === 'clubs' && currentUser.clubManaging === selectedClub._id))}
+          canDelete={currentUser && currentUser.role === 'admin'} // Only admins can delete clubs
         />
       )}
 
@@ -1684,6 +1683,17 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
 
   // Determine if any edit mode is active
   const isEditingAny = isEditingDetails || isEditingEvents;
+  
+  // Check if user has permission to edit this club (admin or club owner)
+  const hasEditPermission = () => {
+    if (!currentUser) return false;
+    if (currentUser.role === 'admin') return true;
+    // Check if user is a club owner/head and managing this club
+    return (
+      (currentUser.role === 'clubs' || currentUser.role === 'clubHead') && 
+      currentUser.clubManaging === club._id
+    );
+  };
 
   // Initialize/Reset form data ONLY when the club prop changes
   useEffect(() => {
@@ -2367,8 +2377,8 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
               </div>
               {/* Edit/Delete Buttons Container */}
               <div className="absolute top-4 right-4 flex items-center gap-2">
-                {/* Updated Edit Button */}
-                {currentUser?.role === 'admin' && (
+                {/* Show Edit Details button only if user has edit permission */}
+                {hasEditPermission() && (
                   <button
                     onClick={handleToggleDetailsEdit} // Edit Details
                     className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-md hover:bg-indigo-200 transition-colors flex items-center gap-1.5 shadow-sm"
@@ -2376,6 +2386,7 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                     <i className="fas fa-edit text-xs"></i> Edit Details
                   </button>
                 )}
+                {/* Only show delete button if canDelete is true */}
                 {canDelete && (
                   <button
                     onClick={onDelete}
@@ -2526,7 +2537,7 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
               <div className="flex justify-between items-center mb-8"> {/* Flex container for heading and button */}
                 <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-2"><i className="fas fa-calendar-alt text-primary-red"></i> Events</h2>
                 {/* Add Edit Events Button - Conditionally Rendered */}
-                {currentUser?.role === 'admin' && (
+                {hasEditPermission() && (
                   <button
                     onClick={handleToggleEventsEdit} // Toggles the main edit mode
                     className="px-3 py-1.5 bg-indigo-100 text-indigo-700 text-sm font-medium rounded-md hover:bg-indigo-200 transition-colors flex items-center gap-1.5 shadow-sm"
