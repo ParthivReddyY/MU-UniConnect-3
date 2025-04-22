@@ -71,7 +71,7 @@ const isFacultyOrAdmin = (req, res, next) => {
 
 // Check if user is club head or admin
 const isClubHeadOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'clubHead' || req.user.role === 'admin')) {
+  if (req.user && (req.user.role === 'clubHead' || req.user.role === 'clubs' || req.user.role === 'admin')) {
     next();
   } else {
     res.status(403).json({ success: false, message: 'Club head or admin access required' });

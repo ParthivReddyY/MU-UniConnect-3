@@ -13,7 +13,7 @@ const UserSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Please provide an email'],
     match: [
-      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
+      /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/,
       'Please provide a valid email'
     ],
     unique: true,
@@ -27,7 +27,7 @@ const UserSchema = new mongoose.Schema({
   },
   role: {
     type: String,
-    enum: ['student', 'faculty', 'clubHead', 'admin'],
+    enum: ['student', 'faculty', 'clubs', 'admin'],
     default: 'student'
   },
   department: {
@@ -47,9 +47,9 @@ const UserSchema = new mongoose.Schema({
   },
   clubManaging: {
     type: String,
-    required: function() {
-      return this.role === 'clubHead';
-    }
+    // Making clubManaging not required so it can be updated after club creation
+    // Removing the required validator to allow initial creation without clubManaging
+    // It will be updated via the update-club-head endpoint after club creation
   },
   profileImage: {
     type: String

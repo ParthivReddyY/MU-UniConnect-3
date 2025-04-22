@@ -154,8 +154,8 @@ const createUser = async (req, res) => {
   try {
     const { name, email, password, role, department, clubManaging } = req.body;
     
-    // Validate role
-    if (!['faculty', 'clubHead', 'admin'].includes(role)) {
+    // Validate role - Updated to include 'clubs' role
+    if (!['faculty', 'clubHead', 'clubs', 'admin'].includes(role)) {
       return res.status(400).json({ message: 'Invalid role' });
     }
     
@@ -180,41 +180,38 @@ const createUser = async (req, res) => {
         return res.status(400).json({ message: 'Department is required for faculty members' });
       }
       userData.department = department;
-    } else if (role === 'clubHead') {
-      if (!clubManaging) {
-        return res.status(400).json({ message: 'Club name is required for club heads' });
+    } else if (role === 'clubHead' || role === 'clubs') {
+      // Updated to handle both clubHead and clubs roles
+      if (clubManaging) {
+        userData.clubManaging = clubManaging;
       }
-      userData.clubManaging = clubManaging;
+      // Note: clubManaging may be updated after club creation, so not requiring it here
     }
+    
+    console.log('Creating user with data:', {
+      name,
+      email,
+      role,
+      department: userData.department || 'N/A',
+      clubManaging: userData.clubManaging || 'N/A'
+    });
     
     const user = await User.create(userData);
     
-    // Generate temporary password and send email
-    const temporaryPassword = crypto.randomBytes(6).toString('hex');
-    user.password = temporaryPassword;
-    await user.save();
-    
-    try {
-      await sendEmail({
+    // Return the created user without sending email
+    // This allows the frontend to use the user ID for further operations
+    res.status(201).json({
+      success: true,
+      message: `${role} account created successfully.`,
+      user: {
+        _id: user._id,
+        name: user.name,
         email: user.email,
-        templateId: TEMPLATES.WELCOME,
-        params: {
-          name: user.name,
-          role: user.role,
-          password: temporaryPassword,
-          loginLink: `${req.protocol}://${req.get('host')}/login`
-        }
-      });
-      
-      res.status(201).json({
-        success: true,
-        message: `${role} account created successfully. Temporary password sent to email.`
-      });
-    } catch (error) {
-      return res.status(500).json({ message: 'Email could not be sent, but account was created' });
-    }
+        role: user.role
+      }
+    });
   } catch (error) {
-    console.error(error);
+    console.error('Error creating user:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -757,6 +754,63 @@ const updateProfile = async (req, res) => {
   }
 };
 
+// Add a function to update club head/club account with club ID
+const updateClubHead = async (req, res) => {
+  try {
+    const { userId, clubManaging } = req.body;
+    
+    if (!userId || !clubManaging) {
+      return res.status(400).json({
+        success: false,
+        message: 'User ID and club ID are required'
+      });
+    }
+    
+    // Find the user by ID
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Make sure user role is appropriate for club management
+    if (user.role !== 'clubs' && user.role !== 'clubHead') {
+      return res.status(400).json({
+        success: false,
+        message: 'User role must be clubs or clubHead to manage clubs'
+      });
+    }
+    
+    // Update the clubManaging field
+    user.clubManaging = clubManaging;
+    await user.save();
+    
+    console.log(`Updated user ${userId} with clubManaging: ${clubManaging}`);
+    
+    res.status(200).json({
+      success: true,
+      message: 'Club association updated successfully',
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        clubManaging: user.clubManaging
+      }
+    });
+  } catch (error) {
+    console.error('Error updating club association:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while updating club association',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   register,
   createUser,
@@ -770,5 +824,6 @@ module.exports = {
   requestPasswordChangeOTP,
   changePassword,
   searchUsers,
-  updateProfile
+  updateProfile,
+  updateClubHead  // Add the new function to exports
 };

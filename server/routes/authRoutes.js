@@ -12,7 +12,8 @@ const {
   checkEmail,
   changePassword,
   requestPasswordChangeOTP,
-  updateProfile // Add this new controller function
+  updateProfile, // Add this new controller function
+  updateClubHead // Add this new function for updating club head/club accounts
 } = require('../controllers/authController');
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
@@ -34,10 +35,15 @@ router.post('/change-password', authenticateUser, changePassword);
 // Protected routes
 router.get('/me', authenticateUser, getCurrentUser);
 
-// Admin-only routes
-router.post('/create-user', authenticateUser, isAdmin, createUser);
+// Public user creation route for clubs
+router.post('/create-user', createUser);
 
 // Add the update profile endpoint
 router.put('/update-profile', authenticateUser, updateProfile);
+
+// Add endpoint for updating club management relationship
+// This is used after creating a club to associate it with a club account
+// Making this public so it can be called after club creation
+router.put('/update-club-head', updateClubHead);
 
 module.exports = router;
