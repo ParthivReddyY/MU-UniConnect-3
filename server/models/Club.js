@@ -95,6 +95,14 @@ const ClubSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
+  linkedin: {
+    type: String,
+    trim: true
+  },
+  website: {
+    type: String,
+    trim: true
+  },
   email: {
     type: String,
     trim: true,

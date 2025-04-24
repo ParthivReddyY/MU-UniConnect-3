@@ -651,11 +651,19 @@ const ClubsEvents = () => {
           <div className="flex flex-col md:flex-row justify-center gap-4 md:gap-12 mb-10">
             <div className="flex items-center gap-3">
               <i className="fas fa-users text-2xl text-primary-red"></i>
-              <span className="text-lg text-gray-800">{clubsData.length}+ Active Clubs</span>
+              <span className="text-lg text-gray-800">{clubsData.length} Active Clubs</span>
             </div>
-            <div className="flex items-center gap-3">
+            <div 
+              className="flex items-center gap-3 cursor-pointer hover:text-primary-red transition-colors" 
+              onClick={() => {
+                const eventsSection = document.getElementById('university-events-section');
+                if (eventsSection) {
+                  eventsSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+            >
               <i className="fas fa-calendar-alt text-2xl text-primary-red"></i>
-              <span className="text-lg text-gray-800">Regular Events</span>
+              <span className="text-lg text-gray-800">University Events</span>
             </div>
             <div className="flex items-center gap-3">
               <i className="fas fa-star text-2xl text-primary-red"></i>
@@ -724,7 +732,7 @@ const ClubsEvents = () => {
       </div>
 
       {/* Events Section - Now only shows University Events */}
-      <div className="w-full py-12 border-t border-gray-200 bg-white">
+      <div id="university-events-section" className="w-full py-12 border-t border-gray-200 bg-white">
         <div className="max-w-6xl mx-auto px-4 md:px-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 flex items-center gap-2">
@@ -1369,30 +1377,56 @@ const ClubsEvents = () => {
                           <i className="fas fa-image text-3xl text-gray-400"></i>
                         )}
                       </div>
-                      <div className="flex-1">
-                        <input
-                          type="file"
-                          id="clubLogo"
-                          accept="image/*"
-                          onChange={handleLogoChange}
-                          className="hidden"
-                        />
-                        <label 
-                          htmlFor="clubLogo" 
-                          className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md inline-block transition-colors"
-                        >
-                          <i className="fas fa-upload mr-2"></i> Upload Logo
-                        </label>
-                        {previewLogo && (
-                          <button
-                            type="button"
-                            onClick={() => setPreviewLogo(null)}
-                            className="ml-2 text-red-500 hover:text-red-700"
+                      <div className="flex-1 flex flex-col gap-2">
+                        {/* Logo URL Input */}
+                        <div>
+                          <input
+                            type="url"
+                            id="logoUrl"
+                            placeholder="Paste logo image URL here"
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                            onChange={(e) => {
+                              if (e.target.value.trim()) {
+                                setPreviewLogo(e.target.value.trim());
+                              }
+                            }}
+                          />
+                          <p className="text-xs text-gray-500 mt-1">Enter a direct URL to an image</p>
+                        </div>
+                        
+                        {/* Divider with OR */}
+                        <div className="flex items-center my-1">
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                          <div className="px-2 text-xs text-gray-500">OR</div>
+                          <div className="flex-1 h-px bg-gray-200"></div>
+                        </div>
+                        
+                        {/* File Upload Option */}
+                        <div>
+                          <input
+                            type="file"
+                            id="clubLogo"
+                            accept="image/*"
+                            onChange={handleLogoChange}
+                            className="hidden"
+                          />
+                          <label 
+                            htmlFor="clubLogo" 
+                            className="cursor-pointer bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-4 rounded-md inline-block transition-colors"
                           >
-                            <i className="fas fa-times mr-1"></i> Remove
-                          </button>
-                        )}
-                        <p className="text-xs text-gray-500 mt-1">Recommended: Square image, 400x400px or larger</p>
+                            <i className="fas fa-upload mr-2"></i> Upload Logo
+                          </label>
+                          {previewLogo && (
+                            <button
+                              type="button"
+                              onClick={() => setPreviewLogo(null)}
+                              className="ml-2 text-red-500 hover:text-red-700"
+                            >
+                              <i className="fas fa-times mr-1"></i> Remove
+                            </button>
+                          )}
+                          <p className="text-xs text-gray-500 mt-1">Recommended: Square image, 400x400px or larger</p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1590,8 +1624,6 @@ const ClubsEvents = () => {
                   <div className="pt-4 border-t border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Mentors</h3>
                     <div className="flex justify-between items-center mb-4">
-                      {/* Removed the redundant h4 heading */}
-                      {/* Updated button styling */}
                       <button 
                         type="button" 
                         onClick={addMentorField} 
@@ -1637,15 +1669,27 @@ const ClubsEvents = () => {
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-primary-red" 
                             />
                           </div>
-                          <div>
-                            <label className="block text-gray-700 text-sm mb-1">Email</label>
-                            <input 
-                              type="email" 
-                              value={mentor.email}
-                              onChange={(e) => handleMentorChange(index, 'email', e.target.value)}
-                              placeholder="Email"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-primary-red" 
-                            />
+                          <div className="flex items-start">
+                            <div className="flex-grow">
+                              <label className="block text-gray-700 text-sm mb-1">Email</label>
+                              <input 
+                                type="email" 
+                                value={mentor.email}
+                                onChange={(e) => handleMentorChange(index, 'email', e.target.value)}
+                                placeholder="Email"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-primary-red" 
+                              />
+                            </div>
+                            {index > 0 && (
+                              <button 
+                                type="button"
+                                onClick={() => removeMentorField(index)}
+                                className="text-red-500 hover:text-red-700 p-1 flex-shrink-0 mt-6 ml-2"
+                                aria-label="Remove Mentor"
+                              >
+                                <i className="fas fa-trash text-sm"></i>
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1704,9 +1748,11 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
         category: club.category || '',
         description: club.description || '',
         instagram: club.instagram || '',
+        linkedin: club.linkedin || '', // Properly set LinkedIn field
+        website: club.website || '',   // Properly set website field
         email: club.email || '',
         location: club.location || '',
-        logo: club.logo || '',
+        image: club.image || '',       // Use image instead of logo
         // Create a deep copy of head and viceHead objects to ensure they're independent objects
         head: { ...(club.head || { name: '', email: '' }) },
         viceHead: { ...(club.viceHead || { name: '', email: '' }) },
@@ -1717,7 +1763,7 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
         events: Array.isArray(club.events) ? club.events.map(event => ({ ...event })) : []
       };
       setFormData(initialData);
-      setPreviewLogo(club.logo || null); // Reset logo preview as well
+      setPreviewLogo(club.image || null); // Reset logo preview as well, using 'image' field
       setError(''); // Clear errors when club changes
       setSuccess(''); // Clear success messages when club changes
     }
@@ -1923,6 +1969,9 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
       // Prepare data for update
       const updateData = {
         ...formData,
+        linkedin: formData.linkedin || '',
+        website: formData.website || '',
+        image: previewLogo, // Make sure the image field is explicitly set to previewLogo
         members: formData.committee.filter(member => member.name?.trim() !== '').map(member => ({
           name: member.name,
           position: member.position,
@@ -1930,9 +1979,6 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
         })),
       };
       delete updateData.committee;
-      if (previewLogo !== club.logo) {
-         updateData.logo = previewLogo;
-      }
       console.log('Data being sent to updateClub:', JSON.stringify(updateData, null, 2));
 
       const response = await onUpdate(club._id, updateData);
@@ -2053,9 +2099,31 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                            <i className="fas fa-users text-5xl text-gray-400"></i>
                          )}
                        </div>
+                       
+                       {/* Logo URL Input */}
+                       <div className="mt-2 mb-3 w-full">
+                         <input 
+                           type="url" 
+                           placeholder="Paste logo image URL here" 
+                           className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-1"
+                           onChange={(e) => {
+                             if (e.target.value.trim()) {
+                               setPreviewLogo(e.target.value.trim());
+                             }
+                           }}
+                         />
+                         <div className="text-xs text-gray-500">Enter a direct URL to an image</div>
+                         
+                         <div className="flex items-center my-2">
+                           <div className="flex-1 h-px bg-gray-200"></div>
+                           <div className="px-2 text-xs text-gray-500">OR</div>
+                           <div className="flex-1 h-px bg-gray-200"></div>
+                         </div>
+                       </div>
+                       
                        <input type="file" id="logo-upload" accept="image/*" onChange={handleLogoChange} className="hidden" />
                        <label htmlFor="logo-upload" className="cursor-pointer bg-white py-1.5 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
-                         Change Logo
+                         Upload Logo
                        </label>
                        {previewLogo && (
                          <button type="button" onClick={() => setPreviewLogo(null)} className="mt-2 text-xs text-red-600 hover:text-red-800">
@@ -2077,6 +2145,8 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                   <h2 className="text-xl font-semibold text-gray-800 mb-6">Contact & Location</h2>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-0"> {/* Reduced gap-y */}
                     {renderField('Instagram Handle', 'instagram', 'text', false, 'e.g., mu_clubname (without @)')}
+                    {renderField('LinkedIn Page', 'linkedin', 'text', false, 'e.g., company/club-name')}
+                    {renderField('Website URL', 'website', 'url', false, 'e.g., https://clubwebsite.com')}
                     {renderField('Email Address', 'email', 'email', false, 'club.email@example.com')}
                     {renderField('Location / Room', 'location', 'text', false, 'e.g., Tech Park, Room 301')}
                   </div>
@@ -2147,23 +2217,25 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                              className="w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-red focus:border-primary-red text-sm bg-white"
                            />
                          </div>
-                         <div>
-                           <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
-                           <input 
-                             type="email" 
-                             value={typeof mentor === 'object' ? mentor.email || '' : ''}
-                             onChange={(e) => {
-                               const value = e.target.value;
-                               handleArrayChange('mentors', index, typeof mentor === 'object' ? 
-                                 { ...mentor, email: value } : { name: '', department: '', email: value })
-                             }}
-                             placeholder="Email"
-                             className="w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-red focus:border-primary-red text-sm bg-white"
-                           />
+                         <div className="flex items-start">
+                           <div className="flex-grow">
+                             <label className="block text-xs font-medium text-gray-500 mb-1">Email</label>
+                             <input 
+                               type="email" 
+                               value={typeof mentor === 'object' ? mentor.email || '' : ''}
+                               onChange={(e) => {
+                                 const value = e.target.value;
+                                 handleArrayChange('mentors', index, typeof mentor === 'object' ? 
+                                   { ...mentor, email: value } : { name: '', department: '', email: value })
+                               }}
+                               placeholder="Email"
+                               className="w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-red focus:border-primary-red text-sm bg-white"
+                             />
+                           </div>
+                           <button type="button" onClick={() => removeMentor(index)} className="text-red-500 hover:text-red-700 p-1 flex-shrink-0 mt-6 ml-2" aria-label="Remove Mentor">
+                             <i className="fas fa-trash text-sm"></i>
+                           </button>
                          </div>
-                         <button type="button" onClick={() => removeMentor(index)} className="md:col-span-3 text-red-500 hover:text-red-700 p-1 w-full text-center mt-2" aria-label="Remove Mentor">
-                           <i className="fas fa-trash text-sm mr-1"></i> Remove
-                         </button>
                        </div>
                      ))}
                      {formData.mentors?.length === 0 && (
@@ -2400,8 +2472,17 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
               {/* Main Header Content */}
               <div className="flex flex-col md:flex-row items-center md:items-center gap-6 md:gap-10">
                 <div className="flex-shrink-0 w-32 h-32 md:w-40 md:h-40 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden border-4 border-white shadow-lg">
-                  {club.logo ? (
-                    <img src={club.logo} alt={`${club.name} logo`} className="w-full h-full object-cover" />
+                  {club.image ? (
+                    <img 
+                      src={club.image} 
+                      alt={`${club.name} logo`} 
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.log("Image failed to load:", club.image);
+                        e.target.onerror = null;
+                        e.target.src = `/api/placeholder/150/150?text=${encodeURIComponent(club.name)}`;
+                      }}
+                    />
                   ) : (
                     <i className="fas fa-users text-6xl text-gray-400"></i>
                   )}
@@ -2418,6 +2499,16 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                     {club.instagram && (
                       <a href={`https://instagram.com/${club.instagram}`} target="_blank" rel="noopener noreferrer" className="flex items-center text-gray-600 hover:text-pink-600 transition-colors group">
                         <i className="fab fa-instagram text-lg mr-1.5 group-hover:scale-110 transition-transform"></i> @{club.instagram}
+                      </a>
+                    )}
+                    {club.linkedin && (
+                      <a href={`https://linkedin.com/in/${club.linkedin}`} target="_blank" rel="noopener noreferrer" className="flex items-center text-gray-600 hover:text-blue-700 transition-colors group">
+                        <i className="fab fa-linkedin text-lg mr-1.5 group-hover:scale-110 transition-transform"></i> LinkedIn
+                      </a>
+                    )}
+                    {club.website && (
+                      <a href={club.website} target="_blank" rel="noopener noreferrer" className="flex items-center text-gray-600 hover:text-green-700 transition-colors group">
+                        <i className="fas fa-globe text-lg mr-1.5 group-hover:scale-110 transition-transform"></i> Website
                       </a>
                     )}
                     {club.email && (
