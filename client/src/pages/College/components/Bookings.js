@@ -129,59 +129,6 @@ export const StudentAppointments = () => {
   );
 };
 
-// Presentation Slot Component
-export const PresentationSlot = () => {
-  const [isHovered, setIsHovered] = useState(false);
-  const navigate = useNavigate();
-  
-  return (
-    <motion.div 
-      className="relative overflow-hidden bg-white rounded-2xl shadow-lg"
-      whileHover={{ y: -8 }}
-      transition={{ type: "spring", stiffness: 300 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-amber-400 to-yellow-600 opacity-90" />
-      
-      <div className="absolute top-5 right-5 bg-white/20 backdrop-blur-md rounded-full p-3">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-      </div>
-      
-      <div className="relative p-7 z-10 h-full flex flex-col">
-        <h3 className="text-2xl font-bold mb-2 text-black">Presentation Slot</h3>
-        
-        <div className="my-4 bg-white/20 backdrop-blur-md h-px w-16" />
-        
-        <p className="text-black/90 mb-6 flex-grow">
-          Reserve time slots for project presentations, thesis defense, or seminar presentations 
-          with the necessary equipment and facilities.
-        </p>
-        
-        <div className="mt-auto space-y-4">
-          <div className="flex items-center text-black/90 text-sm font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-black/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>Duration: 30-60 minutes</span>
-          </div>
-          
-          <motion.button 
-            className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
-            whileTap={{ scale: 0.97 }}
-            animate={{ scale: isHovered ? 1.03 : 1 }}
-            onClick={() => navigate('/college/bookings/presentation-slot')}
-          >
-            Book Slot
-          </motion.button>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
 // Event Booking Component
 export const EventBooking = () => {
   const [isHovered, setIsHovered] = useState(false);
@@ -233,69 +180,6 @@ export const EventBooking = () => {
   );
 };
 
-// Host Presentation Component (NEW) - renamed to HostPresentationCard
-export const HostPresentationCard = () => {
-  const [isHovered, setIsHovered] = useState(false);
-  const navigate = useNavigate();
-  const { isFaculty, isClubHead, isAdmin } = useAuth();
-  
-  const handleHostPresentation = () => {
-    navigate('/college/bookings/host-presentation');
-  };
-  
-  // Only show for faculty, club heads, and admins
-  if (!isFaculty() && !isClubHead() && !isAdmin()) {
-    return null;
-  }
-  
-  return (
-    <motion.div 
-      className="relative overflow-hidden bg-white rounded-2xl shadow-lg"
-      whileHover={{ y: -8 }}
-      transition={{ type: "spring", stiffness: 300 }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-green-400 to-teal-500 opacity-90" />
-      
-      <div className="absolute top-5 right-5 bg-white/20 backdrop-blur-md rounded-full p-3">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3m0 0l3 3m-3-3v7m6-6v.01M19 12a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-      </div>
-      
-      <div className="relative p-7 z-10 h-full flex flex-col">
-        <h3 className="text-2xl font-bold mb-2 text-black">Host Presentation</h3>
-        
-        <div className="my-4 bg-white/20 backdrop-blur-md h-px w-16" />
-        
-        <p className="text-black/90 mb-6 flex-grow">
-          Create and manage presentation slots for students to book. Set availability, 
-          locations, and review incoming presentation requests.
-        </p>
-        
-        <div className="mt-auto space-y-4">
-          <div className="flex items-center text-black/90 text-sm font-medium">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-black/70" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span>Manage presentation schedule</span>
-          </div>
-          
-          <motion.button 
-            className="w-full py-3 px-4 rounded-xl font-medium bg-white text-black shadow-md hover:shadow-lg transition-all"
-            whileTap={{ scale: 0.97 }}
-            animate={{ scale: isHovered ? 1.03 : 1 }}
-            onClick={handleHostPresentation}
-          >
-            Manage Slots
-          </motion.button>
-        </div>
-      </div>
-    </motion.div>
-  );
-};
-
 // Main Bookings Component
 const Bookings = () => {
   const { isFaculty, isClubHead, isAdmin } = useAuth();
@@ -335,22 +219,6 @@ const Bookings = () => {
             transition={{ duration: 0.3, delay: 0.1 }}
           >
             {isFaculty() ? <StudentAppointments /> : <FacultyAppointment />}
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <PresentationSlot />
-          </motion.div>
-          
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-          >
-            {isFaculty() || isClubHead() || isAdmin() ? <HostPresentationCard /> : <StudentAppointments />}
           </motion.div>
         </motion.div>
       </motion.div>
