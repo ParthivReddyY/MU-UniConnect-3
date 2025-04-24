@@ -120,7 +120,7 @@ const authController = require('./controllers/authController');
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/presentation-slots', require('./routes/api/presentationSlots'));
+// Removed presentation slots route
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/upload', uploadRoutes);  // Add this line
 app.use('/api/proxy', proxyRoutes);

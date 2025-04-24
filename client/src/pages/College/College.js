@@ -10,8 +10,7 @@ import Bookings from './components/Bookings';
 import HostelMaintenance from './components/HostelMaintenance';
 import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
-import PresentationSlot from './components/bookings/PresentationSlot';
-import HostPresentation from './components/bookings/HostPresentation';
+// Removed PresentationSlot and HostPresentation imports
 
 const College = () => {
   const navigate = useNavigate();
@@ -108,8 +107,7 @@ const College = () => {
         {isBookingSubRoute ? (
           <Routes>
             <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
-            <Route path="bookings/presentation-slot" element={<PresentationSlot />} />
-            <Route path="bookings/host-presentation" element={<HostPresentation />} />
+            {/* Removed presentation-related routes */}
             {/* Add other booking sub-routes here when they are implemented */}
           </Routes>
         ) : (
