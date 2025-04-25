@@ -3,16 +3,50 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import { useAuth } from '../contexts/AuthContext';
 
-// Optimized memoized navigation link component
-const NavLink = memo(({ to, isActive, children }) => (
-  <Link 
-    to={to} 
-    className={`${isActive ? 'active' : ''}`}
-    aria-current={isActive ? 'page' : undefined}
-  >
-    {children}
-  </Link>
-));
+// Enhanced NavLink component with dropdown support
+const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  
+  // Only display dropdown if it has content and we're on desktop
+  const handleMouseEnter = () => {
+    if (hasDropdown && window.innerWidth >= 768) {
+      setShowDropdown(true);
+    }
+  };
+  
+  const handleMouseLeave = () => {
+    if (hasDropdown) {
+      setShowDropdown(false);
+    }
+  };
+  
+  return (
+    <div 
+      className={`nav-item ${hasDropdown ? 'has-dropdown' : ''}`}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <Link 
+        to={to} 
+        className={`${isActive ? 'active' : ''}`}
+        aria-current={isActive ? 'page' : undefined}
+      >
+        {children}
+        {hasDropdown && <i className="fas fa-chevron-down text-xs ml-1.5 transition-transform duration-300" style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0)' }}></i>}
+      </Link>
+      
+      {hasDropdown && showDropdown && (
+        <>
+          {/* Invisible connector to prevent hover gap issues */}
+          <div className="dropdown-connector"></div>
+          <div className="nav-dropdown">
+            {dropdownContent}
+          </div>
+        </>
+      )}
+    </div>
+  );
+});
 
 function Navbar() {
   const [scrolled, setScrolled] = useState(false);
@@ -197,10 +231,193 @@ function Navbar() {
         <div className={`header-bottom ${menuOpen ? 'show' : ''}`} id="navigation">
           {/* Navigation Links */}
           <nav className="nav-links" aria-label="Main navigation">
-            <NavLink to="/" isActive={isActive('/')}>Home</NavLink>
-            <NavLink to="/clubs-events" isActive={isActive('/clubs-events')}>Clubs & Events</NavLink>
-            <NavLink to="/faculty" isActive={isActive('/faculty')}>Faculty</NavLink>
-            <NavLink to="/college" isActive={isActive('/college')}>College</NavLink>
+            <NavLink 
+              to="/" 
+              isActive={isActive('/')} 
+              hasDropdown={false}
+            >
+              Home
+            </NavLink>
+            
+            <NavLink 
+              to="/clubs-events" 
+              isActive={isActive('/clubs-events')}
+              hasDropdown={true}
+              dropdownContent={
+                <div className="dropdown-grid">
+                  <div className="dropdown-section">
+                    <h3 className="dropdown-title">Clubs</h3>
+                    <Link to="/clubs-events?filter=technical" className="dropdown-item">
+                      <i className="fas fa-laptop-code text-blue-600"></i>
+                      <div>
+                        <span>Technical Clubs</span>
+                        <span className="dropdown-description">Coding, Robotics & more</span>
+                      </div>
+                    </Link>
+                    <Link to="/clubs-events?filter=non-technical" className="dropdown-item">
+                      <i className="fas fa-lightbulb text-orange-600"></i>
+                      <div>
+                        <span>Non-Technical Clubs</span>
+                        <span className="dropdown-description">Business, Entrepreneurship & more</span>
+                      </div>
+                    </Link>
+                    <Link to="/clubs-events?filter=arts" className="dropdown-item">
+                      <i className="fas fa-music text-purple-600"></i>
+                      <div>
+                        <span>Cultural Clubs</span>
+                        <span className="dropdown-description">Music, Dance & Drama</span>
+                      </div>
+                    </Link>
+                    <Link to="/clubs-events?filter=sports" className="dropdown-item">
+                      <i className="fas fa-volleyball-ball text-green-600"></i>
+                      <div>
+                        <span>Sports Clubs</span>
+                        <span className="dropdown-description">Athletics & team sports</span>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="dropdown-section">
+                    <h3 className="dropdown-title">Events</h3>
+                    <Link to="/clubs-events?type=upcoming" className="dropdown-item">
+                      <i className="fas fa-calendar-day text-primary-red"></i>
+                      <div>
+                        <span>Upcoming Events</span>
+                        <span className="dropdown-description">Don't miss out</span>
+                      </div>
+                    </Link>
+                    <Link to="/clubs-events?type=featured" className="dropdown-item">
+                      <i className="fas fa-star text-amber-500"></i>
+                      <div>
+                        <span>Featured Events</span>
+                        <span className="dropdown-description">Highlights of the events</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              }
+            >
+              Clubs & Events
+            </NavLink>
+            
+            <NavLink 
+              to="/faculty" 
+              isActive={isActive('/faculty')}
+              hasDropdown={true}
+              dropdownContent={
+                <div className="dropdown-grid">
+                  <div className="dropdown-section">
+                    <h3 className="dropdown-title">Faculty Directory</h3>
+                    <Link to="/faculty?department=engineering" className="dropdown-item">
+                      <i className="fas fa-cogs text-primary-red"></i>
+                      <div>
+                        <span>Engineering Faculty</span>
+                        <span className="dropdown-description">Meet our engineering professors</span>
+                      </div>
+                    </Link>
+                    <Link to="/faculty?department=science" className="dropdown-item">
+                      <i className="fas fa-flask text-green-600"></i>
+                      <div>
+                        <span>Science Faculty</span>
+                        <span className="dropdown-description">Physics, Chemistry & more</span>
+                      </div>
+                    </Link>
+                    <Link to="/faculty?department=humanities" className="dropdown-item">
+                      <i className="fas fa-book text-amber-600"></i>
+                      <div>
+                        <span>Humanities Faculty</span>
+                        <span className="dropdown-description">Languages, Arts & Social Sciences</span>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="dropdown-section">
+                    <h3 className="dropdown-title">Faculty Services</h3>
+                    <Link to="/faculty-appointments" className="dropdown-item">
+                      <i className="fas fa-calendar-check text-primary-teal"></i>
+                      <div>
+                        <span>Faculty Appointments</span>
+                        <span className="dropdown-description">Schedule meetings</span>
+                      </div>
+                    </Link>
+                    <Link to="/faculty/research" className="dropdown-item">
+                      <i className="fas fa-microscope text-blue-600"></i>
+                      <div>
+                        <span>Research Projects</span>
+                        <span className="dropdown-description">Ongoing research work</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              }
+            >
+              Faculty
+            </NavLink>
+            
+            <NavLink 
+              to="/college" 
+              isActive={isActive('/college')}
+              hasDropdown={true}
+              dropdownContent={
+                <div className="dropdown-grid">
+                  <div className="dropdown-section">
+                    <h3 className="dropdown-title">College Information</h3>
+                    <Link to="/college?tab=general" className="dropdown-item">
+                      <i className="fas fa-university text-primary-red"></i>
+                      <div>
+                        <span>Overview</span>
+                        <span className="dropdown-description">About the university</span>
+                      </div>
+                    </Link>
+                    <Link to="/college?tab=news" className="dropdown-item">
+                      <i className="fas fa-newspaper text-blue-600"></i>
+                      <div>
+                        <span>News & Updates</span>
+                        <span className="dropdown-description">Latest announcements</span>
+                      </div>
+                    </Link>
+                    <Link to="/feedback" className="dropdown-item">
+                      <i className="fas fa-comment text-primary-teal"></i>
+                      <div>
+                        <span>Feedback</span>
+                        <span className="dropdown-description">Share your thoughts</span>
+                      </div>
+                    </Link>
+                  </div>
+                  <div className="dropdown-section">
+                    <h3 className="dropdown-title">Campus Services</h3>
+                    <Link to="/college?tab=calendar" className="dropdown-item">
+                      <i className="fas fa-calendar-alt text-purple-600"></i>
+                      <div>
+                        <span>Academic Calendar</span>
+                        <span className="dropdown-description">Important dates & events</span>
+                      </div>
+                    </Link>
+                    <Link to="/college?tab=bookings" className="dropdown-item">
+                      <i className="fas fa-ticket-alt text-amber-600"></i>
+                      <div>
+                        <span>Bookings</span>
+                        <span className="dropdown-description">Reserve facilities</span>
+                      </div>
+                    </Link>
+                    <Link to="/college?tab=hostel" className="dropdown-item">
+                      <i className="fas fa-home text-green-600"></i>
+                      <div>
+                        <span>Hostel Maintenance</span>
+                        <span className="dropdown-description">Lodge complaints</span>
+                      </div>
+                    </Link>
+                    <Link to="/college?tab=map" className="dropdown-item">
+                      <i className="fas fa-map-marked-alt text-primary-teal"></i>
+                      <div>
+                        <span>Campus Map</span>
+                        <span className="dropdown-description">Navigate the campus</span>
+                      </div>
+                    </Link>
+                  </div>
+                </div>
+              }
+            >
+              College
+            </NavLink>
           </nav>
 
           {/* Auth Button - desktop version */}

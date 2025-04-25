@@ -140,14 +140,6 @@ const Overview = () => {
     }
   ];
 
-  const researchAreas = [
-    { name: "Artificial Intelligence & Machine Learning", icon: "fas fa-robot", percentage: 85 },
-    { name: "Sustainable Energy Solutions", icon: "fas fa-solar-panel", percentage: 75 },
-    { name: "Biomedical Engineering", icon: "fas fa-heartbeat", percentage: 80 },
-    { name: "Advanced Materials Science", icon: "fas fa-atom", percentage: 70 },
-    { name: "Data Science & Analytics", icon: "fas fa-chart-network", percentage: 90 },
-  ];
-
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -474,98 +466,49 @@ const Overview = () => {
         </div>
       </motion.section>
       
-      {/* Research and Innovation Section with Progress Bars */}
-      <motion.section variants={itemVariants} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white rounded-2xl shadow-md p-8">
-          <h2 className="text-2xl font-bold mb-6 flex items-center">
-            <i className="fas fa-flask text-primary-red mr-3"></i>
-            Research Excellence
-          </h2>
-          <p className="text-dark-gray mb-8">
-            We are dedicated to fostering a vibrant research ecosystem and promoting a culture of innovation across multiple disciplines.
-          </p>
-          
-          <div className="space-y-6">
-            {researchAreas.map((area, index) => (
-              <div key={index} className="space-y-2">
-                <div className="flex justify-between mb-1">
-                  <div className="flex items-center">
-                    <i className={`${area.icon} text-primary-teal mr-2`}></i>
-                    <span className="font-medium">{area.name}</span>
-                  </div>
-                  <span className="text-medium-gray">{area.percentage}%</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2.5">
-                  <motion.div 
-                    className="bg-gradient-to-r from-primary-teal to-primary-red h-2.5 rounded-full"
-                    initial={{ width: 0 }}
-                    whileInView={{ width: `${area.percentage}%` }}
-                    transition={{ duration: 1, delay: index * 0.1 }}
-                    viewport={{ once: true }}
-                  />
-                </div>
+      {/* Removed Research and Innovation Section with Progress Bars */}
+      
+      {/* Global Collaborations - Make this a standalone section now that Research section is removed */}
+      <motion.section variants={itemVariants} className="bg-gray-50 rounded-2xl shadow-md p-8">
+        <h2 className="text-2xl font-bold mb-6 flex items-center">
+          <i className="fas fa-globe-americas text-primary-teal mr-3"></i>
+          Global Collaborations
+        </h2>
+        <p className="text-dark-gray mb-8">
+          We partner with leading international universities to provide our students with global exposure and opportunities.
+        </p>
+        
+        <div className="space-y-6">
+          {globalPartners.map((partner, index) => (
+            <motion.div 
+              key={index}
+              initial={{ opacity: 0, x: -20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              transition={{ delay: index * 0.1 }}
+              viewport={{ once: true }}
+              className="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4"
+            >
+              <div className="flex-shrink-0">
+                <img src={partner.logo} alt={partner.name} className="w-16 h-16 rounded-lg object-cover" />
               </div>
-            ))}
-          </div>
-          
-          <div className="mt-10 pt-6 border-t border-gray-100 flex justify-between items-center">
-            <div className="text-center">
-              <p className="text-3xl font-bold text-primary-red">250+</p>
-              <p className="text-sm text-medium-gray">Research Papers</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-primary-red">15+</p>
-              <p className="text-sm text-medium-gray">Patents Filed</p>
-            </div>
-            <div className="text-center">
-              <p className="text-3xl font-bold text-primary-red">₹50M+</p>
-              <p className="text-sm text-medium-gray">Research Grants</p>
-            </div>
-          </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold text-lg">{partner.name}</h4>
+                <p className="text-sm text-medium-gray mb-1">{partner.location}</p>
+                <p className="text-primary-teal text-sm">{partner.partnership}</p>
+              </div>
+              <div className="flex-shrink-0">
+                <button className="text-primary-red hover:underline">
+                  <i className="fas fa-arrow-right"></i>
+                </button>
+              </div>
+            </motion.div>
+          ))}
         </div>
         
-        {/* Global Collaborations */}
-        <div className="bg-gray-50 rounded-2xl shadow-md p-8">
-          <h2 className="text-2xl font-bold mb-6 flex items-center">
-            <i className="fas fa-globe-americas text-primary-teal mr-3"></i>
-            Global Collaborations
-          </h2>
-          <p className="text-dark-gray mb-8">
-            We partner with leading international universities to provide our students with global exposure and opportunities.
-          </p>
-          
-          <div className="space-y-6">
-            {globalPartners.map((partner, index) => (
-              <motion.div 
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4"
-              >
-                <div className="flex-shrink-0">
-                  <img src={partner.logo} alt={partner.name} className="w-16 h-16 rounded-lg object-cover" />
-                </div>
-                <div className="flex-grow">
-                  <h4 className="font-semibold text-lg">{partner.name}</h4>
-                  <p className="text-sm text-medium-gray mb-1">{partner.location}</p>
-                  <p className="text-primary-teal text-sm">{partner.partnership}</p>
-                </div>
-                <div className="flex-shrink-0">
-                  <button className="text-primary-red hover:underline">
-                    <i className="fas fa-arrow-right"></i>
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-          
-          <button className="w-full mt-6 bg-primary-teal text-white py-3 rounded-lg font-medium hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
-            <i className="fas fa-handshake"></i>
-            View All Partnerships
-          </button>
-        </div>
+        <button className="w-full mt-6 bg-primary-teal text-white py-3 rounded-lg font-medium hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
+          <i className="fas fa-handshake"></i>
+          View All Partnerships
+        </button>
       </motion.section>
       
       {/* Campus Facilities Section with Image Cards */}

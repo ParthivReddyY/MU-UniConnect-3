@@ -754,3 +754,181 @@ body.modal-open main {
 body.hide-navbar .navbar {
   display: none !important; /* Added !important to ensure this rule takes precedence */
 }
+
+/* Navbar dropdown menu styling */
+.nav-item {
+  position: relative;
+}
+
+.has-dropdown {
+  position: relative;
+}
+
+/* Dropdown connector - creates an invisible bridge between nav item and dropdown */
+.dropdown-connector {
+  position: absolute;
+  height: 12px;
+  width: 100%;
+  left: 0;
+  top: 100%;
+  z-index: 101;
+  background-color: transparent;
+}
+
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);  /* Position exactly below the connector */
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 520px;
+  max-width: 90vw;
+  background: rgba(255, 255, 255, 0.98);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 1.25rem;
+  z-index: 100;
+  margin-top: 0;  /* Remove margin since we use the connector */
+  opacity: 0;
+  animation: fadeInDropdown 0.3s forwards;
+  border: 1px solid rgba(230, 230, 230, 0.8);
+}
+
+@keyframes fadeInDropdown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.nav-dropdown::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%) rotate(45deg);
+  width: 16px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.98);
+  border-top: 1px solid rgba(230, 230, 230, 0.8);
+  border-left: 1px solid rgba(230, 230, 230, 0.8);
+  z-index: -1;
+}
+
+.dropdown-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.dropdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.dropdown-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--dark-gray);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(230, 230, 230, 0.8);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  padding: 0.625rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  text-decoration: none;
+  color: var(--dark-gray);
+  background-color: transparent;
+}
+
+.dropdown-item:hover {
+  background-color: rgba(240, 240, 240, 0.8);
+  transform: translateX(3px);
+}
+
+.dropdown-item i {
+  font-size: 1.15rem;
+  margin-right: 0.75rem;
+  width: 1.5rem;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.dropdown-item:hover i {
+  transform: scale(1.1);
+}
+
+.dropdown-item div {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdown-item span:first-child {
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--dark-gray);
+}
+
+.dropdown-description {
+  font-size: 0.75rem;
+  color: var(--medium-gray);
+  margin-top: 0.15rem;
+}
+
+/* Update nav-links to accommodate dropdowns */
+.nav-links {
+  display: flex;
+  gap: 48px;
+}
+
+.nav-links a {
+  padding: 8px 16px;
+}
+
+/* Mobile dropdown adjustments */
+@media (max-width: 768px) {
+  .nav-dropdown {
+    position: relative;
+    top: 0;
+    left: 0;
+    transform: none;
+    width: 100%;
+    min-width: unset;
+    max-width: 100%;
+    box-shadow: none;
+    border-radius: 8px;
+    margin-top: 8px;
+    margin-bottom: 16px;
+    padding: 1rem;
+    animation: none;
+    opacity: 1;
+  }
+  
+  .nav-dropdown::before {
+    display: none;
+  }
+  
+  .dropdown-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .header-container.menu-open .nav-links {
+    align-items: flex-start;
+  }
+  
+  .nav-item {
+    width: 100%;
+  }
+}

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';  // Import useLocation to access URL parameters
 import '../CSS/clubs-events.css'; // Still importing for animations and complex styles
-import { getAllClubs, createClub, deleteClub, getClubsByCategory } from '../services/clubService';
 import { toast } from 'react-toastify';  // Assuming you have react-toastify for notifications
 import api from '../utils/axiosConfig';  // Add the api import
 import { renderFormField } from '../utils/clubFormUtils';
@@ -22,6 +22,7 @@ const ClubsEvents = () => {
   const [clubHeadPassword, setClubHeadPassword] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [allEvents, setAllEvents] = useState([]); // New state for all events
+  const [shouldScrollToClubs, setShouldScrollToClubs] = useState(false);
   // Event modal states
   const [showEventModal, setShowEventModal] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -36,6 +37,33 @@ const ClubsEvents = () => {
     isActive: true,
     isClubEvent: false
   });
+
+  // Create reference for clubs section to scroll to
+  const clubsSectionRef = useRef(null);
+  
+  // Get location to access URL parameters
+  const location = useLocation();
+
+  // Helper functions to interact with the API
+  const getAllClubs = async () => {
+    const response = await api.get('/api/clubs');
+    return response.data;
+  };
+
+  const getClubsByCategory = async (category) => {
+    const response = await api.get(`/api/clubs/category/${category}`);
+    return response.data;
+  };
+
+  const createClub = async (clubData) => {
+    const response = await api.post('/api/clubs', clubData);
+    return response.data;
+  };
+
+  const deleteClub = async (clubId) => {
+    const response = await api.delete(`/api/clubs/${clubId}`);
+    return response.data;
+  };
 
   // Fetch clubs data from API
   useEffect(() => {
@@ -101,7 +129,24 @@ const ClubsEvents = () => {
     };
 
     fetchClubs();
-  }, []);
+
+    // Check URL query parameters and apply filter if needed
+    const params = new URLSearchParams(location.search);
+    const filterParam = params.get('filter');
+    if (filterParam) {
+      // Apply the filter (this will be done once clubs data is loaded)
+      filterClubsByCategory(filterParam);
+      setShouldScrollToClubs(true); // Set flag to scroll to clubs section
+    }
+  }, [location.search]); // Add location.search as a dependency to rerun when URL changes
+
+  // Scroll to clubs section if flag is set
+  useEffect(() => {
+    if (shouldScrollToClubs && clubsSectionRef.current) {
+      clubsSectionRef.current.scrollIntoView({ behavior: 'smooth' });
+      setShouldScrollToClubs(false); // Reset flag after scrolling
+    }
+  }, [shouldScrollToClubs]);
 
   // Filter clubs by category
   const filterClubsByCategory = async (category) => {
@@ -641,6 +686,41 @@ const ClubsEvents = () => {
     );
   };
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const filterParam = params.get('filter');
+    const typeParam = params.get('type');
+    
+    // Handle filter parameter - for club categories
+    if (filterParam) {
+      // Ensure clubsData is loaded before applying the filter
+      if (clubsData.length > 0) {
+        filterClubsByCategory(filterParam);
+        setShouldScrollToClubs(true); // Set flag to scroll to clubs section
+      } else {
+        // Retry filtering once clubsData is loaded
+        const interval = setInterval(() => {
+          if (clubsData.length > 0) {
+            filterClubsByCategory(filterParam);
+            setShouldScrollToClubs(true);
+            clearInterval(interval);
+          }
+        }, 100);
+      }
+    }
+    
+    // Handle type parameter - for events navigation
+    if (typeParam === 'upcoming' || typeParam === 'featured') {
+      // Scroll to university events section after a short delay to ensure it's loaded
+      setTimeout(() => {
+        const eventsSection = document.getElementById('university-events-section');
+        if (eventsSection) {
+          eventsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 300);
+    }
+  }, [location.search, clubsData]); // Add clubsData as a dependency to ensure it triggers when data is loaded
+
   return (
     <div className="-mt-20 w-full bg-gray-50 min-h-screen pb-8">
       {/* Description Section - Full Width with contained content */}
@@ -720,7 +800,7 @@ const ClubsEvents = () => {
       </div>
 
       {/* Clubs Grid - Full Width with contained content */}
-      <div className="w-full py-12">
+      <div ref={clubsSectionRef} className="w-full py-12">
         <div className="max-w-6xl mx-auto px-4 md:px-6">
           <h2 className="text-2xl md:text-3xl font-semibold text-gray-800 mb-8 flex items-center gap-2">
             <i className="fas fa-users text-primary-red"></i> Explore Our Clubs
@@ -2442,6 +2522,7 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                   onClick={onClose}
                   className="flex items-center text-gray-600 hover:text-primary-red transition-colors focus:outline-none"
                   aria-label="Back to clubs"
+                  id="back-to-clubs-btn"
                 >
                   <i className="fas fa-arrow-left mr-2"></i>
                   <span className="font-medium text-sm">Back to Clubs</span>

@@ -24,6 +24,17 @@ const College = () => {
     const tabFromUrl = searchParams.get('tab');
     if (tabFromUrl && ['general', 'news', 'calendar', 'bookings', 'hostel', 'map'].includes(tabFromUrl)) {
       setActiveTab(tabFromUrl);
+      
+      // Add scroll functionality - wait for content to load before scrolling
+      setTimeout(() => {
+        const contentArea = document.querySelector('.w-full.bg-white.rounded-xl');
+        if (contentArea) {
+          // Adjust scroll position to account for fixed header
+          const yOffset = -200; // Adjust this value based on your header height
+          const y = contentArea.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 650); // Set timeout slightly longer than the loading timeout (600ms)
     }
     
     // Simulate loading content

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../App.css';
 import '../styles/Home.css';
+import { useAuth } from '../contexts/AuthContext'; // Import AuthContext
 
 function Home() {
   // Create refs for the slider elements
@@ -9,6 +10,9 @@ function Home() {
   const testimonialSliderRef = useRef(null);
   let autoScrollInterval = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
+  
+  // Get current user status from auth context
+  const { currentUser } = useAuth();
   
   useEffect(() => {
     console.log("Home component mounted");
@@ -583,24 +587,26 @@ function Home() {
         </div>
       </section>
 
-      {/* Call to Action Section */}
-      <section className="py-16 md:py-24 bg-gradient-to-r from-primary-red to-secondary-red text-white text-center">
-        <div className="content-container px-4 md:px-6">
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Connect with Campus Life?</h2>
-          <p className="text-lg md:text-xl max-w-3xl mx-auto mb-10 opacity-90">Join MU-UniConnect today to stay informed about university activities, connect with faculty, and engage with campus organizations.</p>
-          <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-10">
-            <Link to="/signup" className="px-6 md:px-8 py-3 md:py-4 bg-white text-primary-teal font-semibold rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base md:text-lg">Sign Up</Link>
-            <a href="#features" className="px-6 md:px-8 py-3 md:py-4 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition text-base md:text-lg">Explore Features</a>
-          </div>
-          <div className="mt-8">
-            <p className="text-lg mb-3">Also available on:</p>
-            <div className="flex justify-center gap-6">
-              <i className="fab fa-android text-2xl md:text-3xl hover:scale-110 transform transition cursor-pointer"></i>
-              <i className="fab fa-apple text-2xl md:text-3xl hover:scale-110 transform transition cursor-pointer"></i>
+      {/* Call to Action Section - Only show for non-logged in users */}
+      {!currentUser && (
+        <section className="py-16 md:py-24 bg-gradient-to-r from-primary-red to-secondary-red text-white text-center">
+          <div className="content-container px-4 md:px-6">
+            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-6">Ready to Connect with Campus Life?</h2>
+            <p className="text-lg md:text-xl max-w-3xl mx-auto mb-10 opacity-90">Join MU-UniConnect today to stay informed about university activities, connect with faculty, and engage with campus organizations.</p>
+            <div className="flex flex-wrap justify-center gap-4 md:gap-6 mb-10">
+              <Link to="/signup" className="px-6 md:px-8 py-3 md:py-4 bg-white text-primary-teal font-semibold rounded-lg shadow-lg hover:shadow-xl transition transform hover:-translate-y-1 text-base md:text-lg">Sign Up</Link>
+              <a href="#features" className="px-6 md:px-8 py-3 md:py-4 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition text-base md:text-lg">Explore Features</a>
+            </div>
+            <div className="mt-8">
+              <p className="text-lg mb-3">Also available on:</p>
+              <div className="flex justify-center gap-6">
+                <i className="fab fa-android text-2xl md:text-3xl hover:scale-110 transform transition cursor-pointer"></i>
+                <i className="fab fa-apple text-2xl md:text-3xl hover:scale-110 transform transition cursor-pointer"></i>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* Footer Section */}
       <footer className="bg-dark-gray text-off-white py-12 md:py-16 pb-0 md:pb-0">
