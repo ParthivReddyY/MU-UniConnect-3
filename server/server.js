@@ -14,8 +14,11 @@ const appointmentRoutes = require('./routes/appointmentRoutes');
 const presentationRoutes = require('./routes/presentationRoutes'); // Add this line
 const routes = require('./routes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
-const uploadRoutes = require('./routes/uploadRoutes');  // Add this line
+const uploadRoutes = require('./routes/uploadRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
+
+// Import controllers for initialization
+const newsController = require('./controllers/newsController');
 
 // Import other routes as needed
 
@@ -30,6 +33,9 @@ const connectDB = async () => {
       useUnifiedTopology: true,
     });
     console.log(`MongoDB Connected: ${conn.connection.host}`);
+    
+    // Initialize collections with sample data
+    await newsController.initializeNews();
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error.message}`);
     process.exit(1);

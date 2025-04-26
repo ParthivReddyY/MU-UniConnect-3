@@ -325,9 +325,9 @@ function Home() {
               </div>
               <h3 className="text-2xl font-semibold text-dark-gray mb-4">Campus News</h3>
               <p className="text-medium-gray mb-6 leading-relaxed">Stay informed with the latest news, announcements, and updates from around the campus</p>
-              <button type="button" className="feature-link inline-flex items-center text-primary-red font-semibold">
+              <Link to="/college?tab=news" className="feature-link inline-flex items-center text-primary-red font-semibold">
                 Read News <i className="fas fa-arrow-right ml-2 transition-transform"></i>
-              </button>
+              </Link>
             </div>
           </div>
         </div>

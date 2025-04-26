@@ -25,6 +25,7 @@ import Profile from './pages/Profile'; // Import the new Profile page
 import FacultyAppointments from './pages/FacultyAppointments'; // Import the Faculty Appointments page
 import Feedback from './pages/Feedback';
 import AdminFeedback from './pages/Admin/AdminFeedback'; // Import AdminFeedback page
+import NewsManagement from './pages/Admin/NewsManagement'; // Import NewsManagement page
 
 // Import components
 import Navbar from './components/Navbar';
@@ -269,6 +270,18 @@ function App() {
                     <ProtectedRoute allowedRoles={['admin']}>
                       <PageContainer>
                         <AdminFeedback />
+                      </PageContainer>
+                    </ProtectedRoute>
+                  }
+                />
+                
+                {/* Admin News Management page */}
+                <Route
+                  path="/admin/news"
+                  element={
+                    <ProtectedRoute allowedRoles={['admin']}>
+                      <PageContainer>
+                        <NewsManagement />
                       </PageContainer>
                     </ProtectedRoute>
                   }
