@@ -24,7 +24,7 @@ const FacultyAppointmentComponent = () => {
   const location = useLocation();
   
   // Get auth context for user information
-  const { currentUser, isStudent, isAdmin } = useAuth();
+  const { currentUser, isStudent, isAdmin, hasRole } = useAuth();
   
   // Student information state
   const [studentInfo, setStudentInfo] = useState({
@@ -206,7 +206,7 @@ const FacultyAppointmentComponent = () => {
     }
     
     // Use the role checking functions from auth context
-    if (!isStudent() && !isAdmin()) {
+    if (!hasRole(['student', 'admin'])) {
       // Redirect to unauthorized page
       navigate('/unauthorized');
       return;
@@ -231,7 +231,7 @@ const FacultyAppointmentComponent = () => {
         setIsLoading(false);
       }, 1000);
     }
-  }, [currentUser, isStudent, isAdmin, navigate]);
+  }, [currentUser, isStudent, isAdmin, hasRole, navigate]);
 
   // Check for pre-selected faculty from URL parameters
   useEffect(() => {

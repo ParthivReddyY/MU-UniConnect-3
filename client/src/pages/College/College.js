@@ -10,7 +10,8 @@ import Bookings from './components/Bookings';
 import HostelMaintenance from './components/HostelMaintenance';
 import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
-// Removed PresentationSlot and HostPresentation imports
+import PresentationSlot from './components/bookings/PresentationSlot';
+import HostPresentation from './components/bookings/HostPresentation';
 
 const College = () => {
   const navigate = useNavigate();
@@ -118,8 +119,9 @@ const College = () => {
         {isBookingSubRoute ? (
           <Routes>
             <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
-            {/* Removed presentation-related routes */}
-            {/* Add other booking sub-routes here when they are implemented */}
+            <Route path="bookings/presentation-slot" element={<PresentationSlot />} />
+            <Route path="bookings/host-presentation" element={<HostPresentation />} />
+            {/* Add other booking-related routes here */}
           </Routes>
         ) : (
           <AnimatePresence mode="wait">

@@ -11,6 +11,7 @@ dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const facultyRoutes = require('./routes/facultyRoutes');
 const appointmentRoutes = require('./routes/appointmentRoutes');
+const presentationRoutes = require('./routes/presentationRoutes'); // Add this line
 const routes = require('./routes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');  // Add this line
@@ -120,7 +121,7 @@ const authController = require('./controllers/authController');
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
-// Removed presentation slots route
+app.use('/api/presentations', presentationRoutes); // Add this line
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/upload', uploadRoutes);  // Add this line
 app.use('/api/proxy', proxyRoutes);

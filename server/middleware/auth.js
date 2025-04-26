@@ -51,36 +51,44 @@ const authenticateUser = async (req, res, next) => {
   }
 };
 
-// Check if user is admin
-const isAdmin = (req, res, next) => {
-  if (req.user && req.user.role === 'admin') {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Admin access required' });
-  }
+// Replace multiple similar middleware functions with this more flexible approach
+const hasRole = (roles) => {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      });
+    }
+    
+    if (roles.includes(req.user.role)) {
+      next();
+    } else {
+      const formattedRoles = roles.map(r => r.charAt(0).toUpperCase() + r.slice(1)).join(' or ');
+      res.status(403).json({ 
+        success: false, 
+        message: `${formattedRoles} access required` 
+      });
+    }
+  };
 };
 
-// Check if user is faculty or admin
-const isFacultyOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'faculty' || req.user.role === 'admin')) {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Faculty or admin access required' });
-  }
-};
-
-// Check if user is club head or admin
-const isClubHeadOrAdmin = (req, res, next) => {
-  if (req.user && (req.user.role === 'clubHead' || req.user.role === 'clubs' || req.user.role === 'admin')) {
-    next();
-  } else {
-    res.status(403).json({ success: false, message: 'Club head or admin access required' });
-  }
-};
+// Then export specific role check functions using the general approach
+const isAdmin = hasRole(['admin']);
+const isFaculty = hasRole(['faculty']);
+const isStudent = hasRole(['student']);
+const isClubHead = hasRole(['clubHead', 'clubs']);
+const isFacultyOrAdmin = hasRole(['faculty', 'admin']);
+const isClubHeadOrAdmin = hasRole(['clubHead', 'clubs', 'admin']);
 
 module.exports = {
   authenticateUser,
   isAdmin,
+  isFaculty,
+  isStudent,
+  isClubHead,
   isFacultyOrAdmin,
-  isClubHeadOrAdmin
+  isClubHeadOrAdmin,
+  // Allow custom role combinations too
+  hasRole
 };

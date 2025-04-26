@@ -3,7 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
-  const { currentUser, isAdmin, isFaculty, isStudent, isClubHead, loading } = useAuth();
+  const { currentUser, loading, hasRole } = useAuth();
   const location = useLocation();
 
   // Show loading state if auth is still being determined
@@ -21,25 +21,10 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
   // If roles are specified, check if user has at least one of the allowed roles
-  if (allowedRoles.length > 0) {
-    const userHasAllowedRole = allowedRoles.some(role => {
-      switch (role) {
-        case 'admin':
-          return isAdmin();
-        case 'faculty':
-          return isFaculty();
-        case 'student':
-          return isStudent();
-        case 'clubHead':
-          return isClubHead();
-        default:
-          return false;
-      }
-    });
+  const userHasAllowedRole = allowedRoles.length > 0 ? hasRole(allowedRoles) : true;
 
-    if (!userHasAllowedRole) {
-      return <Navigate to="/unauthorized" replace />;
-    }
+  if (!userHasAllowedRole) {
+    return <Navigate to="/unauthorized" replace />;
   }
 
   // User is authenticated and has allowed role (if specified)

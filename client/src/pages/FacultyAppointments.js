@@ -40,7 +40,7 @@ const FacultyAppointments = () => {
     if (!currentUser) {
       setAuthError(true);
       setError('You must be logged in to view this page.');
-    } else if (!isFaculty() && !isAdmin()) {
+    } else if (!(isFaculty || isAdmin)) {
       setAuthError(true);
       setError('You must be a faculty member or admin to view this page.');
     } else {
