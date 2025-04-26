@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import CollegeHeader from './components/CollegeHeader';
 import CollegeTabs from './components/CollegeTabs';
 import Overview from './components/Overview';
@@ -10,32 +10,41 @@ import Bookings from './components/Bookings';
 import HostelMaintenance from './components/HostelMaintenance';
 import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
-// Removed PresentationSlot and HostPresentation imports
 
 const College = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
   const [activeTab, setActiveTab] = useState('general');
   const [isLoading, setIsLoading] = useState(true);
+  const location = useLocation();
+  const navigate = useNavigate();
+  
+  // Check if we're on a booking sub-route
+  const isBookingSubRoute = location.pathname.includes('/college/bookings/');
 
-  // Parse tab from URL on component mount
   useEffect(() => {
+    // Get tab from URL
     const searchParams = new URLSearchParams(location.search);
     const tabFromUrl = searchParams.get('tab');
-    if (tabFromUrl && ['general', 'news', 'calendar', 'bookings', 'hostel', 'map'].includes(tabFromUrl)) {
-      setActiveTab(tabFromUrl);
-      
-      // Add scroll functionality - wait for content to load before scrolling
-      setTimeout(() => {
-        const contentArea = document.querySelector('.w-full.bg-white.rounded-xl');
-        if (contentArea) {
-          // Adjust scroll position to account for fixed header
-          const yOffset = -200; // Adjust this value based on your header height
-          const y = contentArea.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          window.scrollTo({ top: y, behavior: 'smooth' });
-        }
-      }, 650); // Set timeout slightly longer than the loading timeout (600ms)
+    const newsId = searchParams.get('id');
+    
+    // If there's a news ID in the URL, ensure we're on the news tab
+    if (newsId) {
+      setActiveTab('news');
     }
+    // Otherwise use the tab from URL if it's valid
+    else if (tabFromUrl && ['general', 'news', 'calendar', 'bookings', 'hostel', 'map'].includes(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    }
+    
+    // Add scroll functionality - wait for content to load before scrolling
+    setTimeout(() => {
+      const contentArea = document.querySelector('.w-full.bg-white.rounded-xl');
+      if (contentArea) {
+        // Adjust scroll position to account for fixed header
+        const yOffset = -200; // Adjust this value based on your header height
+        const y = contentArea.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 650); // Set timeout slightly longer than the loading timeout (600ms)
     
     // Simulate loading content
     const timer = setTimeout(() => setIsLoading(false), 600);
@@ -45,7 +54,21 @@ const College = () => {
   // Update URL when tab changes
   const handleTabChange = (tab) => {
     setActiveTab(tab);
-    navigate(`?tab=${tab}`, { replace: true });
+    
+    // Create new URL with the selected tab
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('tab', tab);
+    
+    // If switching to a tab other than 'news', remove the news 'id' parameter
+    if (tab !== 'news' && searchParams.has('id')) {
+      searchParams.delete('id');
+    }
+    
+    // Update the URL without reloading the page
+    navigate({
+      pathname: location.pathname,
+      search: searchParams.toString()
+    }, { replace: true });
   };
 
   // Animation variants
@@ -65,11 +88,8 @@ const College = () => {
     }
   };
 
-  // Check if we're on a booking sub-route
-  const isBookingSubRoute = location.pathname.includes('/college/bookings/');
-
-  // Render the appropriate component based on the active tab
-  const renderTabContent = () => {
+  // Render appropriate component based on active tab
+  const renderContent = () => {
     if (isLoading) {
       return <TabSkeleton />;
     }
@@ -118,7 +138,6 @@ const College = () => {
         {isBookingSubRoute ? (
           <Routes>
             <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
-            {/* Removed presentation-related routes */}
             {/* Add other booking sub-routes here when they are implemented */}
           </Routes>
         ) : (
@@ -131,7 +150,7 @@ const College = () => {
               exit="exit"
               className="w-full bg-white rounded-xl shadow-md p-5 md:p-8"
             >
-              {renderTabContent()}
+              {renderContent()}
             </motion.div>
           </AnimatePresence>
         )}
