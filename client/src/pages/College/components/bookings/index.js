@@ -1,7 +1,7 @@
 import FacultyAppointment from './FacultyAppointment';
 import EventBooking from './EventBooking';
-import PresentationSlot from './PresentationSlot';
-import HostPresentation from './HostPresentation';
+import PresentationSlot from './Presentations/PresentationSlot';
+import HostPresentation from './Presentations/HostPresentation';
 
 export {
   FacultyAppointment,

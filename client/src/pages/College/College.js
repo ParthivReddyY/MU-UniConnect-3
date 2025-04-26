@@ -10,8 +10,8 @@ import Bookings from './components/Bookings';
 import HostelMaintenance from './components/HostelMaintenance';
 import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
-import PresentationSlot from './components/bookings/PresentationSlot';
-import HostPresentation from './components/bookings/HostPresentation';
+import PresentationSlot from './components/bookings/Presentations/PresentationSlot';
+import HostPresentation from './components/bookings/Presentations/HostPresentation';
 
 const College = () => {
   const [activeTab, setActiveTab] = useState('general');

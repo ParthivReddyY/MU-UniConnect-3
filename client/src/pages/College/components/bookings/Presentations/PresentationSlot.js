@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../../contexts/AuthContext';
-import api from '../../../../utils/axiosConfig';
+import { useAuth } from '../../../../../contexts/AuthContext';
+import api from '../../../../../utils/axiosConfig';
 
 const PresentationSlot = () => {
   const [presentations, setPresentations] = useState([]);
