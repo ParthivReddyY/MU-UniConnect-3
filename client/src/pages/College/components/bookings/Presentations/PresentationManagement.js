@@ -29,13 +29,19 @@ const PresentationManagement = () => {
   const fetchPresentations = async () => {
     try {
       setLoading(true);
-      const response = await api.get('/api/presentations/host');
-      // Ensure we're setting an array even if the API returns something unexpected
-      setPresentations(Array.isArray(response.data) ? response.data : []);
+      const response = await api.get('/api/presentations/faculty');
+      
+      if (response.data && Array.isArray(response.data)) {
+        console.log("Fetched presentations:", response.data);
+        setPresentations(response.data);
+      } else {
+        console.warn("Response data is not an array:", response.data);
+        setPresentations([]);
+      }
     } catch (error) {
-      console.error('Error fetching presentations:', error);
+      console.error("Error fetching presentations:", error);
       toast.error('Failed to load presentations');
-      setPresentations([]); // Ensure we always have an array even on error
+      setPresentations([]);
     } finally {
       setLoading(false);
     }
@@ -47,18 +53,6 @@ const PresentationManagement = () => {
     toast.success('Presentation event created successfully!');
   };
 
-  // Remove unused function since we're not currently implementing edit functionality
-  // If you need this function later, you can uncomment it
-  /* 
-  const handleEditPresentation = (updatedPresentation) => {
-    setPresentations(presentations.map(p => 
-      p._id === updatedPresentation._id ? updatedPresentation : p
-    ));
-    setSelectedPresentation(null);
-    toast.success('Presentation event updated successfully!');
-  };
-  */
-
   const handleDeletePresentation = async (id) => {
     if (window.confirm('Are you sure you want to delete this presentation event? This action cannot be undone.')) {
       try {
@@ -66,7 +60,6 @@ const PresentationManagement = () => {
         setPresentations(presentations.filter(p => p._id !== id));
         toast.success('Presentation event deleted successfully');
       } catch (error) {
-        console.error('Error deleting presentation:', error);
         toast.error('Failed to delete presentation event');
       }
     }
@@ -93,8 +86,7 @@ const PresentationManagement = () => {
       .then(() => {
         toast.success('Link copied to clipboard!');
       })
-      .catch(err => {
-        console.error('Failed to copy:', err);
+      .catch(() => {
         toast.error('Failed to copy link');
       });
   };
@@ -135,6 +127,18 @@ const PresentationManagement = () => {
         return true;
     }
   }) : [];
+
+  // Format date properly for display (without time)
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
 
   if (showCreationForm) {
     return (
@@ -266,7 +270,7 @@ const PresentationManagement = () => {
                       <div>
                         <p className="text-sm text-gray-500">Presentation Period</p>
                         <p className="text-gray-800">
-                          {new Date(presentation.presentationPeriod.start).toLocaleDateString()} - {new Date(presentation.presentationPeriod.end).toLocaleDateString()}
+                          {formatDate(presentation.presentationPeriod.start)} - {formatDate(presentation.presentationPeriod.end)}
                         </p>
                       </div>
                     </div>

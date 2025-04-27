@@ -12,7 +12,7 @@ const TEMPLATES = {
   PASSWORD_RESET: 1,
   
   // Template for password reset OTP
-  PASSWORD_RESET_OTP: 1
+  PASSWORD_RESET_OTP: 1,
 };
 
 /**

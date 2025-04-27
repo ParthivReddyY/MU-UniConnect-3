@@ -1,24 +1,30 @@
 const Presentation = require('../models/Presentation');
 const User = require('../models/User');
-const { sendEmail, TEMPLATES } = require('../utils/sendEmail');
+const { v4: uuidv4 } = require('uuid');
 
 // Get all available presentation slots (for students)
 const getAvailablePresentationSlots = async (req, res) => {
   try {
-    const presentations = await Presentation.find({ 
-      booked: false,
-      date: { $gte: new Date() } // Only future slots
+    const presentations = await Presentation.find({
+      'presentationPeriod.end': { $gte: new Date() } // Only presentations that haven't ended yet
     })
-    .populate('faculty', 'name department')
-    .sort({ date: 1, startTime: 1 })
+    .populate('faculty', 'name department email')
     .lean();
     
-    // Map presentations to include faculty name
-    const formattedPresentations = presentations.map(presentation => ({
-      ...presentation,
-      facultyName: presentation.faculty.name,
-      facultyDepartment: presentation.faculty.department
-    }));
+    // Format the presentations for frontend
+    const formattedPresentations = presentations.map(presentation => {
+      // Count available slots
+      const availableSlots = presentation.slots.filter(slot => !slot.booked).length;
+      const totalSlots = presentation.slots.length;
+      
+      return {
+        ...presentation,
+        facultyName: presentation.faculty.name,
+        facultyDepartment: presentation.faculty.department,
+        availableSlots,
+        totalSlots
+      };
+    });
     
     res.status(200).json(formattedPresentations);
   } catch (error) {
@@ -33,11 +39,26 @@ const getFacultyPresentationSlots = async (req, res) => {
     const userId = req.user.userId;
     
     const presentations = await Presentation.find({ faculty: userId })
-      .populate('bookedBy', 'name email studentId')
-      .sort({ date: 1, startTime: 1 })
+      .sort({ 'presentationPeriod.start': 1 })
       .lean();
     
-    res.status(200).json(presentations);
+    // Add statistics for each presentation
+    const presentationsWithStats = presentations.map(presentation => {
+      const bookedSlots = presentation.slots.filter(slot => slot.booked).length;
+      const totalSlots = presentation.slots.length;
+      
+      return {
+        ...presentation,
+        slots: {
+          data: presentation.slots,
+          bookedCount: bookedSlots,
+          totalCount: totalSlots,
+          availableCount: totalSlots - bookedSlots
+        }
+      };
+    });
+    
+    res.status(200).json(presentationsWithStats);
   } catch (error) {
     console.error('Error getting faculty presentation slots:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -49,12 +70,15 @@ const createPresentationSlot = async (req, res) => {
   try {
     const userId = req.user.userId;
     const { 
-      title, description, date, startTime, endTime, 
-      location, presentationType, maxParticipants 
+      title, description, venue, participationType, teamSizeMin, teamSizeMax,
+      registrationStart, registrationEnd, presentationStart, presentationEnd,
+      slotConfig, targetAudience, gradingCriteria, customGradingCriteria,
+      hostName, hostDepartment
     } = req.body;
     
     // Validate inputs
-    if (!title || !date || !startTime || !endTime || !location) {
+    if (!title || !venue || !slotConfig || !registrationStart || !registrationEnd || !presentationStart || !presentationEnd) {
+      console.log('Missing required fields in presentation creation:', { title, venue, slotConfig });
       return res.status(400).json({ message: 'Missing required fields' });
     }
     
@@ -64,28 +88,63 @@ const createPresentationSlot = async (req, res) => {
       return res.status(403).json({ message: 'Only faculty members can create presentation slots' });
     }
     
-    // Create new presentation slot
-    const presentation = await Presentation.create({
+    // Set presentation dates without time for the presentation period
+    // Adding a time component (00:00:00) since the input is date-only
+    const presentationStartDate = new Date(`${presentationStart}T00:00:00`);
+    const presentationEndDate = new Date(`${presentationEnd}T23:59:59`);
+    
+    // Generate time slots based on configuration
+    const slots = generateTimeSlots(
+      slotConfig.startTime,
+      slotConfig.endTime,
+      presentationStartDate,
+      presentationEndDate,
+      slotConfig.duration,
+      slotConfig.buffer
+    );
+    
+    // Create new presentation with all fields from client
+    const presentationData = {
       title,
       description: description || '',
-      date,
-      startTime,
-      endTime,
-      location,
-      presentationType: presentationType || 'Academic',
-      maxParticipants: maxParticipants || 1,
+      venue,
       faculty: userId,
       facultyName: user.name,
-      booked: false
-    });
+      hostDepartment: hostDepartment || user.department || '',
+      registrationPeriod: {
+        start: new Date(registrationStart),
+        end: new Date(registrationEnd)
+      },
+      presentationPeriod: {
+        start: presentationStartDate,
+        end: presentationEndDate
+      },
+      participationType: participationType || 'individual',
+      teamSizeMin: teamSizeMin || 1,
+      teamSizeMax: teamSizeMax || 1,
+      slotConfig,
+      slots
+    };
+    
+    // Add optional fields if provided
+    if (targetAudience) {
+      presentationData.targetAudience = targetAudience;
+    }
+    
+    if (customGradingCriteria && gradingCriteria) {
+      presentationData.customGradingCriteria = true;
+      presentationData.gradingCriteria = gradingCriteria;
+    }
+    
+    const presentation = await Presentation.create(presentationData);
     
     res.status(201).json({
       success: true,
-      message: 'Presentation slot created successfully',
+      message: 'Presentation event created successfully',
       presentation
     });
   } catch (error) {
-    console.error('Error creating presentation slot:', error);
+    console.error('Error creating presentation:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -95,68 +154,92 @@ const bookPresentationSlot = async (req, res) => {
   try {
     const presentationId = req.params.id;
     const userId = req.user.userId;
+    const { 
+      slotId, topic, teamName, teamMembers 
+    } = req.body;
     
-    // Find the presentation slot
+    if (!slotId) {
+      return res.status(400).json({ message: 'Slot ID is required' });
+    }
+    
+    // Find the presentation
     const presentation = await Presentation.findById(presentationId);
     
     if (!presentation) {
-      return res.status(404).json({ message: 'Presentation slot not found' });
+      return res.status(404).json({ message: 'Presentation not found' });
+    }
+    
+    // Find the specific slot
+    const slotIndex = presentation.slots.findIndex(slot => slot.id === slotId);
+    
+    if (slotIndex === -1) {
+      return res.status(404).json({ message: 'Slot not found' });
     }
     
     // Check if slot is already booked
-    if (presentation.booked) {
+    if (presentation.slots[slotIndex].booked) {
       return res.status(400).json({ message: 'This slot is already booked' });
     }
     
-    // Book the slot
-    presentation.booked = true;
-    presentation.bookedBy = userId;
-    presentation.bookedAt = new Date();
-    await presentation.save();
-    
-    // Get user and faculty information for email
-    const student = await User.findById(userId);
-    const faculty = await User.findById(presentation.faculty);
-    
-    // Send email notifications
-    try {
-      // Notify faculty
-      await sendEmail({
-        email: faculty.email,
-        templateId: TEMPLATES.PRESENTATION_BOOKING_FACULTY,
-        params: {
-          facultyName: faculty.name,
-          studentName: student.name,
-          studentEmail: student.email,
-          title: presentation.title,
-          date: new Date(presentation.date).toLocaleDateString(),
-          startTime: new Date(presentation.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          location: presentation.location
-        }
-      });
-      
-      // Notify student
-      await sendEmail({
-        email: student.email,
-        templateId: TEMPLATES.PRESENTATION_BOOKING_STUDENT,
-        params: {
-          studentName: student.name,
-          facultyName: faculty.name,
-          title: presentation.title,
-          date: new Date(presentation.date).toLocaleDateString(),
-          startTime: new Date(presentation.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          location: presentation.location
-        }
-      });
-    } catch (emailError) {
-      console.error('Error sending presentation booking emails:', emailError);
-      // Continue with the booking process even if email fails
+    // Check if registration period is open
+    const now = new Date();
+    if (now < presentation.registrationPeriod.start || now > presentation.registrationPeriod.end) {
+      return res.status(400).json({ message: 'Registration period is closed' });
     }
+    
+    // Get student information
+    const student = await User.findById(userId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    // Update the slot
+    presentation.slots[slotIndex].booked = true;
+    presentation.slots[slotIndex].bookedBy = userId;
+    presentation.slots[slotIndex].bookedAt = new Date();
+    presentation.slots[slotIndex].status = 'booked';
+    presentation.slots[slotIndex].topic = topic;
+    
+    // Handle team-based presentations
+    if (presentation.participationType === 'team') {
+      presentation.slots[slotIndex].teamName = teamName;
+      
+      // Process team members
+      let processedTeamMembers = [];
+      
+      if (teamMembers && Array.isArray(teamMembers)) {
+        processedTeamMembers = teamMembers.map(member => ({
+          name: member.name,
+          email: member.email,
+          studentId: member.studentId
+        }));
+      }
+      
+      // Always include the booking student
+      if (!processedTeamMembers.some(m => m.email === student.email)) {
+        processedTeamMembers.push({
+          name: student.name,
+          email: student.email,
+          studentId: student.studentId
+        });
+      }
+      
+      presentation.slots[slotIndex].teamMembers = processedTeamMembers;
+    } else {
+      // Individual presentation - just add the booking student
+      presentation.slots[slotIndex].teamMembers = [{
+        name: student.name,
+        email: student.email,
+        studentId: student.studentId
+      }];
+    }
+    
+    await presentation.save();
     
     res.status(200).json({
       success: true,
       message: 'Presentation slot booked successfully',
-      presentation
+      slot: presentation.slots[slotIndex]
     });
   } catch (error) {
     console.error('Error booking presentation slot:', error);
@@ -164,67 +247,196 @@ const bookPresentationSlot = async (req, res) => {
   }
 };
 
-// Delete/cancel a presentation slot
-const deletePresentationSlot = async (req, res) => {
+// Get slots for a specific presentation (for grading)
+const getPresentationSlots = async (req, res) => {
   try {
     const presentationId = req.params.id;
     const userId = req.user.userId;
     
-    // Find the presentation slot
     const presentation = await Presentation.findById(presentationId);
+    
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation not found' });
+    }
+    
+    // Check if user is the faculty who created this presentation
+    if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'You are not authorized to access these slots' });
+    }
+    
+    // Return the slots
+    res.status(200).json(presentation.slots);
+  } catch (error) {
+    console.error('Error getting presentation slots:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Start a presentation (change slot status to in-progress)
+const startPresentationSlot = async (req, res) => {
+  try {
+    const slotId = req.params.slotId;
+    const userId = req.user.userId;
+    
+    // Find the presentation containing this slot
+    const presentation = await Presentation.findOne({ 'slots.id': slotId });
     
     if (!presentation) {
       return res.status(404).json({ message: 'Presentation slot not found' });
     }
     
+    // Check if user is the faculty who created this presentation
+    if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'You are not authorized to start this presentation' });
+    }
+    
+    // Find and update the slot
+    const slotIndex = presentation.slots.findIndex(slot => slot.id === slotId);
+    
+    if (slotIndex === -1) {
+      return res.status(404).json({ message: 'Slot not found' });
+    }
+    
+    // Update the slot status
+    presentation.slots[slotIndex].status = 'in-progress';
+    await presentation.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Presentation started successfully',
+      slot: presentation.slots[slotIndex]
+    });
+  } catch (error) {
+    console.error('Error starting presentation:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Complete a presentation (grade and provide feedback)
+const completePresentationSlot = async (req, res) => {
+  try {
+    const slotId = req.params.slotId;
+    const userId = req.user.userId;
+    const { grades, feedback, totalScore } = req.body;
+    
+    // Find the presentation containing this slot
+    const presentation = await Presentation.findOne({ 'slots.id': slotId });
+    
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation slot not found' });
+    }
+    
+    // Check if user is the faculty who created this presentation
+    if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'You are not authorized to grade this presentation' });
+    }
+    
+    // Find and update the slot
+    const slotIndex = presentation.slots.findIndex(slot => slot.id === slotId);
+    
+    if (slotIndex === -1) {
+      return res.status(404).json({ message: 'Slot not found' });
+    }
+    
+    // Update the slot with grades and feedback
+    presentation.slots[slotIndex].status = 'completed';
+    presentation.slots[slotIndex].grades = grades || {};
+    presentation.slots[slotIndex].feedback = feedback || '';
+    presentation.slots[slotIndex].totalScore = totalScore || 0;
+    
+    await presentation.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Presentation graded successfully',
+      slot: presentation.slots[slotIndex]
+    });
+  } catch (error) {
+    console.error('Error grading presentation:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Delete/cancel a presentation event
+const deletePresentationSlot = async (req, res) => {
+  try {
+    const presentationId = req.params.id;
+    const userId = req.user.userId;
+    
+    // Find the presentation
+    const presentation = await Presentation.findById(presentationId);
+    
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation not found' });
+    }
+    
     // Ensure only the faculty who created it can delete it
     if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'You are not authorized to delete this presentation slot' });
+      return res.status(403).json({ message: 'You are not authorized to delete this presentation' });
     }
     
-    // If booked, notify the student
-    if (presentation.booked && presentation.bookedBy) {
-      try {
-        const student = await User.findById(presentation.bookedBy);
-        const faculty = await User.findById(presentation.faculty);
-        
-        if (student && faculty) {
-          await sendEmail({
-            email: student.email,
-            templateId: TEMPLATES.PRESENTATION_CANCELLATION,
-            params: {
-              studentName: student.name,
-              facultyName: faculty.name,
-              title: presentation.title,
-              date: new Date(presentation.date).toLocaleDateString(),
-              startTime: new Date(presentation.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              reason: 'The faculty member has cancelled this presentation slot.'
-            }
-          });
-        }
-      } catch (emailError) {
-        console.error('Error sending cancellation email:', emailError);
-        // Continue with deletion even if email fails
-      }
-    }
-    
-    // Delete the presentation slot
+    // Delete the presentation
     await Presentation.findByIdAndDelete(presentationId);
     
     res.status(200).json({
       success: true,
-      message: 'Presentation slot cancelled successfully'
+      message: 'Presentation event deleted successfully'
     });
   } catch (error) {
-    console.error('Error deleting presentation slot:', error);
+    console.error('Error deleting presentation:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
+
+// Helper function to generate time slots
+function generateTimeSlots(startTime, endTime, periodStart, periodEnd, duration, buffer) {
+  const slots = [];
+  const days = [];
+  
+  // Generate array of dates between start and end date
+  let currentDate = new Date(periodStart);
+  const endDate = new Date(periodEnd);
+  
+  while (currentDate <= endDate) {
+    days.push(new Date(currentDate));
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  // Parse time strings
+  const [startHour, startMinute] = startTime.split(':').map(Number);
+  const [endHour, endMinute] = endTime.split(':').map(Number);
+  
+  // For each day, generate slots
+  days.forEach(day => {
+    let currentSlotTime = new Date(day);
+    currentSlotTime.setHours(startHour, startMinute, 0);
+    
+    let endSlotTime = new Date(day);
+    endSlotTime.setHours(endHour, endMinute, 0);
+    
+    while (currentSlotTime <= endSlotTime) {
+      slots.push({
+        id: uuidv4(),
+        time: new Date(currentSlotTime),
+        booked: false,
+        status: 'available'
+      });
+      
+      // Move to next slot time (duration + buffer)
+      currentSlotTime = new Date(currentSlotTime.getTime() + (duration + buffer) * 60 * 1000);
+    }
+  });
+  
+  return slots;
+}
 
 module.exports = {
   getAvailablePresentationSlots,
   getFacultyPresentationSlots,
   createPresentationSlot,
   bookPresentationSlot,
-  deletePresentationSlot
+  deletePresentationSlot,
+  getPresentationSlots,
+  startPresentationSlot,
+  completePresentationSlot
 };

@@ -25,7 +25,6 @@ const PresentationSlot = () => {
         const response = await api.get('/api/presentations/available');
         setPresentations(response.data);
       } catch (err) {
-        console.error('Error fetching available presentations:', err);
         setError('Failed to load available presentation slots');
       } finally {
         setLoading(false);
@@ -137,11 +136,22 @@ const PresentationSlot = () => {
         toast.error(response.data.message || 'Failed to book presentation slot');
       }
     } catch (err) {
-      console.error('Error booking presentation slot:', err);
       toast.error(err.response?.data?.message || 'Failed to book presentation slot');
     } finally {
       setBookingInProgress(false);
     }
+  };
+
+  // Format date properly for display (without time)
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
   if (loading) {
@@ -202,7 +212,7 @@ const PresentationSlot = () => {
                       <div>
                         <p className="text-sm text-gray-500">Presentation Period</p>
                         <p className="text-gray-800">
-                          {new Date(selectedPresentation.presentationPeriod.start).toLocaleDateString()} - {new Date(selectedPresentation.presentationPeriod.end).toLocaleDateString()}
+                          {formatDate(selectedPresentation.presentationPeriod.start)} - {formatDate(selectedPresentation.presentationPeriod.end)}
                         </p>
                       </div>
                     </div>
@@ -458,6 +468,15 @@ const PresentationSlot = () => {
                       <div>
                         <p className="text-sm text-gray-500">Location</p>
                         <p className="text-gray-800">{presentation.venue}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <i className="fas fa-calendar-day mt-1 mr-3 text-gray-400"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Presentation Period</p>
+                        <p className="text-gray-800">
+                          {formatDate(presentation.presentationPeriod.start)} - {formatDate(presentation.presentationPeriod.end)}
+                        </p>
                       </div>
                     </div>
                   </div>

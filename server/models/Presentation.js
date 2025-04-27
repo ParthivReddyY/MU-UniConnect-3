@@ -3,41 +3,12 @@ const mongoose = require('mongoose');
 const PresentationSchema = new mongoose.Schema({
   title: {
     type: String,
-    required: [true, 'Title is required'],
-    trim: true,
-    maxlength: [200, 'Title cannot be more than 200 characters']
+    required: true,
+    trim: true
   },
   description: {
     type: String,
-    trim: true,
-    maxlength: [1000, 'Description cannot be more than 1000 characters']
-  },
-  date: {
-    type: Date,
-    required: [true, 'Date is required']
-  },
-  startTime: {
-    type: Date,
-    required: [true, 'Start time is required']
-  },
-  endTime: {
-    type: Date,
-    required: [true, 'End time is required']
-  },
-  location: {
-    type: String,
-    required: [true, 'Location is required'],
     trim: true
-  },
-  presentationType: {
-    type: String,
-    enum: ['Academic', 'Project Defense', 'Thesis', 'Research', 'Other'],
-    default: 'Academic'
-  },
-  maxParticipants: {
-    type: Number,
-    default: 1,
-    min: [1, 'At least one participant must be allowed']
   },
   faculty: {
     type: mongoose.Schema.Types.ObjectId,
@@ -45,20 +16,123 @@ const PresentationSchema = new mongoose.Schema({
     required: true
   },
   facultyName: {
+    type: String
+  },
+  hostDepartment: {
+    type: String
+  },
+  venue: {
     type: String,
     required: true
   },
-  booked: {
+  registrationPeriod: {
+    start: {
+      type: Date,
+      required: true
+    },
+    end: {
+      type: Date,
+      required: true
+    }
+  },
+  presentationPeriod: {
+    start: {
+      type: Date,
+      required: true
+    },
+    end: {
+      type: Date,
+      required: true
+    }
+  },
+  participationType: {
+    type: String,
+    enum: ['individual', 'team'],
+    default: 'individual'
+  },
+  teamSizeMin: {
+    type: Number,
+    default: 1
+  },
+  teamSizeMax: {
+    type: Number,
+    default: 1
+  },
+  targetAudience: {
+    year: [{
+      type: String,
+      trim: true
+    }],
+    school: [{
+      type: String,
+      trim: true
+    }],
+    department: [{
+      type: String,
+      trim: true
+    }]
+  },
+  customGradingCriteria: {
     type: Boolean,
     default: false
   },
-  bookedBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+  gradingCriteria: [{
+    name: String,
+    weight: Number
+  }],
+  slotConfig: {
+    duration: {
+      type: Number,
+      required: true,
+      default: 20 // in minutes
+    },
+    buffer: {
+      type: Number,
+      default: 5 // in minutes
+    },
+    startTime: {
+      type: String,
+      required: true
+    },
+    endTime: {
+      type: String,
+      required: true
+    }
   },
-  bookedAt: {
-    type: Date
+  slots: [
+    {
+      id: String,
+      time: Date,
+      booked: {
+        type: Boolean,
+        default: false
+      },
+      bookedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      bookedAt: Date,
+      status: {
+        type: String,
+        enum: ['available', 'booked', 'in-progress', 'completed'],
+        default: 'available'
+      },
+      topic: String,
+      teamName: String,
+      teamMembers: [{
+        name: String,
+        email: String,
+        studentId: String
+      }],
+      feedback: String,
+      grades: mongoose.Schema.Types.Mixed,
+      totalScore: Number
+    }
+  ],
+  createdAt: {
+    type: Date,
+    default: Date.now
   }
-}, { timestamps: true });
+});
 
 module.exports = mongoose.model('Presentation', PresentationSchema);

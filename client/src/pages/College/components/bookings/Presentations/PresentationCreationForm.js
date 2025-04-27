@@ -19,8 +19,8 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     teamSizeMin: 1,
     teamSizeMax: 1,
     venue: '',
-    hostName: currentUser.name, // Add host name from current user
-    hostDepartment: currentUser.department || '', // Add host department from current user
+    hostName: currentUser?.name || '', 
+    hostDepartment: currentUser?.department || '', 
     registrationPeriod: {
       start: '',
       end: ''
@@ -46,7 +46,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     ]
   });
 
-  // School and department options from SignUp.js structure
+  // School and academic data - structured for consistent reuse
   const schoolOptions = [
     { value: 'École Centrale School of Engineering(ECSE)', label: 'École Centrale School of Engineering' },
     { value: 'School Of Law(SOL)', label: 'School of Law' },
@@ -57,7 +57,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     { value: 'School of Hospitality Management(SOHM)', label: 'School of Hospitality Management' }
   ];
 
-  // Department options - restructured to match SignUp.js
   const academicData = {
     "École Centrale School of Engineering(ECSE)": [
       { value: 'AI (Artificial Intelligence)', label: 'AI (Artificial Intelligence)' },
@@ -111,16 +110,16 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     { value: '5', label: '5th Year' }
   ];
 
-  // Search functionality for departments dropdown
+  // Department search functionality
   const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
   const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
   const departmentDropdownRef = useRef(null);
   
-  // State for storing generated slots
+  // Slot preview state
   const [generatedSlots, setGeneratedSlots] = useState([]);
   const [showSlotPreview, setShowSlotPreview] = useState(false);
 
-  // Close dropdown when clicking outside
+  // Handle clicks outside the department dropdown
   useEffect(() => {
     function handleClickOutside(event) {
       if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target)) {
@@ -134,22 +133,22 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     };
   }, [departmentDropdownRef]);
 
+  // Initialize form with data if provided
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
     }
     
-    // Initialize with host data if available
     if (currentUser) {
       setFormData(prev => ({
         ...prev,
-        hostName: currentUser.name,
-        hostDepartment: currentUser.department || ''
+        hostName: currentUser.name || prev.hostName,
+        hostDepartment: currentUser.department || prev.hostDepartment
       }));
     }
   }, [initialData, currentUser]);
 
-  // Handle input change for regular fields
+  // Field change handlers
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -166,7 +165,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     }
   };
 
-  // Handle change for nested fields
   const handleNestedChange = (parent, field, value) => {
     setFormData(prev => ({
       ...prev,
@@ -186,7 +184,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     }
   };
 
-  // Handle checkbox change for multiple select options
   const handleCheckboxChange = (parent, field, value, checked) => {
     setFormData(prev => {
       let updatedValues = [...prev[parent][field]];
@@ -216,7 +213,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     }
   };
 
-  // Handle grading criteria change
+  // Grading criteria management
   const handleCriteriaChange = (index, field, value) => {
     setFormData(prev => {
       const updatedCriteria = [...prev.gradingCriteria];
@@ -231,7 +228,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     });
   };
 
-  // Add new grading criterion
   const addGradingCriterion = () => {
     setFormData(prev => ({
       ...prev,
@@ -239,7 +235,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     }));
   };
 
-  // Remove grading criterion
   const removeGradingCriterion = (index) => {
     setFormData(prev => ({
       ...prev,
@@ -247,7 +242,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     }));
   };
 
-  // Generate slots based on configuration - now connected to UI
+  // Slot generation and preview
   const generateSlots = () => {
     const { duration, buffer, startTime, endTime } = formData.slotConfig;
     const totalDuration = duration + buffer;
@@ -267,40 +262,39 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     return slots;
   };
 
-  // Preview slots
   const handlePreviewSlots = () => {
     generateSlots();
   };
 
-  // Validate form before submission
+  // Form validation
   const validateForm = () => {
     const errors = {};
     
-    // Basic information validation
-    if (!formData.title) {
-      errors.title = "Title is required";
-    }
+    // Required fields validation
+    const requiredFields = [
+      { field: 'title', message: "Title is required" },
+      { field: 'venue', message: "Venue is required" },
+      { field: 'description', message: "Description is required" },
+      { field: 'registrationPeriod.start', message: "Registration start date is required" },
+      { field: 'registrationPeriod.end', message: "Registration end date is required" },
+      { field: 'presentationPeriod.start', message: "Presentation start date is required" },
+      { field: 'presentationPeriod.end', message: "Presentation end date is required" }
+    ];
     
-    if (!formData.venue) {
-      errors.venue = "Venue is required";
-    }
-    
-    // Dates validation
-    if (!formData.registrationPeriod.start) {
-      errors["registrationPeriod.start"] = "Registration start date is required";
-    }
-    
-    if (!formData.registrationPeriod.end) {
-      errors["registrationPeriod.end"] = "Registration end date is required";
-    }
-    
-    if (!formData.presentationPeriod.start) {
-      errors["presentationPeriod.start"] = "Presentation start date is required";
-    }
-    
-    if (!formData.presentationPeriod.end) {
-      errors["presentationPeriod.end"] = "Presentation end date is required";
-    }
+    requiredFields.forEach(({ field, message }) => {
+      const fieldParts = field.split('.');
+      let value;
+      
+      if (fieldParts.length === 1) {
+        value = formData[field];
+      } else {
+        value = formData[fieldParts[0]][fieldParts[1]];
+      }
+      
+      if (!value) {
+        errors[field] = message;
+      }
+    });
     
     // Date order validation
     if (formData.registrationPeriod.start && formData.registrationPeriod.end) {
@@ -318,11 +312,11 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     // Team size validation
     if (formData.participationType === 'team') {
       if (formData.teamSizeMin <= 0) {
-        errors.teamSizeMin = "Minimum team size must be positive";
+        errors.teamSizeMin = "Minimum team size must be at least 1";
       }
       
       if (formData.teamSizeMax < formData.teamSizeMin) {
-        errors.teamSizeMax = "Maximum team size must be greater than or equal to minimum";
+        errors.teamSizeMax = "Maximum team size cannot be less than minimum team size";
       }
     }
     
@@ -339,7 +333,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     if (formData.customGradingCriteria) {
       const totalWeight = formData.gradingCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
       if (totalWeight !== 100) {
-        errors.gradingCriteria = `Grading criteria weights must sum to 100%. Current total: ${totalWeight}%`;
+        errors.gradingCriteria = `Total grading criteria weight must equal 100% (currently ${totalWeight}%)`;
       }
       
       const emptyCriterion = formData.gradingCriteria.find(c => !c.name.trim());
@@ -348,39 +342,69 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
       }
     }
     
+    // Validate slot configuration
+    if (!formData.slotConfig.startTime || !formData.slotConfig.endTime) {
+      errors.slotConfig = "Please specify slot start and end times";
+    } else {
+      // Validate start time is before end time
+      const [startHour, startMinute] = formData.slotConfig.startTime.split(':').map(Number);
+      const [endHour, endMinute] = formData.slotConfig.endTime.split(':').map(Number);
+      
+      if (startHour > endHour || (startHour === endHour && startMinute >= endMinute)) {
+        errors.slotConfig = "Slot start time must be before end time";
+      }
+    }
+    
+    // Set form errors for UI display
     setFormErrors(errors);
+    
+    // Return true if no errors
     return Object.keys(errors).length === 0;
   };
 
-  // Handle form submission
+  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     // Validate form fields
-    if (!validateForm()) {
-      toast.error("Please fix the errors in the form");
-      
+    const isValid = validateForm();
+    if (!isValid) {
       // Scroll to the first error
-      const firstErrorKey = Object.keys(formErrors)[0];
-      if (firstErrorKey) {
-        const element = document.querySelector(`[name="${firstErrorKey}"], [data-error="${firstErrorKey}"]`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
+      const firstErrorField = document.querySelector('.border-red-500');
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
+      toast.error("Please fix the form errors before submitting");
       return;
     }
     
     setIsLoading(true);
     
     try {
-      // Generate slots for the presentation
-      const slots = generateSlots();
-      
-      // Create data to submit
+      // Create data to submit with properly formatted dates
       const dataToSubmit = {
-        ...formData,
-        slots
+        title: formData.title,
+        description: formData.description,
+        venue: formData.venue,
+        hostName: formData.hostName || currentUser.name,
+        hostDepartment: formData.hostDepartment || currentUser.department,
+        participationType: formData.participationType,
+        teamSizeMin: formData.teamSizeMin,
+        teamSizeMax: formData.teamSizeMax,
+        targetAudience: formData.targetAudience,
+        customGradingCriteria: formData.customGradingCriteria,
+        gradingCriteria: formData.gradingCriteria,
+        slotConfig: {
+          duration: parseInt(formData.slotConfig.duration, 10),
+          buffer: parseInt(formData.slotConfig.buffer, 10),
+          startTime: formData.slotConfig.startTime,
+          endTime: formData.slotConfig.endTime
+        },
+        // Fields separated for the backend
+        registrationStart: formData.registrationPeriod.start,
+        registrationEnd: formData.registrationPeriod.end,
+        presentationStart: formData.presentationPeriod.start,
+        presentationEnd: formData.presentationPeriod.end
       };
       
       const response = await api.post('/api/presentations', dataToSubmit);
@@ -392,14 +416,13 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
         toast.error(response.data.message || 'Failed to create presentation event');
       }
     } catch (error) {
-      console.error('Error creating presentation:', error);
       toast.error(error.response?.data?.message || 'Failed to create presentation event');
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Get available departments based on selected schools
+  // Department selection helpers
   const getAvailableDepartments = () => {
     if (formData.targetAudience.school.length === 0) {
       return [];
@@ -414,7 +437,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     return availableDepts;
   };
 
-  // Handle adding a department
   const handleAddDepartment = (value) => {
     // Check if department's school is selected
     const deptSchool = Object.entries(academicData).find(([school, depts]) => 
@@ -445,7 +467,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     setShowDepartmentDropdown(false);
   };
 
-  // Handle removing a department
   const handleRemoveDepartment = (value) => {
     setFormData(prev => ({
       ...prev,
@@ -454,6 +475,34 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
         department: prev.targetAudience.department.filter(dept => dept !== value)
       }
     }));
+  };
+
+  // Error summary display
+  const renderFormErrorSummary = () => {
+    const errorKeys = Object.keys(formErrors);
+    if (errorKeys.length === 0) return null;
+    
+    return (
+      <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
+        <div className="flex">
+          <div className="flex-shrink-0">
+            <i className="fas fa-exclamation-circle text-red-500"></i>
+          </div>
+          <div className="ml-3">
+            <h3 className="text-sm font-medium text-red-800">
+              Please fix the following errors:
+            </h3>
+            <div className="mt-2 text-sm text-red-700">
+              <ul className="list-disc pl-5 space-y-1">
+                {errorKeys.map(key => (
+                  <li key={key}>{formErrors[key]}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -470,6 +519,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
         </div>
         
         <form onSubmit={handleSubmit} className="p-6">
+          {Object.keys(formErrors).length > 0 && renderFormErrorSummary()}
           <div className="space-y-8">
             {/* Basic Information Section */}
             <div>
@@ -514,9 +564,12 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                     name="description"
                     value={formData.description}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]"
+                    className={`w-full px-4 py-2 border ${formErrors.description ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[80px]`}
                     placeholder="Enter presentation description"
                   />
+                  {formErrors.description && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.description}</p>
+                  )}
                 </div>
                 
                 <div>
@@ -590,7 +643,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">Start Date</label>
                       <input
-                        type="datetime-local"
+                        type="date"
                         name="presentationPeriod.start"
                         value={formData.presentationPeriod.start}
                         onChange={(e) => handleNestedChange('presentationPeriod', 'start', e.target.value)}
@@ -603,7 +656,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                     <div>
                       <label className="text-xs text-gray-500 mb-1 block">End Date</label>
                       <input
-                        type="datetime-local"
+                        type="date"
                         name="presentationPeriod.end"
                         value={formData.presentationPeriod.end}
                         onChange={(e) => handleNestedChange('presentationPeriod', 'end', e.target.value)}
@@ -660,7 +713,9 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                       />
                     </div>
                   </div>
-                  
+                  {formErrors.slotConfig && (
+                    <p className="mt-1 text-sm text-red-600">{formErrors.slotConfig}</p>
+                  )}
                   <button 
                     type="button"
                     onClick={handlePreviewSlots}

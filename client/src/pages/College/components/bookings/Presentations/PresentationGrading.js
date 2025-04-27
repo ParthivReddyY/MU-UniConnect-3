@@ -15,6 +15,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
   const [presentationCompleted, setPresentationCompleted] = useState(false);
   const [feedback, setFeedback] = useState('');
 
+  // Fetch slots when component mounts or presentation changes
   useEffect(() => {
     if (!presentation) return;
     
@@ -31,7 +32,6 @@ const PresentationGrading = ({ presentation, onClose }) => {
           setPresentationInProgress(true);
         }
       } catch (error) {
-        console.error('Error fetching presentation slots:', error);
         toast.error('Failed to load presentation slots');
       } finally {
         setLoading(false);
@@ -39,8 +39,9 @@ const PresentationGrading = ({ presentation, onClose }) => {
     };
     
     fetchSlots();
-  }, [presentation]); // Removed fetchSlots from dependency array
+  }, [presentation]);
 
+  // Handle starting a presentation
   const handleStartPresentation = async (slot) => {
     try {
       setSubmitting(true);
@@ -56,13 +57,13 @@ const PresentationGrading = ({ presentation, onClose }) => {
         toast.success('Presentation started successfully');
       }
     } catch (error) {
-      console.error('Error starting presentation:', error);
       toast.error('Failed to start presentation');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Handle grade changes
   const handleGradeChange = (criterionName, value) => {
     setGrades(prev => ({
       ...prev,
@@ -70,6 +71,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
     }));
   };
 
+  // Handle completing a presentation with grades
   const handleCompletePresentation = async () => {
     if (!activeSlot) return;
     
@@ -124,13 +126,13 @@ const PresentationGrading = ({ presentation, onClose }) => {
         }, 3000);
       }
     } catch (error) {
-      console.error('Error completing presentation:', error);
       toast.error('Failed to complete presentation');
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Format time slot for display
   const calculateTimeSlot = (slot) => {
     if (!slot.scheduleTime) return 'Time not set';
     
@@ -148,6 +150,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
     }
   };
 
+  // Get status badge for slot
   const getSlotStatus = (slot) => {
     switch (slot.status) {
       case 'booked':
@@ -161,6 +164,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
     }
   };
 
+  // Export grades to CSV
   const exportToCSV = () => {
     // Create array of row objects
     const rows = slots.map(slot => {
@@ -193,21 +197,20 @@ const PresentationGrading = ({ presentation, onClose }) => {
     let csvContent = columns.join(',') + '\n';
     
     rows.forEach(row => {
-      const csvRow = columns.map(column => {
+      const rowData = columns.map(column => {
         const value = row[column] !== undefined ? row[column] : '';
         // Escape commas and quotes
-        const escapedValue = typeof value === 'string' ? `"${value.replace(/"/g, '""')}"` : value;
-        return escapedValue;
-      }).join(',');
-      csvContent += csvRow + '\n';
+        return `"${String(value).replace(/"/g, '""')}"`;
+      });
+      csvContent += rowData.join(',') + '\n';
     });
     
-    // Create download link
+    // Download the CSV file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `presentation-grades-${presentation.title.replace(/[^a-zA-Z0-9]/g, '-')}.csv`);
+    link.setAttribute('download', `${presentation.title}_grades.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -215,8 +218,8 @@ const PresentationGrading = ({ presentation, onClose }) => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto">
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Presentation Grading</h1>
@@ -330,7 +333,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
                 <div className="p-6">
                   <h4 className="font-medium text-gray-700 mb-3">Grade Breakdown</h4>
                   <div className="space-y-3">
-                    {Object.entries(grades).map(([criterion, score]) => (
+                    {Object.entries(activeSlot.grades || {}).map(([criterion, score]) => (
                       <div key={criterion} className="flex justify-between items-center">
                         <span className="text-gray-600">{criterion}</span>
                         <span className="font-medium">{score}/100</span>
@@ -342,11 +345,11 @@ const PresentationGrading = ({ presentation, onClose }) => {
                     </div>
                   </div>
                   
-                  {feedback && (
+                  {activeSlot.feedback && (
                     <div className="mt-6">
                       <h4 className="font-medium text-gray-700 mb-2">Feedback</h4>
                       <div className="bg-gray-50 p-4 rounded-md border border-gray-100">
-                        <p className="text-gray-600 whitespace-pre-wrap">{feedback}</p>
+                        <p className="text-gray-600 whitespace-pre-wrap">{activeSlot.feedback}</p>
                       </div>
                     </div>
                   )}
@@ -372,7 +375,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
                 </div>
                 
                 <div className="p-6">
-                  <h4 className="font-medium text-gray-700 mb-4">Grading Criteria</h4>
+                  <h3 className="font-semibold text-gray-800 mb-4">Grade This Presentation</h3>
                   
                   <div className="space-y-6">
                     {(presentation.customGradingCriteria ? presentation.gradingCriteria : [
@@ -382,13 +385,9 @@ const PresentationGrading = ({ presentation, onClose }) => {
                       { name: 'Q&A', weight: 20 }
                     ]).map(criterion => (
                       <div key={criterion.name} className="space-y-2">
-                        <div className="flex justify-between">
-                          <label className="block font-medium text-gray-700">
-                            {criterion.name} <span className="text-sm text-gray-500">({criterion.weight}%)</span>
-                          </label>
-                          <span className="text-sm font-medium text-gray-700">
-                            {grades[criterion.name] || 0}/100
-                          </span>
+                        <div className="flex justify-between items-center">
+                          <label className="font-medium text-gray-700">{criterion.name} ({criterion.weight}%)</label>
+                          <span className="text-sm text-gray-500">{grades[criterion.name] || 0}/100</span>
                         </div>
                         <input
                           type="range"
@@ -398,25 +397,16 @@ const PresentationGrading = ({ presentation, onClose }) => {
                           onChange={(e) => handleGradeChange(criterion.name, e.target.value)}
                           className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                         />
-                        <div className="flex justify-between text-xs text-gray-500">
-                          <span>0</span>
-                          <span>25</span>
-                          <span>50</span>
-                          <span>75</span>
-                          <span>100</span>
-                        </div>
                       </div>
                     ))}
                     
-                    <div className="pt-4 border-t border-gray-200">
-                      <label className="block font-medium text-gray-700 mb-2">
-                        Feedback (optional)
-                      </label>
+                    <div className="border-t border-gray-200 pt-4 mt-4">
+                      <label className="block font-medium text-gray-700 mb-2">Feedback (Optional)</label>
                       <textarea
                         value={feedback}
                         onChange={(e) => setFeedback(e.target.value)}
-                        rows="4"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        rows="3"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                         placeholder="Provide feedback for the presentation..."
                       ></textarea>
                     </div>
@@ -438,7 +428,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
                         </>
                       ) : (
                         <>
-                          <i className="fas fa-save mr-2"></i>
+                          <i className="fas fa-check-circle mr-2"></i>
                           Complete Grading
                         </>
                       )}

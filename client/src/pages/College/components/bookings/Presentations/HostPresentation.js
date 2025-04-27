@@ -92,9 +92,7 @@ const HostPresentation = () => {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'presentations' && (
-          <PresentationManagement />
-        )}
+        {activeTab === 'presentations' && <PresentationManagement />}
 
         {activeTab === 'analytics' && (
           <div className="bg-white rounded-lg shadow-sm p-6 text-center">

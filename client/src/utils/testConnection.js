@@ -4,7 +4,7 @@ import axios from 'axios';
 const testServerConnection = async () => {
   try {
     // Try to connect to the server's health endpoint
-    const response = await axios.get('http://localhost:5000/health', {
+    const response = await axios.get('http://localhost:9000/health', {
       timeout: 5000 // 5 second timeout
     });
     
