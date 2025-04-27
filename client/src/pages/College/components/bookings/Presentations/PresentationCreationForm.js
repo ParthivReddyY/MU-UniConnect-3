@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import api from '../../../../../utils/axiosConfig';
+import { academicStructure } from '../../../../../utils/academicDataUtils';
 
 const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData = null }) => {
   const { currentUser } = useAuth();
@@ -57,50 +58,30 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     { value: 'School of Hospitality Management(SOHM)', label: 'School of Hospitality Management' }
   ];
 
-  const academicData = {
-    "École Centrale School of Engineering(ECSE)": [
-      { value: 'AI (Artificial Intelligence)', label: 'AI (Artificial Intelligence)' },
-      { value: 'Biotechnology', label: 'Biotechnology' },
-      { value: 'Computational Biology', label: 'Computational Biology' },
-      { value: 'CSE (Computer Science and Engineering)', label: 'CSE (Computer Science and Engineering)' },
-      { value: 'Civil Engineering', label: 'Civil Engineering' },
-      { value: 'CM (Computation and Mathematics)', label: 'CM (Computation and Mathematics)' },
-      { value: 'ECM (Electronics and Computer Engineering)', label: 'ECM (Electronics and Computer Engineering)' },
-      { value: 'Mechanical Engineering (ME)', label: 'Mechanical Engineering (ME)' },
-      { value: 'Mechatronics (MT)', label: 'Mechatronics (MT)' },
-      { value: 'Nanotechnology', label: 'Nanotechnology' },
-      { value: 'ECE (Electronics and Communication Engineering)', label: 'ECE (Electronics and Communication Engineering)' },
-      { value: 'Aerospace Engineering', label: 'Aerospace Engineering' },
-      { value: 'Electronic and Computer Engineering', label: 'Electronic and Computer Engineering' },
-      { value: 'VLSI Design and Technology', label: 'VLSI Design and Technology' }
-    ],
-    "School of Management(SOM)": [
-      { value: 'Applied Economics and Finance', label: 'Applied Economics and Finance' },
-      { value: 'Digital Technologies', label: 'Digital Technologies' },
-      { value: 'Computational Business Analytics', label: 'Computational Business Analytics' }
-    ],
-    "School Of Law(SOL)": [
-      { value: 'Corporate Law', label: 'Corporate Law' },
-      { value: 'Business Laws', label: 'Business Laws' },
-      { value: 'Criminal Law', label: 'Criminal Law' },
-      { value: 'International Law', label: 'International Law' },
-      { value: 'Intellectual Property Law', label: 'Intellectual Property Law' }
-    ],
-    "Indira Mahindra School of Education(IMSOE)": [
-      { value: 'School Education', label: 'School Education' },
-      { value: 'Education', label: 'Education' }
-    ],
-    "School of Digital Media and Communication(SDMC)": [
-      { value: 'Computation and Media', label: 'Computation and Media' },
-      { value: 'Journalism and Mass Communication', label: 'Journalism and Mass Communication' }
-    ],
-    "School of Design Innovation(SODI)": [
-      { value: 'Design Innovation', label: 'Design Innovation' }
-    ],
-    "School of Hospitality Management(SOHM)": [
-      { value: 'Culinary and Hospitality Management', label: 'Culinary and Hospitality Management' }
-    ]
+  // Convert academicStructure to the format expected by the form
+  const formatDepartments = (school) => {
+    if (!school || !academicStructure[school]) return [];
+    
+    // Flatten all departments from all programs in this school
+    const departments = [];
+    
+    Object.values(academicStructure[school]).forEach(depts => {
+      depts.forEach(dept => {
+        // Only add if not already in the array
+        if (!departments.some(d => d.value === dept)) {
+          departments.push({ value: dept, label: dept });
+        }
+      });
+    });
+    
+    return departments;
   };
+
+  // Map academicStructure to the format expected by this component
+  const academicData = Object.keys(academicStructure).reduce((acc, school) => {
+    acc[school] = formatDepartments(school);
+    return acc;
+  }, {});
 
   const yearOptions = [
     { value: '1', label: '1st Year' },

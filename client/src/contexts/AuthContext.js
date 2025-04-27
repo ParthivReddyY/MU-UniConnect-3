@@ -110,21 +110,42 @@ export const AuthProvider = ({ children }) => {
       });
       
       if (response.data.success && response.data.token && response.data.user) {
-        // Log the received user data with studentId
-        console.log('Login successful - received user data:', {
-          id: response.data.user._id,
-          name: response.data.user.name,
-          studentId: response.data.user.studentId || 'not set'
-        });
-        
         // Set auth token to axios default headers
         api.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
         
-        // Save token and user info to localStorage
+        // Store the token in localStorage
         localStorage.setItem('token', response.data.token);
-        localStorage.setItem('user', JSON.stringify(response.data.user));
         
-        // Update state
+        // Immediately fetch complete user profile data
+        try {
+          const userResponse = await api.get('/api/auth/me');
+          if (userResponse.data && userResponse.data.success && userResponse.data.user) {
+            console.log('Fetched complete user data after login:', {
+              id: userResponse.data.user._id,
+              name: userResponse.data.user.name,
+              studentId: userResponse.data.user.studentId || 'not set',
+              yearOfJoining: userResponse.data.user.yearOfJoining || 'not set'
+            });
+            
+            // Save the complete user data to localStorage
+            localStorage.setItem('user', JSON.stringify(userResponse.data.user));
+            
+            // Update state with complete user data
+            setCurrentUser(userResponse.data.user);
+            setIsLoading(false);
+            
+            return {
+              success: true,
+              user: userResponse.data.user
+            };
+          }
+        } catch (userDataError) {
+          console.error('Error fetching complete user data:', userDataError);
+          // Fall back to the original user data if fetching complete data fails
+        }
+        
+        // If fetching complete data fails, use the original response data
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         setCurrentUser(response.data.user);
         setIsLoading(false);
         
@@ -353,33 +374,46 @@ export const AuthProvider = ({ children }) => {
     }
   };
   
-  // Update user profile function
+  // Update user profile function - Optimized
   const updateProfile = async (userData) => {
+    setIsLoading(true);
+    setError('');
+    
     try {
-      setError('');
-      console.log('Updating profile with data:', userData);
+      // Sanitize and validate data before sending
+      const sanitizedData = { ...userData };
       
-      // Make sure studentId is included in the request
-      if (userData.studentId !== undefined) {
-        console.log('Updating student ID to:', userData.studentId);
+      // Convert empty strings to undefined for optional fields to prevent unintended updates
+      ['studentId', 'mobileNumber', 'bio', 'yearOfJoining'].forEach(field => {
+        if (sanitizedData[field] === '') {
+          sanitizedData[field] = undefined;
+        }
+      });
+      
+      // For yearOfJoining, apply simple validation
+      if (sanitizedData.yearOfJoining !== undefined) {
+        const year = parseInt(sanitizedData.yearOfJoining, 10);
+        const currentYear = new Date().getFullYear();
+        
+        if (isNaN(year) || year < 1990 || year > currentYear) {
+          console.warn(`Invalid year ${sanitizedData.yearOfJoining}, not updating`);
+          delete sanitizedData.yearOfJoining;
+        } else {
+          console.log('Updating academic year of joining to:', sanitizedData.yearOfJoining);
+        }
       }
       
-      // Make sure yearOfJoining is included in the request
-      if (userData.yearOfJoining !== undefined) {
-        console.log('Updating academic year of joining to:', userData.yearOfJoining);
-      }
-      
-      const response = await api.put('/api/auth/update-profile', userData);
+      const response = await api.put('/api/auth/update-profile', sanitizedData);
       
       if (response.data.success) {
         // Update the user in local storage
         const updatedUser = { ...currentUser, ...response.data.user };
         
-        console.log('Profile updated. New user data:', {
-          id: updatedUser._id,
-          name: updatedUser.name,
-          studentId: updatedUser.studentId || 'not set',
-          yearOfJoining: updatedUser.yearOfJoining || 'not set'
+        // Log important field changes
+        ['studentId', 'yearOfJoining', 'department'].forEach(field => {
+          if (currentUser[field] !== updatedUser[field]) {
+            console.log(`Updated ${field}: ${currentUser[field] || 'not set'} → ${updatedUser[field] || 'not set'}`);
+          }
         });
         
         localStorage.setItem('user', JSON.stringify(updatedUser));
@@ -387,6 +421,7 @@ export const AuthProvider = ({ children }) => {
         // Update the current user state
         setCurrentUser(updatedUser);
         
+        setIsLoading(false);
         return { success: true, message: response.data.message, user: updatedUser };
       } else {
         throw new Error(response.data.message || 'Failed to update profile');
@@ -394,6 +429,7 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Update profile error:', err);
       setError(err.response?.data?.message || err.message || 'Failed to update profile');
+      setIsLoading(false);
       return { success: false, error: err.response?.data?.message || err.message || 'Failed to update profile' };
     }
   };
@@ -442,7 +478,7 @@ export const AuthProvider = ({ children }) => {
     resetPassword,
     updatePassword,
     verifyEmail,
-    updateProfile  // Add the updateProfile function to context
+    updateProfile
   };
   
   return (

@@ -8,7 +8,9 @@
  * @returns {object} - Academic progress information
  */
 export const calculateAcademicProgress = (yearOfJoining) => {
-  if (!yearOfJoining) {
+  // Basic validation
+  const validation = validateYearOfJoining(yearOfJoining);
+  if (!validation.isValid) {
     return { isValidCalculation: false };
   }
   
@@ -17,14 +19,6 @@ export const calculateAcademicProgress = (yearOfJoining) => {
   const currentDate = new Date();
   const currentYear = currentDate.getFullYear();
   const currentMonth = currentDate.getMonth(); // 0-11
-  
-  // Validate the year input
-  if (isNaN(joinYear) || joinYear > currentYear || joinYear < 1990) {
-    return { isValidCalculation: false };
-  }
-  
-  // FIXED CALCULATION:
-  // For Indian academic system where academic years typically start in July/August
   
   // Calculate the number of completed academic years since joining
   let academicYear;
@@ -100,7 +94,11 @@ export const formatAcademicYear = (yearStr) => {
   return `${year}-${year + 1}`;
 };
 
-// Get current semester dates
+/**
+ * Get current semester dates
+ * @param {string} yearOfJoining - Year of joining
+ * @returns {object} - Current semester information
+ */
 export const getCurrentSemesterDates = (yearOfJoining) => {
   const currentDate = new Date();
   const currentMonth = currentDate.getMonth(); // 0-11 (Jan-Dec)
@@ -122,9 +120,13 @@ export const getCurrentSemesterDates = (yearOfJoining) => {
   }
 };
 
-// Debug utility to validate yearOfJoining
+/**
+ * Validate year of joining
+ * @param {string|number} year - Year to validate
+ * @returns {object} - Validation result with isValid flag and message
+ */
 export const validateYearOfJoining = (year) => {
-  if (!year) return { isValid: false, message: 'Year is empty' };
+  if (!year) return { isValid: false, message: 'Year is required' };
   
   const yearNum = typeof year === 'string' ? parseInt(year, 10) : year;
   

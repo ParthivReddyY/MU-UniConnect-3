@@ -1,6 +1,7 @@
 /**
  * Validation utilities for forms
  */
+import { getAcademicYears } from './academicDataUtils';
 
 /**
  * Validate email format
@@ -36,13 +37,46 @@ export const isValidStudentId = (id) => {
 /**
  * Validate year is in reasonable range
  * @param {string|number} year - Year to validate
+ * @returns {object} - Result with isValid flag and message
+ */
+export const validateYear = (year) => {
+  if (!year) return { isValid: false, message: 'Year is required' };
+  
+  const numYear = parseInt(year, 10);
+  const currentYear = new Date().getFullYear();
+  
+  if (isNaN(numYear)) {
+    return { isValid: false, message: 'Not a valid number' };
+  }
+  
+  if (numYear < 1990 || numYear > currentYear) {
+    return { 
+      isValid: false, 
+      message: `Year should be between 1990 and ${currentYear}` 
+    };
+  }
+  
+  return { isValid: true, message: 'Valid year' };
+};
+
+/**
+ * Simple check if year is valid (for backward compatibility)
+ * @param {string|number} year - Year to validate
  * @returns {boolean} - True if valid
  */
 export const isValidYear = (year) => {
-  if (!year) return false;
-  const numYear = parseInt(year, 10);
-  const currentYear = new Date().getFullYear();
-  return !isNaN(numYear) && numYear >= 1990 && numYear <= currentYear;
+  return validateYear(year).isValid;
+};
+
+/**
+ * Generate year options for selection dropdowns
+ * @param {number} count - Number of years to generate (default 10)
+ * @returns {string[]} - Array of year strings
+ * @deprecated Use getAcademicYears from academicDataUtils instead
+ */
+export const generateYearOptions = (count = 10) => {
+  console.warn('generateYearOptions is deprecated, use getAcademicYears from academicDataUtils instead');
+  return getAcademicYears(count);
 };
 
 /**
@@ -53,41 +87,104 @@ export const isValidYear = (year) => {
 export const calculateProfileCompletion = (userData) => {
   if (!userData) return 0;
   
+  // Define fields to check by user role
+  const fields = {
+    base: ['name', 'email', 'bio'],
+    student: ['studentId', 'yearOfJoining'],
+    faculty: ['department'],
+    clubHead: ['clubManaging']
+  };
+  
+  // Track completed fields and total fields
   let completed = 0;
-  let total = 3; // Base fields: name, email, bio
+  let total = fields.base.length;
   
-  if (userData.name) completed++;
-  if (userData.bio) completed++;
-  completed++; // Email is always provided
+  // Check base fields
+  fields.base.forEach(field => {
+    if (field === 'email' || userData[field]) completed++;
+  });
   
-  // Role-specific fields
+  // Check role-specific fields
   if (userData.role === 'student') {
-    total += 2; // studentId and yearOfJoining
-    if (userData.studentId) completed++;
-    if (userData.yearOfJoining) completed++;
-  } else if (userData.role === 'faculty') {
-    total++; // department
-    if (userData.department) completed++;
-  } else if (userData.role === 'clubHead') {
-    total++; // clubManaging
-    if (userData.clubManaging) completed++;
-  }
-  
-  // Mobile number
-  total++;
-  if (userData.mobileNumber) completed++;
-  
-  // Social links
-  if (userData.socialLinks) {
-    Object.keys(userData.socialLinks).forEach(platform => {
+    fields.student.forEach(field => {
       total++;
-      if (userData.socialLinks[platform]) completed++;
+      if (userData[field]) completed++;
+    });
+  } else if (userData.role === 'faculty') {
+    fields.faculty.forEach(field => {
+      total++;
+      if (userData[field]) completed++;
+    });
+  } else if (userData.role === 'clubHead' || userData.role === 'clubs') {
+    fields.clubHead.forEach(field => {
+      total++;
+      if (userData[field]) completed++;
     });
   }
   
-  // Profile image
+  // Check mobile number
   total++;
-  if (userData.profileImage) completed++;
+  if (userData.mobileNumber) completed++;
   
-  return Math.round((completed / total) * 100);
+  // Check social links
+  if (userData.socialLinks) {
+    Object.entries(userData.socialLinks).forEach(([platform, url]) => {
+      total++;
+      if (url) completed++;
+    });
+  }
+  
+  // Calculate percentage
+  return Math.round((completed / Math.max(total, 1)) * 100);
+};
+
+/**
+ * Validate user form data
+ * @param {Object} formData - User form data to validate
+ * @returns {Object} - Object with errors by field
+ */
+export const validateUserForm = (formData) => {
+  const errors = {};
+  
+  // Required fields
+  if (!formData.name?.trim()) {
+    errors.name = 'Name is required';
+  }
+  
+  if (!formData.email?.trim()) {
+    errors.email = 'Email is required';
+  } else if (!isValidEmail(formData.email)) {
+    errors.email = 'Email format is invalid';
+  }
+  
+  // Role-specific validations
+  if (formData.role === 'student') {
+    if (!formData.studentId?.trim()) {
+      errors.studentId = 'Student ID is required';
+    } else if (!isValidStudentId(formData.studentId)) {
+      errors.studentId = 'Student ID format is invalid';
+    }
+    
+    if (formData.yearOfJoining) {
+      const yearValidation = validateYear(formData.yearOfJoining);
+      if (!yearValidation.isValid) {
+        errors.yearOfJoining = yearValidation.message;
+      }
+    }
+  } else if (formData.role === 'faculty') {
+    if (!formData.department?.trim()) {
+      errors.department = 'Department is required';
+    }
+  } else if (formData.role === 'clubHead' || formData.role === 'clubs') {
+    if (!formData.clubManaging?.trim()) {
+      errors.clubManaging = 'Club name is required';
+    }
+  }
+  
+  // Validate mobile number if provided
+  if (formData.mobileNumber && !/^[0-9]{10}$/.test(formData.mobileNumber)) {
+    errors.mobileNumber = 'Mobile number must be 10 digits';
+  }
+  
+  return errors;
 };

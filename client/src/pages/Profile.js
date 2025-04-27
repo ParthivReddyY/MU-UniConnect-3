@@ -1,15 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api from '../utils/axiosConfig';
 import ImageUploader from '../components/ImageUploader';
 import { calculateAcademicProgress, formatAcademicYear } from '../utils/academicUtils';
+import { calculateProfileCompletion, validateUserForm } from '../utils/validation';
+import { getAcademicYears } from '../utils/academicDataUtils';
 
 const Profile = () => {
   const navigate = useNavigate();
-  const { currentUser, isAdmin, isFaculty, isClubHead } = useAuth();
+  const { currentUser, updateProfile, isAdmin, isFaculty, isClubHead } = useAuth();
   
-  // Form data state
+  // Form data state - initialized with empty values, populated in useEffect
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,12 +19,8 @@ const Profile = () => {
     clubManaging: '',
     bio: '',
     mobileNumber: '',
-    yearOfJoining: '', // Added yearOfJoining to formData
-    socialLinks: {
-      linkedin: '',
-      twitter: '',
-      github: ''
-    }
+    yearOfJoining: '',
+    socialLinks: { linkedin: '', twitter: '', github: '' }
   });
   
   // UI state
@@ -31,38 +28,20 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [notification, setNotification] = useState({ show: false, type: '', message: '' });
   const [imageData, setImageData] = useState(null);
+  const [academicInfo, setAcademicInfo] = useState(null);
   const [editMode, setEditMode] = useState({
     name: false,
     bio: false,
     mobileNumber: false,
     socialLinks: false,
     studentId: false,
-    yearOfJoining: false  // Add edit mode for yearOfJoining
+    yearOfJoining: false
   });
+  const [errors, setErrors] = useState({});
   
   const bioRef = useRef(null);
   
-  // Format date for better display
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Not available';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-  
-  // Format semester information
-  const formatSemesterInfo = (academicInfo) => {
-    if (!academicInfo || !academicInfo.isValidCalculation) return 'Not available';
-    
-    return `${academicInfo.year}${academicInfo.yearSuffix} Year, ${academicInfo.currentSemester}${academicInfo.semesterSuffix} Semester`;
-  };
-
-  // Add state for academic information
-  const [academicInfo, setAcademicInfo] = useState(null);
-  
-  // Load user data
+  // Load user data and calculate academic progress in a single useEffect
   useEffect(() => {
     if (!currentUser) {
       navigate('/login');
@@ -88,68 +67,26 @@ const Profile = () => {
     
     // Calculate academic progress if yearOfJoining exists
     if (currentUser.yearOfJoining) {
-      const academicProgress = calculateAcademicProgress(currentUser.yearOfJoining);
-      setAcademicInfo(academicProgress);
+      setAcademicInfo(calculateAcademicProgress(currentUser.yearOfJoining));
     }
     
     setIsLoading(false);
   }, [currentUser, navigate]);
   
-  // Toggle edit mode for student ID specifically for students
-  const toggleStudentIdEdit = () => {
-    if (currentUser.role === 'student') {
-      setEditMode(prev => ({
-        ...prev,
-        studentId: !prev.studentId
-      }));
-    }
+  // Helper functions
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Not available';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    });
+  };
+  
+  const formatSemesterInfo = (academicInfo) => {
+    if (!academicInfo || !academicInfo.isValidCalculation) return 'Not available';
+    return `${academicInfo.year}${academicInfo.yearSuffix} Year, ${academicInfo.currentSemester}${academicInfo.semesterSuffix} Semester`;
   };
 
-  // Toggle edit mode for year of joining specifically for students
-  const toggleYearOfJoiningEdit = () => {
-    if (currentUser.role === 'student') {
-      setEditMode(prev => ({
-        ...prev,
-        yearOfJoining: !prev.yearOfJoining
-      }));
-    }
-  };
-
-  // Auto-focus on editing fields
-  useEffect(() => {
-    if (editMode.bio && bioRef.current) {
-      bioRef.current.focus();
-    }
-  }, [editMode.bio]);
-  
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    if (name.includes('.')) {
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
-  };
-  
-  // Handle image change
-  const handleImageChange = (data) => {
-    setImageData(data);
-    handleSave(); // Auto-save when image changes
-  };
-  
-  // Toggle edit mode for a field
+  // Consolidated toggle function for any edit mode field
   const toggleEditMode = (field) => {
     setEditMode(prev => ({
       ...prev,
@@ -157,9 +94,61 @@ const Profile = () => {
     }));
   };
   
+  // Auto-focus on editing fields
+  useEffect(() => {
+    if (editMode.bio && bioRef.current) {
+      bioRef.current.focus();
+    }
+  }, [editMode.bio]);
+  
+  // Handle form input changes with support for nested objects
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    
+    if (name.includes('.')) {
+      const [parent, child] = name.split('.');
+      setFormData(prev => ({
+        ...prev,
+        [parent]: { ...prev[parent], [child]: value }
+      }));
+    } else {
+      setFormData(prev => ({ ...prev, [name]: value }));
+    }
+    
+    // Clear field-specific error when user types
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: undefined
+      }));
+    }
+  };
+  
+  // Handle image change with auto-save
+  const handleImageChange = (data) => {
+    setImageData(data);
+    handleSave(); // Auto-save when image changes
+  };
+  
   // Save a specific field
   const saveField = async (field) => {
     toggleEditMode(field);
+    
+    // Create a partial form data object with just the field being edited
+    const partialForm = { 
+      ...formData,
+      role: currentUser.role // Ensure role is included for validation
+    };
+    
+    // Validate the field
+    const fieldErrors = validateUserForm(partialForm);
+    
+    if (fieldErrors[field]) {
+      setErrors(prev => ({ ...prev, [field]: fieldErrors[field] }));
+      showNotification('error', `Error: ${fieldErrors[field]}`);
+      return;
+    }
+    
     await handleSave();
   };
   
@@ -171,6 +160,15 @@ const Profile = () => {
       // Prepare data for submission
       const dataToSubmit = { ...formData };
       
+      // Validate form data before saving
+      const formErrors = validateUserForm({ ...dataToSubmit, role: currentUser.role });
+      
+      if (Object.keys(formErrors).length > 0) {
+        setErrors(formErrors);
+        showNotification('error', 'Please fix the highlighted errors.');
+        return;
+      }
+      
       // Handle image upload if changed
       if (imageData) {
         if (imageData.type === 'url' && imageData.url) {
@@ -181,86 +179,47 @@ const Profile = () => {
       }
       
       // Make API request to update profile
-      const response = await api.put('/api/auth/update-profile', dataToSubmit);
+      const result = await updateProfile(dataToSubmit);
       
-      if (response.data.success) {
+      if (result.success) {
         showNotification('success', 'Profile updated successfully!');
+        
+        // Update academic info if yearOfJoining was changed
+        if (dataToSubmit.yearOfJoining && dataToSubmit.yearOfJoining !== currentUser.yearOfJoining) {
+          setAcademicInfo(calculateAcademicProgress(dataToSubmit.yearOfJoining));
+        }
+      } else {
+        throw new Error(result.error || 'Failed to update profile');
       }
     } catch (error) {
       console.error('Error updating profile:', error);
-      showNotification('error', error.response?.data?.message || 'Failed to update profile.');
+      showNotification('error', error.response?.data?.message || error.message || 'Failed to update profile.');
     } finally {
       setIsSaving(false);
     }
   };
   
-  // Show notification
+  // Show notification with auto-hide
   const showNotification = (type, message) => {
     setNotification({ show: true, type, message });
-    
-    // Auto-hide notification after 5 seconds
-    setTimeout(() => {
-      setNotification({ show: false, type: '', message: '' });
-    }, 5000);
+    setTimeout(() => setNotification({ show: false, type: '', message: '' }), 5000);
   };
   
-  // Generate profile completion percentage
-  const getProfileCompletion = () => {
-    let completed = 0;
-    let total = 3; // Base fields: name, email, bio
-    
-    if (formData.name) completed++;
-    if (formData.bio) completed++;
-    completed++; // Email is always provided
-    
-    // Role-specific fields
-    if (formData.studentId !== undefined) {
-      total++;
-      if (formData.studentId) completed++;
-    }
-    
-    if (formData.department !== undefined) {
-      total++;
-      if (formData.department) completed++;
-    }
-    
-    if (formData.yearOfJoining !== undefined) {
-      total++;
-      if (formData.yearOfJoining) completed++;
-    }
-    
-    if (formData.clubManaging !== undefined) {
-      total++;
-      if (formData.clubManaging) completed++;
-    }
-    
-    // Mobile number
-    total++;
-    if (formData.mobileNumber) completed++;
-    
-    // Social links
-    Object.keys(formData.socialLinks).forEach(platform => {
-      total++;
-      if (formData.socialLinks[platform]) completed++;
-    });
-    
-    // Profile image
-    total++;
-    if (currentUser.profileImage || imageData) completed++;
-    
-    return Math.round((completed / total) * 100);
-  };
-
-  // Loading state
+  // Loading state with more informative message
   if (isLoading) {
     return (
-      <div className="bg-gray-50 min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-600"></div>
+      <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-600 mb-4"></div>
+        <p className="text-gray-600">Loading your profile data...</p>
       </div>
     );
   }
   
-  const completionPercentage = getProfileCompletion();
+  // Calculate profile completion percentage
+  const completionPercentage = calculateProfileCompletion(currentUser);
+
+  // Get academic years for dropdown
+  const academicYears = getAcademicYears(10);
   
   return (
     <div className="bg-gray-50 min-h-screen w-full">
@@ -268,7 +227,7 @@ const Profile = () => {
       <div className="h-48 md:h-64 lg:h-80 bg-gradient-to-r from-indigo-600 to-purple-700 relative">
         <div className="absolute inset-0 bg-black/20"></div>
         
-        {/* Improved Back button */}
+        {/* Back button */}
         <div className="absolute top-0 left-0 p-4">
           <button 
             onClick={() => navigate('/dashboard')}
@@ -639,7 +598,7 @@ const Profile = () => {
                           <span className="text-gray-800 font-medium text-sm">{formData.studentId}</span>
                           {currentUser.role === 'student' && (
                             <button 
-                              onClick={toggleStudentIdEdit}
+                              onClick={() => toggleEditMode('studentId')}
                               className="ml-2 text-gray-400 hover:text-indigo-600 text-xs"
                             >
                               <i className="fas fa-pencil-alt"></i>
@@ -673,7 +632,7 @@ const Profile = () => {
                         <div className="flex items-center">
                           <span className="text-red-500 text-xs italic">Not set</span>
                           <button 
-                            onClick={toggleStudentIdEdit}
+                            onClick={() => toggleEditMode('studentId')}
                             className="ml-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-2 py-1 rounded text-xs"
                           >
                             Add ID
@@ -693,18 +652,14 @@ const Profile = () => {
                             name="yearOfJoining"
                             value={formData.yearOfJoining}
                             onChange={handleInputChange}
-                            className="w-28 px-2 py-1 text-sm border border-gray-300 rounded"
+                            className={`w-28 px-2 py-1 text-sm border ${errors.yearOfJoining ? 'border-red-500' : 'border-gray-300'} rounded`}
                           >
                             <option value="">Select Year</option>
-                            {/* Generate options for the last 10 years */}
-                            {Array.from({ length: 10 }, (_, i) => {
-                              const year = new Date().getFullYear() - i;
-                              return (
-                                <option key={year} value={year.toString()}>
-                                  {year}
-                                </option>
-                              );
-                            })}
+                            {academicYears.map(year => (
+                              <option key={year} value={year}>
+                                {year}
+                              </option>
+                            ))}
                           </select>
                           <button 
                             onClick={() => saveField('yearOfJoining')}
@@ -723,7 +678,7 @@ const Profile = () => {
                             <span className="text-red-500 text-xs italic">Not set</span>
                           )}
                           <button 
-                            onClick={toggleYearOfJoiningEdit}
+                            onClick={() => toggleEditMode('yearOfJoining')}
                             className="ml-2 text-gray-400 hover:text-indigo-600 text-xs"
                           >
                             <i className="fas fa-pencil-alt"></i>

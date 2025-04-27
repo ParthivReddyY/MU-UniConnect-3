@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { getSchools, getPrograms, getDepartments, getAcademicYears } from '../utils/academicDataUtils';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -29,155 +30,6 @@ const SignUp = () => {
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState('');
   
-  // Academic data structure containing the hierarchy of schools, programs, and departments
-  const academicData = useMemo(() => ({
-    "École Centrale School of Engineering(ECSE)": {
-      "B.Tech": [
-        "AI (Artificial Intelligence)",
-        "Biotechnology",
-        "Computational Biology",
-        "CSE (Computer Science and Engineering)",
-        "Civil Engineering",
-        "CM (Computation and Mathematics)",
-        "ECM (Electronics and Computer Engineering)",
-        "Mechanical Engineering (ME)",
-        "Mechatronics (MT)",
-        "Nanotechnology",
-        "ECE (Electronics and Communication Engineering)",
-        "Aerospace Engineering",
-        "Electronic and Computer Engineering",
-        "VLSI Design and Technology"
-      ],
-      "5 Year Integrated M.Tech": [
-        "Computer Science and Engineering",
-        "Biotechnology"
-      ],
-      "M.Tech": [
-        "Autonomous Electric Vehicles (A-EV's)",
-        "Computer-Aided Structural Engineering",
-        "AI and Data Science",
-        "Systems Engineering",
-        "VLSI Design and Embedded Systems",
-        "Smart Grid and Energy Storage Technologies",
-        "Robotics",
-        "Transportation Engineering",
-        "Computational Mechanics",
-        "Biomedical Data Science"
-      ],
-      "Ph.D.": [
-        "Physics",
-        "Civil Engineering",
-        "Electrical and Computer Engineering",
-        "Mathematics",
-        "Mechanical and Aerospace Engineering",
-        "Humanities and Social Sciences",
-        "Life Sciences"
-      ]
-    },
-    "School of Management(SOM)": {
-      "BBA": [
-        "BBA Applied Economics and Finance",
-        "BBA Digital Technologies",
-        "BBA Computational Business Analytics"
-      ],
-      "MBA": ["MBA"],
-      "Ph.D.": [
-        "Ph.D. in Economics",
-        "Ph.D. in Finance",
-        "Ph.D. in Decision Sciences",
-        "Ph.D. in Marketing",
-        "Ph.D. in Management (Strategy & Entrepreneurship, Organisational Behaviour & HRM)",
-        "Ph.D. in Information Science and Technology"
-      ]
-    },
-    "School Of Law(SOL)": {
-      "BA.LL.B.": [
-        "Corporate Law",
-        "Business Laws",
-        "Criminal Law",
-        "International Law",
-        "Intellectual Property Law",
-        "Civil and Private Law",
-        "Public Law"
-      ],
-      "B.B.A.LL.B.": [
-        "Corporate Law",
-        "Business Laws",
-        "Criminal Law",
-        "International Law",
-        "Intellectual Property Law",
-        "Civil and Private Law",
-        "Public Law"
-      ],
-      "3-Years LL.B.(Hons.)": [
-        "Corporate Law",
-        "Business Laws",
-        "Criminal Law",
-        "International Law",
-        "Intellectual Property Law",
-        "Civil and Private Law",
-        "Public Law"
-      ],
-      "B.Tech.-LL.B.(Hons.)": ["Integrated Dual-Degree"],
-      "Ph.D.": [
-        "Constitutional Law and Administrative Law",
-        "Corporate Law and Business Law",
-        "International Law",
-        "Technology Law",
-        "Air and Space Law",
-        "Maritime and Defence Law"
-      ]
-    },
-    "Indira Mahindra School of Education(IMSOE)": {
-      "Master of Arts (M.A.) in Education": ["M.A. in Education"],
-      "Ph.D.": [
-        "School Education",
-        "Higher Education",
-        "Sociology of Education",
-        "Educational Leadership and Management",
-        "Psychology of Education",
-        "Educational Innovations",
-        "History of Education",
-        "Economics of Education",
-        "Teacher Education",
-        "Educational Policy Studies",
-        "Political Contexts of Education",
-        "Curriculum and Pedagogical Studies",
-        "Technology and Education"
-      ]
-    },
-    "School of Digital Media and Communication(SDMC)": {
-      "B.Tech (Computation and Media)": ["Computation and Media"],
-      "Bachelor of Journalism and Mass Communication": ["Journalism and Mass Communication"],
-      "MA in Journalism and Mass Communication": ["Journalism and Mass Communication"],
-      "Ph.D.": [
-        "Journalism Studies",
-        "Media Studies",
-        "Mass Communication",
-        "Film and Television Studies",
-        "Strategic Communication",
-        "Media and Communication Management",
-        "History, Technology and Systems of Media and Communication",
-        "Ethics, Policies and Laws of Mediated Communication",
-        "Human and Machine-Interface Communication"
-      ]
-    },
-    "School of Design Innovation(SODI)": {
-      "B.Des in Design Innovation": ["Design Innovation"],
-      "M.Des in Design Innovation": ["Design Innovation"],
-      "Ph.D.": [
-        "Design Thinking",
-        "Online and Scalable Design Education",
-        "Design for Sustainability",
-        "Design for Empathy in HCI"
-      ]
-    },
-    "School of Hospitality Management(SOHM)": {
-      "4-Yr B.Sc.(Hons.) Culinary and Hospitality Management": ["Culinary and Hospitality Management"]
-    }
-  }), []);
-
-  const currentYear = new Date().getFullYear();
   const { register, verifyEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   
@@ -191,7 +43,7 @@ const SignUp = () => {
   // Update available programs when school changes
   useEffect(() => {
     if (formData.school) {
-      const programs = Object.keys(academicData[formData.school] || {});
+      const programs = getPrograms(formData.school);
       setAvailablePrograms(programs);
       setFormData(prev => ({
         ...prev,
@@ -202,12 +54,12 @@ const SignUp = () => {
       setAvailablePrograms([]);
       setAvailableDepartments([]);
     }
-  }, [formData.school, academicData]);
+  }, [formData.school]);
   
   // Update available departments when program changes
   useEffect(() => {
     if (formData.school && formData.program) {
-      const departments = academicData[formData.school][formData.program] || [];
+      const departments = getDepartments(formData.school, formData.program);
       setAvailableDepartments(departments);
       setFormData(prev => ({
         ...prev,
@@ -216,7 +68,7 @@ const SignUp = () => {
     } else {
       setAvailableDepartments([]);
     }
-  }, [formData.program, formData.school, academicData]);
+  }, [formData.program, formData.school]);
   
   // Function to validate form inputs
   const validateForm = () => {
@@ -455,16 +307,6 @@ const SignUp = () => {
     </div>
   );
 
-  // Generate year options for the select dropdown
-  const generateYearOptions = () => {
-    const years = [];
-    for (let i = 0; i <= 10; i++) {
-      const year = currentYear - i;
-      years.push(year.toString());
-    }
-    return years;
-  };
-
   // Render OTP verification form
   if (isVerifying) {
     return (
@@ -623,8 +465,8 @@ const SignUp = () => {
               Academic Information
             </h3>
             <div className="flex flex-wrap -mx-2">
-              {renderField("yearOfJoining", "Academic Year of Joining", "select", "fa-calendar-check", "Select Year", generateYearOptions())}
-              {renderField("school", "School", "select", "fa-university", "Select your school", Object.keys(academicData))}
+              {renderField("yearOfJoining", "Academic Year of Joining", "select", "fa-calendar-check", "Select Year", getAcademicYears())}
+              {renderField("school", "School", "select", "fa-university", "Select your school", getSchools())}
               {renderField("program", "Program", "select", "fa-book", "Select your program", availablePrograms, !formData.school)}
               {renderField("department", "Department/Specialization", "select", "fa-flask", "Select your department/specialization", availableDepartments, !formData.program)}
               {renderField("accommodationType", "Accommodation Type", "select", "fa-home", "Select accommodation type", ["dayScholar", "hosteller"])}
