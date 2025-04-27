@@ -102,7 +102,7 @@ function PageContainer({ children, fullWidth = false }) {
   const topMarginClass = hideNavbar ? '' : 'mt-16 md:mt-20';
   
   return (
-    <main className={`flex-1 w-full ${topMarginClass} ${fullWidth ? 'full-width-container' : 'std-container'}`}>
+    <main className={`flex-1 w-full ${topMarginClass} ${fullWidth ? 'container-fluid px-0' : 'std-container'}`}>
       <div className="w-full">
         {children}
       </div>

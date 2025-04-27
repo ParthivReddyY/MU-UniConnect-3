@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import api from '../../../../../utils/axiosConfig';
 
@@ -8,6 +9,12 @@ const PresentationSlot = () => {
   const [presentations, setPresentations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedPresentation, setSelectedPresentation] = useState(null);
+  const [bookingInProgress, setBookingInProgress] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [teamName, setTeamName] = useState('');
+  const [topic, setTopic] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState(null);
   const navigate = useNavigate();
   const { currentUser } = useAuth();
 
@@ -28,22 +35,112 @@ const PresentationSlot = () => {
     fetchPresentations();
   }, []);
 
-  const bookSlot = async (presentationId) => {
+  const handlePresentationSelect = (presentation) => {
+    setSelectedPresentation(presentation);
+    setSelectedSlot(null);
+    setTeamMembers([{ id: currentUser._id, name: currentUser.name, email: currentUser.email }]);
+    setTeamName('');
+    setTopic('');
+  };
+  
+  const handleSlotSelect = (slot) => {
+    setSelectedSlot(slot);
+  };
+  
+  const addTeamMember = () => {
+    if (teamMembers.length >= selectedPresentation?.teamSizeMax) {
+      toast.warning(`Maximum team size is ${selectedPresentation.teamSizeMax}`);
+      return;
+    }
+    
+    setTeamMembers([...teamMembers, { id: '', name: '', email: '' }]);
+  };
+  
+  const removeTeamMember = (index) => {
+    // Don't allow removing the current user (first member)
+    if (index === 0) return;
+    
+    const updatedMembers = [...teamMembers];
+    updatedMembers.splice(index, 1);
+    setTeamMembers(updatedMembers);
+  };
+  
+  const handleTeamMemberChange = (index, field, value) => {
+    const updatedMembers = [...teamMembers];
+    updatedMembers[index] = { ...updatedMembers[index], [field]: value };
+    setTeamMembers(updatedMembers);
+  };
+  
+  const bookSlot = async () => {
     if (!currentUser) {
       navigate('/login', { state: { from: '/college/bookings/presentation-slot' } });
       return;
     }
+    
+    if (!selectedPresentation) {
+      toast.error('Please select a presentation event');
+      return;
+    }
+    
+    if (!selectedSlot) {
+      toast.error('Please select a time slot');
+      return;
+    }
+    
+    if (selectedPresentation.participationType === 'team') {
+      // Validate team size
+      if (teamMembers.length < selectedPresentation.teamSizeMin) {
+        toast.error(`Minimum team size is ${selectedPresentation.teamSizeMin}`);
+        return;
+      }
+      
+      // Validate team name for team presentations
+      if (!teamName.trim()) {
+        toast.error('Please enter a team name');
+        return;
+      }
+      
+      // Validate team members have names
+      const emptyNameIndex = teamMembers.findIndex((m, idx) => idx > 0 && !m.name.trim());
+      if (emptyNameIndex !== -1) {
+        toast.error(`Please enter a name for team member ${emptyNameIndex + 1}`);
+        return;
+      }
+    }
+    
+    // Validate topic
+    if (!topic.trim()) {
+      toast.error('Please enter a presentation topic');
+      return;
+    }
 
     try {
-      const response = await api.post(`/api/presentations/${presentationId}/book`);
+      setBookingInProgress(true);
+      
+      const bookingData = {
+        presentationId: selectedPresentation._id,
+        slotId: selectedSlot.id,
+        topic,
+        participants: teamMembers,
+        teamName: selectedPresentation.participationType === 'team' ? teamName : undefined
+      };
+      
+      const response = await api.post(`/api/presentations/${selectedPresentation._id}/book`, bookingData);
+      
       if (response.data.success) {
-        // Update local state to reflect booking
-        setPresentations(presentations.filter(p => p._id !== presentationId));
-        alert('Presentation slot booked successfully!');
+        toast.success('Presentation slot booked successfully!');
+        // Reset form
+        setSelectedPresentation(null);
+        setSelectedSlot(null);
+        navigate('/dashboard');
+      } else {
+        toast.error(response.data.message || 'Failed to book presentation slot');
       }
     } catch (err) {
       console.error('Error booking presentation slot:', err);
-      alert(err.response?.data?.message || 'Failed to book presentation slot');
+      toast.error(err.response?.data?.message || 'Failed to book presentation slot');
+    } finally {
+      setBookingInProgress(false);
     }
   };
 
@@ -70,13 +167,227 @@ const PresentationSlot = () => {
       </div>
     );
   }
+  
+  // Display booking form if a presentation is selected
+  if (selectedPresentation) {
+    return (
+      <div className="px-6 py-10 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex items-center mb-6">
+            <button 
+              onClick={() => setSelectedPresentation(null)}
+              className="mr-4 bg-white hover:bg-gray-50 text-gray-700 py-2 px-3 rounded-md transition-colors flex items-center"
+            >
+              <i className="fas fa-arrow-left mr-2"></i>
+              Back
+            </button>
+            <h2 className="text-2xl font-bold text-gray-800">{selectedPresentation.title}</h2>
+          </div>
+          
+          <div className="bg-white rounded-xl shadow-md overflow-hidden mb-6">
+            <div className="p-6">
+              <div className="flex flex-col md:flex-row md:items-start mb-6">
+                <div className="md:w-1/2 md:pr-6 mb-6 md:mb-0">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Event Details</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-start">
+                      <i className="fas fa-map-marker-alt mt-1 mr-3 text-gray-400"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Venue</p>
+                        <p className="text-gray-800">{selectedPresentation.venue}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <i className="fas fa-calendar-day mt-1 mr-3 text-gray-400"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Presentation Period</p>
+                        <p className="text-gray-800">
+                          {new Date(selectedPresentation.presentationPeriod.start).toLocaleDateString()} - {new Date(selectedPresentation.presentationPeriod.end).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <i className="fas fa-users mt-1 mr-3 text-gray-400"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Participation</p>
+                        <p className="text-gray-800">
+                          {selectedPresentation.participationType === 'individual' ? 'Individual' : `Team (${selectedPresentation.teamSizeMin}-${selectedPresentation.teamSizeMax} members)`}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start">
+                      <i className="fas fa-clock mt-1 mr-3 text-gray-400"></i>
+                      <div>
+                        <p className="text-sm text-gray-500">Slot Duration</p>
+                        <p className="text-gray-800">
+                          {selectedPresentation.slotConfig.duration} minutes (with {selectedPresentation.slotConfig.buffer} min buffer)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="md:w-1/2">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Select a Time Slot</h3>
+                  
+                  {selectedPresentation.slots && selectedPresentation.slots.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
+                      {selectedPresentation.slots.map(slot => (
+                        <button
+                          key={slot.id}
+                          className={`p-2 border rounded-md text-sm ${
+                            selectedSlot?.id === slot.id 
+                              ? 'bg-blue-50 border-blue-300 text-blue-700' 
+                              : slot.booked 
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                : 'bg-white border-gray-200 hover:bg-gray-50'
+                          }`}
+                          onClick={() => !slot.booked && handleSlotSelect(slot)}
+                          disabled={slot.booked}
+                        >
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">
+                              {new Date(slot.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                            {slot.booked && <i className="fas fa-lock text-gray-400"></i>}
+                          </div>
+                          <div className="text-xs mt-1">
+                            {new Date(slot.time).toLocaleDateString()}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500 italic">No slots available for booking</p>
+                  )}
+                </div>
+              </div>
+              
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4">Presentation Information</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Presentation Topic*
+                    </label>
+                    <input
+                      type="text"
+                      value={topic}
+                      onChange={(e) => setTopic(e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                      placeholder="Enter the topic of your presentation"
+                    />
+                  </div>
+                  
+                  {selectedPresentation.participationType === 'team' && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Team Name*
+                      </label>
+                      <input
+                        type="text"
+                        value={teamName}
+                        onChange={(e) => setTeamName(e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Enter your team name"
+                      />
+                    </div>
+                  )}
+                  
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-sm font-medium text-gray-700">
+                        {selectedPresentation.participationType === 'team' ? 'Team Members*' : 'Presenter Information'}
+                      </label>
+                      {selectedPresentation.participationType === 'team' && teamMembers.length < selectedPresentation.teamSizeMax && (
+                        <button
+                          type="button"
+                          onClick={addTeamMember}
+                          className="text-sm text-blue-600 hover:text-blue-800"
+                        >
+                          <i className="fas fa-plus mr-1"></i> Add Member
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-3">
+                      {teamMembers.map((member, index) => (
+                        <div key={index} className="flex space-x-3">
+                          <div className="flex-1">
+                            <input
+                              type="text"
+                              value={member.name}
+                              onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Name"
+                              disabled={index === 0}  // First member is always the current user
+                            />
+                          </div>
+                          <div className="flex-1">
+                            <input
+                              type="email"
+                              value={member.email}
+                              onChange={(e) => handleTeamMemberChange(index, 'email', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="Email"
+                              disabled={index === 0}  // First member is always the current user
+                            />
+                          </div>
+                          {index > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => removeTeamMember(index)}
+                              className="p-2 text-red-600 hover:text-red-800"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gray-50 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setSelectedPresentation(null)}
+                className="mr-3 px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={bookSlot}
+                disabled={bookingInProgress || !selectedSlot}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+              >
+                {bookingInProgress ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white mr-2"></div>
+                    Booking...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check mr-2"></i>
+                    Book Slot
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="px-6 py-10 bg-gradient-to-br from-gray-50 to-blue-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex flex-col md:flex-row items-center justify-between mb-12">
           <div>
-            <h2 className="text-3xl font-bold mb-2 text-gray-800">Available Presentation Slots</h2>
+            <h2 className="text-3xl font-bold mb-2 text-gray-800">Available Presentation Events</h2>
             <p className="text-gray-600 max-w-2xl">
               Book available time slots for academic presentations, defense sessions, or project demonstrations
             </p>
@@ -95,9 +406,9 @@ const PresentationSlot = () => {
             <div className="bg-blue-50 h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6">
               <i className="fas fa-calendar-times text-3xl text-blue-500"></i>
             </div>
-            <h3 className="text-xl font-semibold mb-2">No Presentation Slots Available</h3>
+            <h3 className="text-xl font-semibold mb-2">No Presentation Events Available</h3>
             <p className="text-gray-600 mb-6">
-              There are currently no open slots for presentations. Please check back later 
+              There are currently no open presentation events for booking. Please check back later 
               or contact your department coordinator.
             </p>
             <Link 
@@ -118,10 +429,10 @@ const PresentationSlot = () => {
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <span className="bg-blue-100 text-blue-800 text-xs font-medium py-1 px-2 rounded">
-                      {presentation.presentationType || 'Academic'}
+                      {presentation.hostDepartment || 'Academic'}
                     </span>
                     <span className="text-sm text-gray-600">
-                      {new Date(presentation.date).toLocaleDateString()}
+                      {new Date(presentation.presentationPeriod.start).toLocaleDateString()}
                     </span>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-800 mb-2">{presentation.title}</h3>
@@ -129,17 +440,16 @@ const PresentationSlot = () => {
                     <div className="flex items-start">
                       <i className="fas fa-user-tie mt-1 mr-3 text-gray-400"></i>
                       <div>
-                        <p className="text-sm text-gray-500">Faculty</p>
-                        <p className="text-gray-800">{presentation.facultyName}</p>
+                        <p className="text-sm text-gray-500">Host</p>
+                        <p className="text-gray-800">{presentation.hostName}</p>
                       </div>
                     </div>
                     <div className="flex items-start">
-                      <i className="fas fa-clock mt-1 mr-3 text-gray-400"></i>
+                      <i className="fas fa-calendar-day mt-1 mr-3 text-gray-400"></i>
                       <div>
-                        <p className="text-sm text-gray-500">Time</p>
+                        <p className="text-sm text-gray-500">Registration Period</p>
                         <p className="text-gray-800">
-                          {new Date(presentation.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-                          {new Date(presentation.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(presentation.registrationPeriod.start).toLocaleDateString()} - {new Date(presentation.registrationPeriod.end).toLocaleDateString()}
                         </p>
                       </div>
                     </div>
@@ -147,16 +457,16 @@ const PresentationSlot = () => {
                       <i className="fas fa-map-marker-alt mt-1 mr-3 text-gray-400"></i>
                       <div>
                         <p className="text-sm text-gray-500">Location</p>
-                        <p className="text-gray-800">{presentation.location}</p>
+                        <p className="text-gray-800">{presentation.venue}</p>
                       </div>
                     </div>
                   </div>
                   <button 
-                    onClick={() => bookSlot(presentation._id)}
+                    onClick={() => handlePresentationSelect(presentation)}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg flex items-center justify-center font-medium transition-colors"
                   >
                     <i className="fas fa-calendar-plus mr-2"></i>
-                    Book This Slot
+                    View Available Slots
                   </button>
                 </div>
               </motion.div>
