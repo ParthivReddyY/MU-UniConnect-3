@@ -12,6 +12,7 @@ import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
 import PresentationSlot from './components/bookings/Presentations/PresentationSlot';
 import HostPresentation from './components/bookings/Presentations/HostPresentation';
+import PresentationDetail from './components/bookings/Presentations/PresentationDetail';
 
 const College = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -142,6 +143,7 @@ const College = () => {
             <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
             <Route path="bookings/presentation-slot" element={<PresentationSlot />} />
             <Route path="bookings/host-presentation" element={<HostPresentation />} />
+            <Route path="bookings/presentation/:id/details" element={<PresentationDetail />} />
             {/* Add other booking-related routes here */}
             {/* Add other booking sub-routes here when they are implemented */}
           </Routes>

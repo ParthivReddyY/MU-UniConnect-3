@@ -4,7 +4,7 @@ import { useAuth } from '../../../../../contexts/AuthContext';
 import api from '../../../../../utils/axiosConfig';
 import { academicStructure } from '../../../../../utils/academicDataUtils';
 
-const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData = null }) => {
+const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData = null, defaultTargetAudience = null }) => {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -118,6 +118,16 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
   useEffect(() => {
     if (initialData) {
       setFormData(initialData);
+    } else if (defaultTargetAudience) {
+      // Use default target audience settings if no initial data
+      setFormData(prev => ({
+        ...prev,
+        targetAudience: {
+          year: [...defaultTargetAudience.year],
+          school: [...defaultTargetAudience.school],
+          department: [...defaultTargetAudience.department]
+        }
+      }));
     }
     
     if (currentUser) {
@@ -127,7 +137,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
         hostDepartment: currentUser.department || prev.hostDepartment
       }));
     }
-  }, [initialData, currentUser]);
+  }, [initialData, defaultTargetAudience, currentUser]);
 
   // Field change handlers
   const handleInputChange = (e) => {

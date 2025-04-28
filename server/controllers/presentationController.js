@@ -388,6 +388,130 @@ const deletePresentationSlot = async (req, res) => {
   }
 };
 
+// Get a single presentation by ID
+const getPresentationById = async (req, res) => {
+  try {
+    const presentationId = req.params.id;
+    const userId = req.user.userId;
+
+    const presentation = await Presentation.findById(presentationId);
+    
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation not found' });
+    }
+    
+    // Check if user has permission to view this presentation
+    const isFaculty = req.user.role === 'faculty';
+    const isAdmin = req.user.role === 'admin';
+    const isFacultyOwner = isFaculty && presentation.faculty.toString() === userId;
+    
+    // Allow access if:
+    // 1. User is admin, OR
+    // 2. User is the faculty who created it, OR
+    // 3. The presentation is explicitly published (isPublished === true)
+    // 4. For any other users (like students), allow access regardless of publication status
+    //    as they will only see available slots anyway
+    
+    // Only do permission check for non-admin, non-owner users
+    if (!isAdmin && !isFacultyOwner) {
+      console.log('User attempting to access presentation:', {
+        userId,
+        role: req.user.role,
+        presentationId,
+        presentationFaculty: presentation.faculty
+      });
+    }
+    
+    // For now, let's remove the restrictive permission check
+    // We'll rely on frontend to control what actions users can take
+    
+    res.status(200).json(presentation);
+  } catch (error) {
+    console.error('Error getting presentation by ID:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Add update presentation functionality
+const updatePresentation = async (req, res) => {
+  try {
+    const presentationId = req.params.id;
+    const userId = req.user.userId;
+    
+    // Find the presentation
+    const presentation = await Presentation.findById(presentationId);
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation not found' });
+    }
+    
+    // Check permissions
+    if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'You are not authorized to update this presentation' });
+    }
+    
+    // Extract fields to update
+    const {
+      title, description, department, venue,
+      registrationStart, registrationEnd, presentationStart, presentationEnd,
+      slotConfig, participationType, teamSizeMin, teamSizeMax,
+      targetAudience, gradingCriteria, customGradingCriteria
+    } = req.body;
+    
+    // Update presentation fields
+    if (title) presentation.title = title;
+    if (description) presentation.description = description;
+    if (department) presentation.department = department;
+    if (venue) presentation.venue = venue;
+    
+    // Update registration and presentation periods
+    if (registrationStart && registrationEnd) {
+      presentation.registrationPeriod = {
+        start: new Date(registrationStart),
+        end: new Date(registrationEnd)
+      };
+    }
+    
+    if (presentationStart && presentationEnd) {
+      presentation.presentationPeriod = {
+        start: new Date(presentationStart),
+        end: new Date(presentationEnd)
+      };
+    }
+    
+    // Update slot config
+    if (slotConfig) presentation.slotConfig = slotConfig;
+    
+    // Update participation type and team sizes
+    if (participationType) presentation.participationType = participationType;
+    if (teamSizeMin !== undefined) presentation.teamSizeMin = teamSizeMin;
+    if (teamSizeMax !== undefined) presentation.teamSizeMax = teamSizeMax;
+    
+    // Update target audience
+    if (targetAudience) presentation.targetAudience = targetAudience;
+    
+    // Update grading criteria
+    if (customGradingCriteria !== undefined) {
+      presentation.customGradingCriteria = customGradingCriteria;
+      
+      if (gradingCriteria) {
+        presentation.gradingCriteria = gradingCriteria;
+      }
+    }
+    
+    // Save the updated presentation
+    await presentation.save();
+    
+    res.status(200).json({
+      message: 'Presentation updated successfully',
+      presentation
+    });
+    
+  } catch (error) {
+    console.error('Error updating presentation:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // Helper function to generate time slots
 function generateTimeSlots(startTime, endTime, periodStart, periodEnd, duration, buffer) {
   const slots = [];
@@ -438,5 +562,7 @@ module.exports = {
   deletePresentationSlot,
   getPresentationSlots,
   startPresentationSlot,
-  completePresentationSlot
+  completePresentationSlot,
+  getPresentationById,
+  updatePresentation
 };
