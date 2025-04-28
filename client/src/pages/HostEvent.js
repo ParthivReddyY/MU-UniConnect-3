@@ -196,7 +196,8 @@ const HostEvent = () => {
         const formData = new FormData();
         formData.append('image', image);
         
-        const uploadResponse = await axios.post('/api/upload/event-image', formData, {
+        // Use the correct image upload endpoint
+        const uploadResponse = await axios.post('/api/upload/image', formData, {
           headers: {
             'Content-Type': 'multipart/form-data'
           }
@@ -207,12 +208,20 @@ const HostEvent = () => {
 
       // Create event with the image URL
       const eventPayload = {
-        ...eventData,
-        imageUrl,
-        hostId: currentUser._id
+        event: {
+          ...eventData,
+          imageUrl,
+          availableSeats: eventData.totalSeats, // Make sure availableSeats is initialized
+          hostId: currentUser._id
+        }
       };
 
-      const response = await axios.post('/api/events/create', eventPayload);
+      console.log('Sending event payload:', eventPayload);
+
+      // Use the correct endpoint as defined in the server routes
+      const response = await axios.post('/api/events/hosted', eventPayload);
+      
+      console.log('Server response:', response.data);
       
       if (response.data.success) {
         toast.success('Event created successfully!');
@@ -222,7 +231,7 @@ const HostEvent = () => {
         toast.error('Failed to create event');
       }
     } catch (error) {
-      console.error('Error creating event:', error);
+      console.error('Error creating event:', error.response?.data || error.message);
       toast.error(error.response?.data?.message || 'Failed to create event');
     } finally {
       setIsSubmitting(false);

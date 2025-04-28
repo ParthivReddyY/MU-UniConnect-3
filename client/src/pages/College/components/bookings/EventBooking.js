@@ -113,12 +113,24 @@ const EventBooking = () => {
   const handleConfirmBooking = async () => {
     setLoading(true);
     try {
+      console.log('Current user data:', {
+        id: currentUser?._id,
+        name: currentUser?.name,
+        email: currentUser?.email
+      });
+      
+      // Set authorization header to ensure user is authenticated
+      const token = localStorage.getItem('token');
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      }
+      
       // Create contact details from form inputs
       const contactDetails = {
         name: document.getElementById('name').value,
         email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        userId: currentUser?._id  // Add user ID to contact details
+        phone: document.getElementById('phone').value
+        // Remove userId from contactDetails - it will be determined by the auth token
       };
       
       // Prepare booking data
@@ -128,8 +140,20 @@ const EventBooking = () => {
         contactDetails
       };
       
+      console.log('Sending booking request with data:', {
+        eventId: bookingData.eventId,
+        seatCount: bookingData.seats.length,
+        contactName: bookingData.contactDetails.name
+      });
+      
       // Send request to book the seats
       const response = await api.post('/api/events/bookings', bookingData);
+      
+      console.log('Booking response:', {
+        status: response.status,
+        success: response.data.success,
+        bookingId: response.data.booking?._id
+      });
       
       if (response.status === 200) {
         // Update local state
@@ -161,6 +185,9 @@ const EventBooking = () => {
       }
     } catch (err) {
       console.error('Error booking tickets:', err);
+      if (err.response) {
+        console.error('Server response:', err.response.data);
+      }
       toast.error(err.response?.data?.message || 'Failed to book tickets. Please try again.');
     } finally {
       setLoading(false);

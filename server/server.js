@@ -48,6 +48,20 @@ app.use((req, res, next) => {
   next();
 });
 
+// Handle OPTIONS requests globally before any other middleware
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    console.log('Handling OPTIONS request for:', req.path);
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Max-Age', '86400'); // 24 hours cache for preflight
+    return res.status(204).end();
+  }
+  next();
+});
+
 // CORS configuration - update to be more permissive in production
 if (process.env.NODE_ENV === 'production') {
   app.use(cors({
@@ -127,12 +141,16 @@ const authController = require('./controllers/authController');
 app.use('/api/auth', authRoutes);
 app.use('/api/faculty', facultyRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/presentations', presentationRoutes); // Add this line
+app.use('/api/presentations', presentationRoutes);
 app.use('/api/feedback', feedbackRoutes);
-app.use('/api/upload', uploadRoutes);  // Add this line
+app.use('/api/upload', uploadRoutes);
 app.use('/api/proxy', proxyRoutes);
 
-// Remove duplicate feedback route registration
+// Event-related routes - properly separated by type
+app.use('/api/events', require('./routes/eventRoutes')); // Add main event routes
+app.use('/api/events/university', require('./routes/universityEventRoutes'));
+app.use('/api/events/clubs', require('./routes/clubEventRoutes'));
+app.use('/api/events/bookings', require('./routes/eventBookingRoutes'));
 
 // Add the search route directly here instead of through users.js
 app.get('/api/users/search', authenticateUser, authController.searchUsers);

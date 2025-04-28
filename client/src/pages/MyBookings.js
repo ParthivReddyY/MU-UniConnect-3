@@ -8,22 +8,50 @@ const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const { currentUser } = useAuth(); // We're keeping this as we need user authentication
+  const { currentUser } = useAuth();
 
   useEffect(() => {
-    fetchBookings();
-    // If we wanted to filter by currentUser.id, we would add currentUser as a dependency
-    // But the API already handles this based on the authentication token
-  }, []);
+    // Only fetch bookings if we have a logged in user
+    if (currentUser && currentUser._id) {
+      console.log('Fetching bookings for user:', currentUser._id);
+      fetchBookings();
+    } else {
+      console.log('No user logged in, not fetching bookings');
+      setLoading(false);
+    }
+  }, [currentUser]); // Added currentUser as dependency so it refetches when user changes
 
   const fetchBookings = async () => {
     setLoading(true);
     try {
+      console.log('Making API call to fetch bookings...');
+      
+      // Ensure the authorization header is set
+      const token = localStorage.getItem('token');
+      if (token) {
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        console.log('Authorization header set with token');
+      } else {
+        console.warn('No token found in localStorage');
+      }
+      
       const response = await api.get('/api/events/bookings/user');
-      setBookings(response.data.bookings || []);
+      console.log('Bookings API response:', response.data);
+      
+      if (response.data.bookings && response.data.bookings.length > 0) {
+        console.log(`Found ${response.data.bookings.length} bookings`);
+        setBookings(response.data.bookings);
+      } else {
+        console.log('No bookings found in response');
+        setBookings([]);
+      }
     } catch (err) {
       console.error('Error fetching bookings:', err);
-      setError('Failed to load your bookings');
+      if (err.response) {
+        console.error('Server response:', err.response.data);
+        console.error('Status code:', err.response.status);
+      }
+      setError('Failed to load your bookings. ' + (err.message || ''));
     } finally {
       setLoading(false);
     }

@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const eventController = require('../controllers/eventController');
-const { authenticateUser } = require('../middleware/auth');
-const { isFacultyOrAdmin } = require('../middleware/roleCheck');
+const { authenticateUser, isFacultyOrAdmin } = require('../middleware/auth');
 
 // OPTIONS route for CORS preflight requests
 router.options('/bookings', (req, res) => {
