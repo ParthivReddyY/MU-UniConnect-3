@@ -12,6 +12,10 @@ import CampusMap from './components/CampusMap';
 import FacultyAppointment from './components/bookings/FacultyAppointment';
 import PresentationSlot from './components/bookings/Presentations/PresentationSlot';
 import HostPresentation from './components/bookings/Presentations/HostPresentation';
+import EventBooking from './components/bookings/EventBooking';
+import HostEvent from './components/bookings/Events/HostEvent';
+import ManageEvents from './components/bookings/Events/ManageEvents';
+import EditEvent from './components/bookings/Events/EditEvent';
 
 const College = () => {
   const [activeTab, setActiveTab] = useState('general');
@@ -142,8 +146,14 @@ const College = () => {
             <Route path="bookings/faculty-appointment" element={<FacultyAppointment />} />
             <Route path="bookings/presentation-slot" element={<PresentationSlot />} />
             <Route path="bookings/host-presentation" element={<HostPresentation />} />
-            {/* Add other booking-related routes here */}
-            {/* Add other booking sub-routes here when they are implemented */}
+            {/* Event Booking System Routes */}
+            <Route path="bookings/events" element={<EventBooking />} />
+            <Route path="bookings/events/:eventId" element={<EventBooking />} />
+            {/* Event Hosting System Routes */}
+            <Route path="bookings/host-events" element={<HostEvent />} />
+            {/* Event Management Routes */}
+            <Route path="bookings/manage-events" element={<ManageEvents />} />
+            <Route path="bookings/edit-event/:eventId" element={<EditEvent />} />
           </Routes>
         ) : (
           <AnimatePresence mode="wait">

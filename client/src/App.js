@@ -26,6 +26,8 @@ import FacultyAppointments from './pages/FacultyAppointments'; // Import the Fac
 import Feedback from './pages/Feedback';
 import AdminFeedback from './pages/Admin/AdminFeedback'; // Import AdminFeedback page
 import NewsManagement from './pages/Admin/NewsManagement'; // Import NewsManagement page
+import MyBookings from './pages/MyBookings'; // Import MyBookings page
+import HostEvent from './pages/HostEvent'; // Import the HostEvent page
 
 // Import components
 import Navbar from './components/Navbar';
@@ -228,6 +230,15 @@ function App() {
                   </PageContainer>
                 } />
                 
+                {/* Event creation route */}
+                <Route path="/host-event" element={
+                  <ProtectedRoute allowedRoles={['clubHead', 'admin', 'faculty']}>
+                    <PageContainer fullWidth>
+                      <HostEvent />
+                    </PageContainer>
+                  </ProtectedRoute>
+                } />
+                
                 {/* Protected routes */}
                 <Route path="/dashboard" element={
                   <ProtectedRoute>
@@ -241,6 +252,15 @@ function App() {
                   <ProtectedRoute>
                     <PageContainer fullWidth>
                       <ChangePassword />
+                    </PageContainer>
+                  </ProtectedRoute>
+                } />
+                
+                {/* My Bookings page - accessible to all logged in users */}
+                <Route path="/my-bookings" element={
+                  <ProtectedRoute>
+                    <PageContainer fullWidth>
+                      <MyBookings />
                     </PageContainer>
                   </ProtectedRoute>
                 } />

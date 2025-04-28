@@ -284,6 +284,13 @@ const Dashboard = () => {
             path="/research-projects"
             color="secondary"
           />
+          <MenuCard 
+            title="My Event Bookings"
+            icon="fa-ticket-alt"
+            description="View and manage your event ticket bookings"
+            path="/my-bookings"
+            color="warning"
+          />
         </>
       );
     }
@@ -300,7 +307,6 @@ const Dashboard = () => {
             color="primary"
           />
           
-          {/* Add this new card */}
           <MenuCard 
             title="Feedback Management"
             icon="fa-comment-dots"
@@ -316,6 +322,14 @@ const Dashboard = () => {
             description="Configure system settings and preferences"
             path="/admin/settings"
             color="info"
+          />
+          
+          <MenuCard 
+            title="My Event Bookings"
+            icon="fa-ticket-alt"
+            description="View and manage your event ticket bookings"
+            path="/my-bookings"
+            color="warning"
           />
         </>
       );
@@ -349,8 +363,16 @@ const Dashboard = () => {
           title="Campus Events"
           icon="fa-ticket-alt"
           description="Browse and register for upcoming campus events"
-          path="/events"
+          path="/college/bookings/events"
           color="warning"
+        />
+        <MenuCard 
+          title="My Event Bookings"
+          icon="fa-calendar-check"
+          description="View and manage your event ticket bookings"
+          path="/my-bookings"
+          color="danger"
+          badge="New"
         />
       </>
     );

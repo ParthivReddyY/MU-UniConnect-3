@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
 
 // Faculty Appointment Component
@@ -128,6 +128,11 @@ export const StudentAppointments = () => {
 // Event Booking Component
 export const EventBooking = () => {
   const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+  
+  const handleBookEvent = () => {
+    navigate('/college/bookings/events');
+  };
   
   return (
     <motion.div 
@@ -137,7 +142,7 @@ export const EventBooking = () => {
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-red-500/70 to-pink-600/70" />
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/70 to-rose-600/70" />
       <div className="absolute inset-0 bg-black/5 backdrop-filter backdrop-blur-[2px]" />
       
       <div className="absolute top-4 right-4 bg-white/30 backdrop-filter backdrop-blur-md rounded-full p-2.5 shadow-lg">
@@ -150,22 +155,23 @@ export const EventBooking = () => {
         <div className="my-3 bg-white/50 h-px w-16" />
         
         <p className="text-white/95 mb-4 flex-grow text-sm leading-relaxed drop-shadow-sm">
-          Book auditoriums, seminar halls, and other venues for cultural events, 
-          technical symposiums, and other student activities.
+          Book tickets for upcoming university events, workshops, cultural shows, and guest lectures. 
+          Get digital tickets sent directly to your email.
         </p>
         
         <div className="mt-auto space-y-3">
           <div className="flex items-center text-white text-sm font-medium">
-            <i className="fas fa-map-marker-alt mr-2.5 text-white/90"></i>
-            <span>Various locations available</span>
+            <i className="fas fa-calendar-star mr-2.5 text-white/90"></i>
+            <span>Featured events available</span>
           </div>
           
           <motion.button 
-            className="w-full py-2.5 px-4 rounded-lg font-medium bg-white/90 shadow-md hover:bg-white/100 text-pink-700 transition-all text-sm flex items-center justify-center"
+            className="w-full py-2.5 px-4 rounded-lg font-medium bg-white/90 shadow-md hover:bg-white/100 text-rose-700 transition-all text-sm flex items-center justify-center"
             whileTap={{ scale: 0.97 }}
             animate={{ scale: isHovered ? 1.02 : 1 }}
+            onClick={handleBookEvent}
           >
-            <i className="fas fa-bookmark mr-2"></i>
+            <i className="fas fa-ticket mr-2"></i>
             Book Now
           </motion.button>
         </div>
@@ -173,6 +179,82 @@ export const EventBooking = () => {
     </motion.div>
   );
 };
+
+
+//Host evnts card
+const HostEventCard = () => {
+  const [isHovered, setIsHovered] = useState(false);
+  const navigate = useNavigate();
+  const { hasRole } = useAuth();
+  
+  const handleHostEvent = () => {
+    // Update to match the route path defined in College.js
+    navigate('/college/bookings/host-events');
+  };
+  
+  // Show for students, faculty, and admins with appropriate permissions
+  if (!hasRole(['student', 'faculty', 'admin', 'event_manager'])) {
+    return null;
+  }
+  
+  return (
+    <motion.div 
+      className="relative overflow-hidden bg-white/30 rounded-xl shadow-lg h-full border border-white/20 backdrop-filter backdrop-blur-md"
+      whileHover={{ 
+        y: -8, 
+        boxShadow: '0 20px 40px -5px rgba(0, 0, 0, 0.25), 0 15px 25px -5px rgba(0, 0, 0, 0.15)' 
+      }}
+      transition={{ type: "spring", stiffness: 400, damping: 17 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      aria-label="Host university events"
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-amber-500/70 to-orange-600/70" />
+      <div className="absolute inset-0 bg-black/5 backdrop-filter backdrop-blur-[2px]" />
+      
+      <div className="absolute top-4 right-4 bg-white/30 backdrop-filter backdrop-blur-md rounded-full p-2.5 shadow-lg">
+        <i className="fas fa-calendar-plus text-base text-white"></i>
+      </div>
+      
+      <div className="relative p-6 z-10 h-full flex flex-col">
+        <h3 className="text-xl font-bold mb-2 text-white drop-shadow-md">Host Event</h3>
+        
+        <div className="my-3 bg-white/50 h-px w-16" />
+        
+        <p className="text-white/95 mb-4 flex-grow text-sm leading-relaxed drop-shadow-sm">
+          Create and manage university events including concerts, cultural events, 
+          technical symposiums, and other campus activities.
+        </p>
+        
+        <div className="mt-auto space-y-3">
+          <div className="flex items-center text-white text-sm font-medium">
+            <i className="fas fa-cog mr-2.5 text-white/90"></i>
+            <span>Full event management controls</span>
+          </div>
+          
+          <motion.button 
+            className="w-full py-2.5 px-4 rounded-lg font-medium bg-white/90 shadow-md hover:bg-white/100 text-amber-700 transition-all text-sm flex items-center justify-center"
+            whileTap={{ scale: 0.97 }}
+            animate={{ scale: isHovered ? 1.02 : 1 }}
+            onClick={handleHostEvent}
+          >
+            <i className="fas fa-plus-circle mr-2"></i>
+            Host Event
+          </motion.button>
+        </div>
+      </div>
+      
+      {/* Animated shine effect on hover */}
+      <motion.div 
+        className="absolute inset-0 opacity-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+        initial={{ x: '-100%', opacity: 0 }}
+        animate={{ x: isHovered ? '100%' : '-100%', opacity: isHovered ? 0.7 : 0 }}
+        transition={{ duration: 0.8, ease: "easeInOut" }}
+      />
+    </motion.div>
+  );
+};
+
 
 // Presentation Slot Booking Component
 export const PresentationSlot = () => {
@@ -336,12 +418,22 @@ const Bookings = () => {
               {hasRole(['faculty']) ? <StudentAppointments /> : <FacultyAppointment />}
             </motion.div>
             
-            {/* Presentation Slot - always visible */}
+            {/* Host Event Card - for all users */}
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.25, delay: 0.1 }}
-              className="h-[312px]" /* Increased from 260px to 312px (20% increase) */
+              className="h-[312px]"
+            >
+              <HostEventCard />
+            </motion.div>
+            
+            {/* Presentation Slot - always visible */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.97 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.25, delay: 0.15 }}
+              className="h-[312px]"
             >
               <PresentationSlot />
             </motion.div>
@@ -350,8 +442,8 @@ const Bookings = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 0.25, delay: 0.15 }}
-              className="h-[312px]" /* Increased from 260px to 312px (20% increase) */
+              transition={{ duration: 0.25, delay: 0.2 }}
+              className="h-[312px]"
             >
               <HostPresentation />
             </motion.div>
