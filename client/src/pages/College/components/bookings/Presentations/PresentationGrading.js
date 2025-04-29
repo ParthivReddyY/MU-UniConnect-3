@@ -4,16 +4,31 @@ import { toast } from 'react-toastify';
 import api from '../../../../../utils/axiosConfig';
 import { useAuth } from '../../../../../contexts/AuthContext';
 
-const PresentationGrading = ({ presentation, onClose }) => {
-  useAuth(); // Access auth context but don't extract unused variables
+const PresentationGrading = ({ presentation, onClose, activeSlotId = null }) => {
+  const { currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [slots, setSlots] = useState([]);
   const [activeSlot, setActiveSlot] = useState(null);
-  const [grades, setGrades] = useState({});
+  const [teamGrades, setTeamGrades] = useState({});
+  const [individualGrades, setIndividualGrades] = useState({});
   const [presentationInProgress, setPresentationInProgress] = useState(false);
   const [presentationCompleted, setPresentationCompleted] = useState(false);
   const [feedback, setFeedback] = useState('');
+  const [error, setError] = useState(null);
+  const [gradingMode, setGradingMode] = useState('team'); // 'team' or 'individual'
+  const [activeTeamMember, setActiveTeamMember] = useState(null);
+  const [isEditingGrades, setIsEditingGrades] = useState(false);
+
+  // Add this line to the component to define criteria
+  const criteria = presentation?.customGradingCriteria 
+    ? presentation.gradingCriteria 
+    : [
+      { name: 'Content', weight: 25 },
+      { name: 'Delivery', weight: 25 },
+      { name: 'Visual Aids', weight: 25 },
+      { name: 'Q&A', weight: 25 }
+    ];
 
   // Fetch slots when component mounts or presentation changes
   useEffect(() => {
@@ -22,60 +37,192 @@ const PresentationGrading = ({ presentation, onClose }) => {
     const fetchSlots = async () => {
       try {
         setLoading(true);
-        const response = await api.get(`/api/presentations/${presentation._id}/slots`);
-        setSlots(response.data);
+        console.log("Fetching slots for presentation:", presentation._id);
+        console.log("Current user:", currentUser?.email || "Unknown");
         
-        // Check if there's an active presentation
-        const inProgressSlot = response.data.find(slot => slot.status === 'in-progress');
-        if (inProgressSlot) {
-          setActiveSlot(inProgressSlot);
-          setPresentationInProgress(true);
+        // Get token from localStorage
+        const token = localStorage.getItem('token');
+        
+        if (!token) {
+          console.error("No authentication token found");
+          setError("Authentication token missing. Please log in again.");
+          toast.error("Authentication error - Please log in again");
+          setLoading(false);
+          return;
+        }
+        
+        console.log("Using token for request:", token.substring(0, 15) + "...");
+        
+        // Make API request with explicit headers
+        const response = await api.get(`/api/presentations/${presentation._id}/slots`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        console.log("Slots fetched successfully:", response.data.length);
+        setSlots(response.data);
+        setError(null);
+        
+        // If activeSlotId is provided, find and set that slot
+        if (activeSlotId) {
+          const selectedSlot = response.data.find(slot => 
+            slot._id === activeSlotId || slot.id === activeSlotId
+          );
+          
+          if (selectedSlot) {
+            setActiveSlot(selectedSlot);
+            setPresentationInProgress(selectedSlot.status === 'in-progress');
+            setPresentationCompleted(selectedSlot.status === 'completed');
+            
+            // If the slot is completed, load its grades and feedback
+            if (selectedSlot.status === 'completed') {
+              if (selectedSlot.grades) {
+                setTeamGrades(selectedSlot.grades);
+              }
+              
+              if (selectedSlot.individualGrades) {
+                setIndividualGrades(selectedSlot.individualGrades);
+              }
+              
+              setFeedback(selectedSlot.feedback || '');
+            }
+          }
+        } else {
+          // Check if there's an active presentation
+          const inProgressSlot = response.data.find(slot => slot.status === 'in-progress');
+          if (inProgressSlot) {
+            setActiveSlot(inProgressSlot);
+            setPresentationInProgress(true);
+          }
         }
       } catch (error) {
-        toast.error('Failed to load presentation slots');
+        console.error("Error fetching presentation slots:", error);
+        console.error("Response status:", error.response?.status);
+        console.error("Error message:", error.response?.data?.message || error.message);
+        
+        const errorMessage = error.response?.data?.message || 
+                            "Failed to load presentation slots. Please try again.";
+        
+        setError(errorMessage);
+        toast.error(errorMessage);
+        
+        // If it's a permission error, show more details
+        if (error.response?.status === 403) {
+          console.log("Permission denied - Current user role:", currentUser?.role);
+          console.log("Presentation faculty ID:", presentation.faculty);
+          console.log("Current user ID:", currentUser?.userId);
+        }
       } finally {
         setLoading(false);
       }
     };
     
     fetchSlots();
-  }, [presentation]);
+  }, [presentation, activeSlotId, currentUser]);
 
   // Handle starting a presentation
   const handleStartPresentation = async (slot) => {
     try {
       setSubmitting(true);
-      const response = await api.put(`/api/presentations/slots/${slot._id}/start`);
+      
+      // Use the correct ID field - prefer _id but fall back to id if _id doesn't exist
+      const slotIdToUse = slot._id || slot.id;
+      console.log("Starting presentation with slot ID:", slotIdToUse);
+      
+      const response = await api.put(`/api/presentations/slots/${slotIdToUse}/start`);
       
       if (response.data.success) {
-        setActiveSlot(slot);
+        // Update the slot status in the UI
+        const updatedSlots = slots.map(s => 
+          (s._id === slot._id || s.id === slot.id) 
+            ? { ...s, status: 'in-progress', startedAt: new Date() } 
+            : s
+        );
+        
+        setSlots(updatedSlots);
+        setActiveSlot({ ...slot, status: 'in-progress', startedAt: new Date() });
         setPresentationInProgress(true);
         
-        // Update the slot in the slots array
-        setSlots(slots.map(s => s._id === slot._id ? { ...s, status: 'in-progress' } : s));
+        // Initialize grades for all team members
+        if (slot.teamMembers && slot.teamMembers.length > 0) {
+          const initialIndividualGrades = {};
+          slot.teamMembers.forEach(member => {
+            initialIndividualGrades[member.email] = {};
+          });
+          setIndividualGrades(initialIndividualGrades);
+          
+          // Set the first team member as active
+          setActiveTeamMember(slot.teamMembers[0]);
+        }
         
         toast.success('Presentation started successfully');
       }
     } catch (error) {
-      toast.error('Failed to start presentation');
+      console.error("Error starting presentation:", error);
+      toast.error(error.response?.data?.message || 'Failed to start presentation');
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Handle grade changes
-  const handleGradeChange = (criterionName, value) => {
-    setGrades(prev => ({
+  // Handle team grade changes
+  const handleTeamGradeChange = (criterionName, value) => {
+    setTeamGrades(prev => ({
       ...prev,
       [criterionName]: parseInt(value, 10) || 0
     }));
+  };
+
+  // Handle individual grade changes
+  const handleIndividualGradeChange = (memberEmail, criterionName, value) => {
+    setIndividualGrades(prev => ({
+      ...prev,
+      [memberEmail]: {
+        ...prev[memberEmail],
+        [criterionName]: parseInt(value, 10) || 0
+      }
+    }));
+  };
+
+  // Switch between team and individual grading modes
+  const switchGradingMode = (mode) => {
+    setGradingMode(mode);
+  };
+
+  // Set active team member for individual grading
+  const selectTeamMember = (member) => {
+    setActiveTeamMember(member);
+  };
+
+  // Calculate average score for a team member based on their grades
+  const calculateMemberScore = (member, gradesObj) => {
+    if (!gradesObj || !gradesObj[member.email]) return 0;
+    
+    const memberGrades = gradesObj[member.email];
+    const criteria = presentation.customGradingCriteria ? presentation.gradingCriteria : [
+      { name: 'Content', weight: 25 },
+      { name: 'Delivery', weight: 25 },
+      { name: 'Visual Aids', weight: 25 },
+      { name: 'Q&A', weight: 25 }
+    ];
+    
+    let totalScore = 0;
+    criteria.forEach(criterion => {
+      const rawScore = memberGrades[criterion.name] || 0;
+      totalScore += (rawScore * criterion.weight / 100);
+    });
+    
+    // Fix decimal issues with proper rounding
+    return Math.round(totalScore * 10) / 10;
   };
 
   // Handle completing a presentation with grades
   const handleCompletePresentation = async () => {
     if (!activeSlot) return;
     
-    // Validate all criteria have been graded
+    // Get the criteria list
     const criteria = presentation.customGradingCriteria ? presentation.gradingCriteria : [
       { name: 'Content', weight: 30 },
       { name: 'Delivery', weight: 30 },
@@ -83,28 +230,79 @@ const PresentationGrading = ({ presentation, onClose }) => {
       { name: 'Q&A', weight: 20 }
     ];
     
-    const missingGrades = criteria.filter(criterion => 
-      grades[criterion.name] === undefined || grades[criterion.name] === null
-    );
-    
-    if (missingGrades.length > 0) {
-      toast.error(`Please grade all criteria before completing: ${missingGrades.map(c => c.name).join(', ')}`);
-      return;
+    // For team grading, validate all team criteria have been graded
+    if (gradingMode === 'team') {
+      const missingGrades = criteria.filter(criterion => 
+        teamGrades[criterion.name] === undefined || teamGrades[criterion.name] === null
+      );
+      
+      if (missingGrades.length > 0) {
+        toast.error(`Please grade all team criteria before completing: ${missingGrades.map(c => c.name).join(', ')}`);
+        return;
+      }
+    } else {
+      // For individual grading, check if all members have been graded
+      if (activeSlot.teamMembers && activeSlot.teamMembers.length > 0) {
+        let missingGrades = false;
+        
+        // Check each team member has grades for each criterion
+        for (const member of activeSlot.teamMembers) {
+          const memberEmail = member.email;
+          if (!individualGrades[memberEmail]) {
+            toast.error(`Please grade team member: ${member.name}`);
+            missingGrades = true;
+            break;
+          }
+          
+          // Check each criterion for this member
+          for (const criterion of criteria) {
+            if (individualGrades[memberEmail][criterion.name] === undefined) {
+              toast.error(`Please grade ${criterion.name} for ${member.name}`);
+              missingGrades = true;
+              break;
+            }
+          }
+          
+          if (missingGrades) break;
+        }
+        
+        if (missingGrades) return;
+      }
     }
     
     try {
       setSubmitting(true);
       
-      // Calculate weighted score
-      const totalScore = criteria.reduce((sum, criterion) => {
-        const rawScore = grades[criterion.name] || 0;
-        const weightedScore = (rawScore * criterion.weight) / 100;
-        return sum + weightedScore;
-      }, 0);
+      // Calculate team score
+      let teamTotalScore = 0;
+      if (gradingMode === 'team') {
+        teamTotalScore = criteria.reduce((sum, criterion) => {
+          const rawScore = teamGrades[criterion.name] || 0;
+          const weightedScore = (rawScore * criterion.weight) / 100;
+          return sum + weightedScore;
+        }, 0);
+      } else {
+        // If individual grading, calculate average of all member scores
+        let totalMemberScores = 0;
+        const memberCount = activeSlot.teamMembers ? activeSlot.teamMembers.length : 0;
+        
+        if (memberCount > 0) {
+          activeSlot.teamMembers.forEach(member => {
+            totalMemberScores += calculateMemberScore(member, individualGrades);
+          });
+          
+          teamTotalScore = Math.round(totalMemberScores / memberCount);
+        }
+      }
       
-      const response = await api.put(`/api/presentations/slots/${activeSlot._id}/complete`, {
-        grades,
-        totalScore,
+      // Use the correct ID field - prefer _id but fall back to id if _id doesn't exist
+      const slotIdToUse = activeSlot._id || activeSlot.id;
+      console.log("Completing presentation with slot ID:", slotIdToUse);
+      
+      const response = await api.put(`/api/presentations/slots/${slotIdToUse}/complete`, {
+        grades: teamGrades,
+        individualGrades: individualGrades,
+        totalScore: teamTotalScore,
         feedback
       });
       
@@ -113,7 +311,16 @@ const PresentationGrading = ({ presentation, onClose }) => {
         setPresentationCompleted(true);
         
         // Update the slot in the slots array
-        setSlots(slots.map(s => s._id === activeSlot._id ? { ...s, status: 'completed', grades, totalScore } : s));
+        setSlots(slots.map(s => s._id === activeSlot._id 
+          ? { 
+              ...s, 
+              status: 'completed', 
+              grades: teamGrades,
+              individualGrades: individualGrades,
+              totalScore: teamTotalScore 
+            } 
+          : s
+        ));
         
         toast.success('Presentation graded successfully');
         
@@ -121,7 +328,8 @@ const PresentationGrading = ({ presentation, onClose }) => {
         setTimeout(() => {
           setActiveSlot(null);
           setPresentationCompleted(false);
-          setGrades({});
+          setTeamGrades({});
+          setIndividualGrades({});
           setFeedback('');
         }, 3000);
       }
@@ -134,10 +342,10 @@ const PresentationGrading = ({ presentation, onClose }) => {
 
   // Format time slot for display
   const calculateTimeSlot = (slot) => {
-    if (!slot.scheduleTime) return 'Time not set';
+    if (!slot.time) return 'Time not set';
     
     try {
-      const scheduleTime = new Date(slot.scheduleTime);
+      const scheduleTime = new Date(slot.time);
       const hours = scheduleTime.getHours();
       const minutes = scheduleTime.getMinutes();
       
@@ -170,17 +378,34 @@ const PresentationGrading = ({ presentation, onClose }) => {
     const rows = slots.map(slot => {
       const baseRow = {
         'Slot Time': calculateTimeSlot(slot),
-        'Student/Team': slot.participants?.map(p => p.name).join(', ') || 'Not assigned',
+        'Date': new Date(slot.time).toLocaleDateString(),
+        'Student/Team': slot.teamMembers?.map(p => p.name).join(', ') || 'Not assigned',
+        'Team Name': slot.teamName || 'N/A',
         'Status': slot.status
       };
       
-      // Add grade columns if this is a completed slot
+      // Add team grade columns if this is a completed slot
       if (slot.status === 'completed' && slot.grades) {
         Object.keys(slot.grades).forEach(criterion => {
-          baseRow[criterion] = slot.grades[criterion];
+          baseRow[`Team ${criterion}`] = slot.grades[criterion];
         });
         
-        baseRow['Total Score'] = slot.totalScore || 0;
+        baseRow['Team Total Score'] = slot.totalScore || 0;
+        
+        // Add individual grades if available
+        if (slot.individualGrades) {
+          slot.teamMembers?.forEach(member => {
+            if (slot.individualGrades[member.email]) {
+              Object.keys(slot.individualGrades[member.email]).forEach(criterion => {
+                baseRow[`${member.name} - ${criterion}`] = slot.individualGrades[member.email][criterion];
+              });
+              
+              // Calculate individual total score
+              const memberScore = calculateMemberScore(member, slot.individualGrades);
+              baseRow[`${member.name} - Total Score`] = memberScore;
+            }
+          });
+        }
       }
       
       return baseRow;
@@ -217,6 +442,93 @@ const PresentationGrading = ({ presentation, onClose }) => {
     document.body.removeChild(link);
   };
 
+  // Toggle edit mode for already completed presentations
+  const toggleGradeEditMode = () => {
+    if (activeSlot.status === 'completed') {
+      setIsEditingGrades(!isEditingGrades);
+      
+      // Load existing grades into state when entering edit mode
+      if (!isEditingGrades) {
+        if (activeSlot.grades) {
+          setTeamGrades(activeSlot.grades);
+        }
+        if (activeSlot.individualGrades) {
+          setIndividualGrades(activeSlot.individualGrades);
+        }
+        setFeedback(activeSlot.feedback || '');
+      }
+    }
+  };
+
+  // Handle submitting updated grades for a completed presentation
+  const handleSubmitGrades = async () => {
+    try {
+      setSubmitting(true);
+      
+      const slotIdToUse = activeSlot._id || activeSlot.id;
+      
+      // Calculate team score
+      let teamTotalScore = 0;
+      if (gradingMode === 'team') {
+        teamTotalScore = criteria.reduce((sum, criterion) => {
+          const score = teamGrades[criterion.name] || 0;
+          return sum + (score * criterion.weight / 100);
+        }, 0);
+      } else {
+        // Calculate average of all member scores
+        let totalMemberScores = 0;
+        const memberCount = activeSlot.teamMembers ? activeSlot.teamMembers.length : 0;
+        
+        if (memberCount > 0) {
+          activeSlot.teamMembers.forEach(member => {
+            totalMemberScores += calculateMemberScore(member, individualGrades);
+          });
+          teamTotalScore = totalMemberScores / memberCount;
+        }
+      }
+      
+      const response = await api.put(`/api/presentations/slots/${slotIdToUse}/update-grades`, {
+        grades: teamGrades,
+        individualGrades: individualGrades,
+        totalScore: teamTotalScore,
+        feedback
+      });
+      
+      if (response.data.success) {
+        // Update the slot in the slots array
+        setSlots(slots.map(s => (s._id === activeSlot._id || s.id === activeSlot.id) 
+          ? { 
+              ...s, 
+              grades: teamGrades,
+              individualGrades: individualGrades,
+              totalScore: teamTotalScore,
+              feedback: feedback
+            } 
+          : s
+        ));
+        
+        // Update active slot
+        setActiveSlot({
+          ...activeSlot,
+          grades: teamGrades,
+          individualGrades: individualGrades,
+          totalScore: teamTotalScore,
+          feedback: feedback
+        });
+        
+        // Exit editing mode
+        setIsEditingGrades(false);
+        
+        toast.success('Grades updated successfully');
+      }
+    } catch (error) {
+      console.error("Error updating grades:", error);
+      toast.error(error.response?.data?.message || 'Failed to update grades');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
@@ -245,6 +557,20 @@ const PresentationGrading = ({ presentation, onClose }) => {
           </div>
         </div>
 
+        {/* Display error message if present */}
+        {error && (
+          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <i className="fas fa-exclamation-circle text-red-500"></i>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Slots List */}
           <div className="lg:col-span-1 bg-white rounded-lg shadow">
@@ -265,9 +591,9 @@ const PresentationGrading = ({ presentation, onClose }) => {
                 <ul className="divide-y divide-gray-200">
                   {slots.map(slot => (
                     <li
-                      key={slot._id}
+                      key={slot._id || slot.id}
                       className={`p-4 hover:bg-gray-50 cursor-pointer transition-colors ${
-                        activeSlot?._id === slot._id ? 'bg-indigo-50' : ''
+                        activeSlot && (activeSlot._id === slot._id || activeSlot.id === slot.id) ? 'bg-indigo-50' : ''
                       }`}
                       onClick={() => !presentationInProgress && slot.status !== 'in-progress' && setActiveSlot(slot)}
                     >
@@ -280,7 +606,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
                       
                       <div className="mt-2">
                         <p className="text-sm text-gray-600">
-                          {slot.participants?.map(p => p.name).join(', ') || 'Not assigned'}
+                          {slot.teamName || slot.teamMembers?.map(p => p.name).join(', ') || 'Not assigned'}
                         </p>
                       </div>
                       
@@ -331,19 +657,48 @@ const PresentationGrading = ({ presentation, onClose }) => {
                 </div>
                 
                 <div className="p-6">
-                  <h4 className="font-medium text-gray-700 mb-3">Grade Breakdown</h4>
+                  <h4 className="font-medium text-gray-700 mb-3">Team Grade Breakdown</h4>
                   <div className="space-y-3">
-                    {Object.entries(activeSlot.grades || {}).map(([criterion, score]) => (
+                    {Object.entries(teamGrades || {}).map(([criterion, score]) => (
                       <div key={criterion} className="flex justify-between items-center">
                         <span className="text-gray-600">{criterion}</span>
                         <span className="font-medium">{score}/100</span>
                       </div>
                     ))}
                     <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-                      <span className="font-medium text-gray-800">Total Score</span>
+                      <span className="font-medium text-gray-800">Team Total Score</span>
                       <span className="font-bold text-green-600">{activeSlot.totalScore || 0}/100</span>
                     </div>
                   </div>
+                  
+                  {/* Individual Grades Section */}
+                  {activeSlot.individualGrades && Object.keys(activeSlot.individualGrades).length > 0 && (
+                    <div className="mt-6">
+                      <h4 className="font-medium text-gray-700 mb-3">Individual Grade Breakdown</h4>
+                      
+                      {activeSlot.teamMembers && activeSlot.teamMembers.map((member, idx) => (
+                        <div key={idx} className="mb-4 p-3 bg-gray-50 rounded-md">
+                          <h5 className="font-medium text-gray-800 mb-2">{member.name}</h5>
+                          {activeSlot.individualGrades[member.email] && (
+                            <div className="space-y-2">
+                              {Object.entries(activeSlot.individualGrades[member.email]).map(([criterion, score]) => (
+                                <div key={criterion} className="flex justify-between items-center">
+                                  <span className="text-gray-600 text-sm">{criterion}</span>
+                                  <span className="font-medium text-sm">{score}/100</span>
+                                </div>
+                              ))}
+                              <div className="pt-2 border-t border-gray-200 flex justify-between items-center">
+                                <span className="font-medium text-gray-800 text-sm">Total Score</span>
+                                <span className="font-bold text-green-600 text-sm">
+                                  {calculateMemberScore(member, activeSlot.individualGrades)}/100
+                                </span>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   
                   {activeSlot.feedback && (
                     <div className="mt-6">
@@ -370,53 +725,161 @@ const PresentationGrading = ({ presentation, onClose }) => {
                     </span>
                   </div>
                   <p className="text-gray-600 mt-2">
-                    {activeSlot.participants?.map(p => p.name).join(', ') || 'Unnamed presentation'} - {calculateTimeSlot(activeSlot)}
+                    {activeSlot.teamMembers?.map(p => p.name).join(', ') || 'Unnamed presentation'} - {calculateTimeSlot(activeSlot)}
                   </p>
                 </div>
                 
                 <div className="p-6">
-                  <h3 className="font-semibold text-gray-800 mb-4">Grade This Presentation</h3>
-                  
-                  <div className="space-y-6">
-                    {(presentation.customGradingCriteria ? presentation.gradingCriteria : [
-                      { name: 'Content', weight: 30 },
-                      { name: 'Delivery', weight: 30 },
-                      { name: 'Visual Aids', weight: 20 },
-                      { name: 'Q&A', weight: 20 }
-                    ]).map(criterion => (
-                      <div key={criterion.name} className="space-y-2">
-                        <div className="flex justify-between items-center">
-                          <label className="font-medium text-gray-700">{criterion.name} ({criterion.weight}%)</label>
-                          <span className="text-sm text-gray-500">{grades[criterion.name] || 0}/100</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={grades[criterion.name] || 0}
-                          onChange={(e) => handleGradeChange(criterion.name, e.target.value)}
-                          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                        />
-                      </div>
-                    ))}
-                    
-                    <div className="border-t border-gray-200 pt-4 mt-4">
-                      <label className="block font-medium text-gray-700 mb-2">Feedback (Optional)</label>
-                      <textarea
-                        value={feedback}
-                        onChange={(e) => setFeedback(e.target.value)}
-                        rows="3"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="Provide feedback for the presentation..."
-                      ></textarea>
+                  {/* Grading Mode Selector */}
+                  <div className="mb-6">
+                    <h3 className="font-semibold text-gray-800 mb-3">Grading Mode</h3>
+                    <div className="flex space-x-4">
+                      <button
+                        onClick={() => switchGradingMode('team')}
+                        className={`px-4 py-2 rounded-md ${
+                          gradingMode === 'team' 
+                            ? 'bg-indigo-100 text-indigo-700 border-indigo-300 border' 
+                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                        }`}
+                      >
+                        <i className="fas fa-users mr-2"></i>
+                        Team Grading
+                      </button>
+                      
+                      {activeSlot.teamMembers && activeSlot.teamMembers.length > 0 && (
+                        <button
+                          onClick={() => switchGradingMode('individual')}
+                          className={`px-4 py-2 rounded-md ${
+                            gradingMode === 'individual' 
+                              ? 'bg-indigo-100 text-indigo-700 border-indigo-300 border' 
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          <i className="fas fa-user mr-2"></i>
+                          Individual Grading
+                        </button>
+                      )}
                     </div>
+                  </div>
+                  
+                  {/* Team Grading Section */}
+                  {gradingMode === 'team' && (
+                    <div className="space-y-6">
+                      <h3 className="font-semibold text-gray-800 mb-4">Grade The Team</h3>
+                      
+                      {(presentation.customGradingCriteria ? presentation.gradingCriteria : [
+                        { name: 'Content', weight: 30 },
+                        { name: 'Delivery', weight: 30 },
+                        { name: 'Visual Aids', weight: 20 },
+                        { name: 'Q&A', weight: 20 }
+                      ]).map(criterion => (
+                        <div key={criterion.name} className="space-y-2">
+                          <div className="flex justify-between items-center">
+                            <label className="font-medium text-gray-700">{criterion.name} ({criterion.weight}%)</label>
+                            <span className="text-sm text-gray-500">{teamGrades[criterion.name] || 0}/100</span>
+                          </div>
+                          <input
+                            type="range"
+                            min="0"
+                            max="100"
+                            value={teamGrades[criterion.name] || 0}
+                            onChange={(e) => handleTeamGradeChange(criterion.name, e.target.value)}
+                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Individual Grading Section */}
+                  {gradingMode === 'individual' && activeSlot.teamMembers && activeSlot.teamMembers.length > 0 && (
+                    <div className="space-y-6">
+                      <h3 className="font-semibold text-gray-800 mb-4">Grade Individual Members</h3>
+                      
+                      {/* Team Member Selector */}
+                      <div className="flex flex-wrap gap-2 mb-4">
+                        {activeSlot.teamMembers.map((member, idx) => (
+                          <button
+                            key={idx}
+                            onClick={() => selectTeamMember(member)}
+                            className={`px-3 py-1.5 rounded-full text-sm ${
+                              activeTeamMember && activeTeamMember.email === member.email
+                                ? 'bg-indigo-100 text-indigo-700 border-indigo-300 border'
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
+                          >
+                            {member.name}
+                          </button>
+                        ))}
+                      </div>
+                      
+                      {/* Active Member Grading Form */}
+                      {activeTeamMember && (
+                        <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                          <h4 className="text-md font-medium text-gray-800 mb-4">
+                            Grading: {activeTeamMember.name}
+                          </h4>
+                          
+                          <div className="space-y-4">
+                            {(presentation.customGradingCriteria ? presentation.gradingCriteria : [
+                              { name: 'Content', weight: 30 },
+                              { name: 'Delivery', weight: 30 },
+                              { name: 'Visual Aids', weight: 20 },
+                              { name: 'Q&A', weight: 20 }
+                            ]).map(criterion => (
+                              <div key={criterion.name} className="space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <label className="font-medium text-gray-700">{criterion.name} ({criterion.weight}%)</label>
+                                  <span className="text-sm text-gray-500">
+                                    {individualGrades[activeTeamMember.email]?.[criterion.name] || 0}/100
+                                  </span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={individualGrades[activeTeamMember.email]?.[criterion.name] || 0}
+                                  onChange={(e) => handleIndividualGradeChange(
+                                    activeTeamMember.email, 
+                                    criterion.name, 
+                                    e.target.value
+                                  )}
+                                  className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          
+                          {/* Member Score Summary */}
+                          <div className="mt-4 pt-4 border-t border-gray-300">
+                            <div className="flex justify-between items-center">
+                              <span className="font-medium text-gray-800">Current Score:</span>
+                              <span className="font-bold text-indigo-600">
+                                {calculateMemberScore(activeTeamMember, individualGrades)}/100
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  <div className="border-t border-gray-200 pt-6 mt-6">
+                    <label className="block font-medium text-gray-700 mb-2">Feedback (Optional)</label>
+                    <textarea
+                      value={feedback}
+                      onChange={(e) => setFeedback(e.target.value)}
+                      rows="4"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Provide feedback for the presentation..."
+                    ></textarea>
                   </div>
                   
                   <div className="mt-6 flex justify-end">
                     <button
                       onClick={handleCompletePresentation}
                       disabled={submitting}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 flex items-center"
+                      className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 flex items-center"
                     >
                       {submitting ? (
                         <>
@@ -451,7 +914,7 @@ const PresentationGrading = ({ presentation, onClose }) => {
                     </div>
                     <div className="ml-4">
                       <h3 className="text-lg font-semibold text-gray-800">
-                        {activeSlot.participants?.map(p => p.name).join(', ') || 'Unnamed presentation'}
+                        {activeSlot.teamName || activeSlot.teamMembers?.map(p => p.name).join(', ') || 'Unnamed presentation'}
                       </h3>
                       <p className="text-gray-600">{calculateTimeSlot(activeSlot)}</p>
                     </div>
@@ -485,6 +948,29 @@ const PresentationGrading = ({ presentation, onClose }) => {
                     </div>
                   </div>
                   
+                  {/* Team Members Section */}
+                  {activeSlot.teamMembers && activeSlot.teamMembers.length > 0 && (
+                    <div className="mb-6">
+                      <h4 className="font-medium text-gray-700 mb-2">Team Members</h4>
+                      <div className="bg-gray-50 rounded-md p-4">
+                        <ul className="divide-y divide-gray-200">
+                          {activeSlot.teamMembers.map((member, idx) => (
+                            <li key={idx} className="py-2 flex items-start">
+                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3 flex-shrink-0">
+                                <span className="text-indigo-600 font-medium">{member.name.charAt(0).toUpperCase()}</span>
+                              </div>
+                              <div>
+                                <p className="font-medium text-gray-800">{member.name}</p>
+                                <p className="text-gray-500 text-sm">{member.email}</p>
+                                {member.studentId && <p className="text-gray-500 text-sm">ID: {member.studentId}</p>}
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                  
                   {activeSlot.status === 'booked' && (
                     <div className="flex justify-center">
                       <button
@@ -511,27 +997,130 @@ const PresentationGrading = ({ presentation, onClose }) => {
                   )}
                   
                   {activeSlot.status === 'completed' && (
-                    <div className="pt-4">
-                      <h4 className="font-medium text-gray-700 mb-3">Grade Breakdown</h4>
-                      <div className="space-y-3">
-                        {Object.entries(activeSlot.grades || {}).map(([criterion, score]) => (
-                          <div key={criterion} className="flex justify-between items-center">
-                            <span className="text-gray-600">{criterion}</span>
-                            <span className="font-medium">{score}/100</span>
-                          </div>
-                        ))}
-                        <div className="pt-3 border-t border-gray-200 flex justify-between items-center">
-                          <span className="font-medium text-gray-800">Total Score</span>
-                          <span className="font-bold text-green-600">{activeSlot.totalScore || 0}/100</span>
-                        </div>
+                    <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-semibold text-gray-800">Grading Results</h3>
+                        
+                        <button
+                          onClick={toggleGradeEditMode}
+                          className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 transition-colors"
+                        >
+                          {isEditingGrades ? 'Cancel Editing' : 'Edit Grades'}
+                        </button>
                       </div>
                       
-                      {activeSlot.feedback && (
-                        <div className="mt-6">
-                          <h4 className="font-medium text-gray-700 mb-2">Feedback</h4>
-                          <div className="bg-gray-50 p-4 rounded-md border border-gray-100">
-                            <p className="text-gray-600 whitespace-pre-wrap">{activeSlot.feedback}</p>
+                      {isEditingGrades ? (
+                        // Show editable grading form with existing values
+                        <div className="space-y-4">
+                          {/* Team grading form */}
+                          <div>
+                            <h4 className="font-medium text-gray-700 mb-2">Team Grade</h4>
+                            {(presentation.customGradingCriteria ? presentation.gradingCriteria : [
+                              { name: 'Content', weight: 30 },
+                              { name: 'Delivery', weight: 30 },
+                              { name: 'Visual Aids', weight: 20 },
+                              { name: 'Q&A', weight: 20 }
+                            ]).map(criterion => (
+                              <div key={criterion.name} className="mb-3 flex flex-col">
+                                <div className="flex justify-between items-center mb-1">
+                                  <label className="text-sm font-medium text-gray-700">{criterion.name} ({criterion.weight}%)</label>
+                                  <span className="text-sm text-gray-500">{teamGrades[criterion.name] || 0}/100</span>
+                                </div>
+                                <input
+                                  type="range"
+                                  min="0"
+                                  max="100"
+                                  value={teamGrades[criterion.name] || 0}
+                                  onChange={(e) => handleTeamGradeChange(criterion.name, parseInt(e.target.value))}
+                                  className="w-full"
+                                />
+                              </div>
+                            ))}
                           </div>
+                          
+                          {/* Individual grading form if applicable */}
+                          {activeSlot.teamMembers && activeSlot.teamMembers.length > 1 && (
+                            <div className="mt-4">
+                              <h4 className="font-medium text-gray-700 mb-2">Individual Grades</h4>
+                              {/* Add tabs for team members */}
+                              <div className="flex gap-2 flex-wrap mb-4">
+                                {activeSlot.teamMembers.map((member, idx) => (
+                                  <button
+                                    key={member.email}
+                                    onClick={() => selectTeamMember(member)}
+                                    className={`px-3 py-1 rounded text-sm ${
+                                      activeTeamMember && activeTeamMember.email === member.email
+                                      ? 'bg-indigo-600 text-white' 
+                                      : 'bg-gray-100 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    {member.name}
+                                  </button>
+                                ))}
+                              </div>
+
+                              {/* Individual member grading */}
+                              {activeTeamMember && (
+                                <div>
+                                  <p className="mb-2 font-medium">Grading: {activeTeamMember.name}</p>
+                                  {(presentation.customGradingCriteria ? presentation.gradingCriteria : [
+                                    { name: 'Content', weight: 30 },
+                                    { name: 'Delivery', weight: 30 },
+                                    { name: 'Visual Aids', weight: 20 },
+                                    { name: 'Q&A', weight: 20 }
+                                  ]).map(criterion => (
+                                    <div key={criterion.name} className="mb-3 flex flex-col">
+                                      <div className="flex justify-between items-center mb-1">
+                                        <label className="text-sm font-medium text-gray-700">{criterion.name} ({criterion.weight}%)</label>
+                                        <span className="text-sm text-gray-500">
+                                          {individualGrades[activeTeamMember.email]?.[criterion.name] || 0}/100
+                                        </span>
+                                      </div>
+                                      <input
+                                        type="range"
+                                        min="0"
+                                        max="100"
+                                        value={individualGrades[activeTeamMember.email]?.[criterion.name] || 0}
+                                        onChange={(e) => handleIndividualGradeChange(
+                                          activeTeamMember.email, 
+                                          criterion.name, 
+                                          parseInt(e.target.value)
+                                        )}
+                                        className="w-full"
+                                      />
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {/* Feedback */}
+                          <div className="mt-4">
+                            <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
+                            <textarea
+                              value={feedback}
+                              onChange={(e) => setFeedback(e.target.value)}
+                              className="w-full p-2 border border-gray-300 rounded"
+                              rows="4"
+                            ></textarea>
+                          </div>
+                          
+                          {/* Save button */}
+                          <div className="mt-4">
+                            <button
+                              onClick={handleSubmitGrades}
+                              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
+                            >
+                              Save Updated Grades
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        // Show readonly grades display
+                        <div>
+                          {/* Add existing grade display code here */}
+                          {/* ... */}
                         </div>
                       )}
                     </div>

@@ -376,7 +376,6 @@ const PresentationManagement = () => {
                     <div className="flex justify-between items-center mb-3">
                       <span className="text-sm font-medium text-gray-700">Slot Statistics</span>
                     </div>
-                    
                     <div className="bg-gray-100 h-2 rounded-full">
                       <div 
                         className="bg-green-500 h-2 rounded-full" 

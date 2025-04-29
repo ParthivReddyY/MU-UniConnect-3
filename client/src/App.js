@@ -136,8 +136,9 @@ function App() {
   }, []);
   
   return (
-    <AuthProvider>
-      <Router>
+    // Move Router to wrap AuthProvider, fixing the navigation context error
+    <Router>
+      <AuthProvider>
         <div className="flex flex-col min-h-[calc(var(--vh,1vh)*100)]">
           {/* Add ToastContainer at the application root level */}
           <ToastContainer
@@ -350,8 +351,8 @@ function App() {
             </>
           )}
         </div>
-      </Router>
-    </AuthProvider>
+      </AuthProvider>
+    </Router>
   );
 }
 

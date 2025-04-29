@@ -13,28 +13,28 @@ router.get('/available', presentationController.getAvailablePresentationSlots);
 // Get presentation slots created by a faculty member
 router.get('/faculty', presentationController.getFacultyPresentationSlots);
 
-// Create a new presentation slot
+// Create a new presentation
 router.post('/', isFacultyOrAdmin, presentationController.createPresentationSlot);
-
-// Book a presentation slot
-router.post('/:id/book', presentationController.bookPresentationSlot);
-
-// Get slots for a specific presentation (for grading)
-router.get('/:id/slots', isFacultyOrAdmin, presentationController.getPresentationSlots);
-
-// Start a presentation (change slot status to in-progress)
-router.put('/slots/:slotId/start', isFacultyOrAdmin, presentationController.startPresentationSlot);
-
-// Complete a presentation (grade and provide feedback)
-router.put('/slots/:slotId/complete', isFacultyOrAdmin, presentationController.completePresentationSlot);
-
-// Delete a presentation event
-router.delete('/:id', isFacultyOrAdmin, presentationController.deletePresentationSlot);
 
 // Get a single presentation by ID
 router.get('/:id', presentationController.getPresentationById);
 
-// Update a presentation
+// Update presentation details
 router.put('/:id', isFacultyOrAdmin, presentationController.updatePresentation);
+
+// Delete a presentation
+router.delete('/:id', isFacultyOrAdmin, presentationController.deletePresentationSlot);
+
+// Book a presentation slot
+router.post('/:id/book', presentationController.bookPresentationSlot);
+
+// Get slots for a specific presentation
+router.get('/:id/slots', presentationController.getPresentationSlots);
+
+// Start a presentation slot
+router.put('/slots/:slotId/start', isFacultyOrAdmin, presentationController.startPresentationSlot);
+
+// Complete a presentation with grading
+router.put('/slots/:slotId/complete', isFacultyOrAdmin, presentationController.completePresentationSlot);
 
 module.exports = router;

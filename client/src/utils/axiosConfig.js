@@ -25,75 +25,53 @@ const api = axios.create({
   }
 });
 
-// Add simplified request logging
+// Add a request interceptor that adds the auth token to requests
 api.interceptors.request.use(
-  config => {
-    // Simplified logging - just show the essential information
-    console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
-    
-    // Add auth token from localStorage if available
+  (config) => {
+    // Get token from localStorage
     const token = localStorage.getItem('token');
+    
+    // If token exists, add it to the Authorization header
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      
+      // Log authentication details for debugging (remove in production)
+      console.debug('Adding auth token to request:', config.url);
     }
     
     return config;
   },
-  error => {
-    console.error('API Request Error:', error.message);
+  (error) => {
     return Promise.reject(error);
   }
 );
 
-// Simplified response handling
+// Add a response interceptor for error handling
 api.interceptors.response.use(
-  response => {
-    // Only log critical information
-    console.log(`API Response: ${response.status} ${response.config.url}`);
+  (response) => {
     return response;
   },
-  error => {
-    // Simplified error logging
+  (error) => {
+    // Handle specific error codes
     if (error.response) {
-      console.error(`API Error ${error.response.status}: ${error.config?.url}`);
-    } else if (error.code) {
-      console.error(`Network error: ${error.code}`);
-    } else {
-      console.error('API Error:', error.message);
-    }
-    
-    // Special handling for network/connectivity errors - silently log but don't show warnings
-    if (error.code === 'ECONNABORTED' || error.code === 'ERR_NETWORK') {
-      // Just return a simple error without special properties that might trigger warnings
-      return Promise.reject(new Error('Network error'));
-    }
-    
-    // Don't redirect on login/register/auth failures to avoid redirect loops
-    if (
-      error.response && 
-      error.response.status === 401 && 
-      !(
-        error.config.url.includes('/login') ||
-        error.config.url.includes('/register') ||
-        error.config.url.includes('/verify-email') ||
-        error.config.url.includes('/forgot-password') ||
-        error.config.url.includes('/reset-password') ||
-        error.config.url.includes('/check-email') ||
-        error.config.url.includes('/verify-reset-otp')
-      )
-    ) {
-      console.log('Authentication token expired or invalid. Redirecting to login...');
+      console.error('API Error Response:', {
+        status: error.response.status,
+        url: error.config.url,
+        message: error.response.data.message || 'Unknown error'
+      });
       
-      // Clear user data
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      // Handle 401 Unauthorized errors
+      if (error.response.status === 401) {
+        console.error('Authentication error - You may need to log in again');
+        
+        // Optionally, redirect to login page or clear token
+        // localStorage.removeItem('token');
+        // window.location.href = '/login';
+      }
       
-      // Redirect to login page if not already there
-      if (!window.location.href.includes('login')) {
-        // Use a slight delay to allow for any current operations to finish
-        setTimeout(() => {
-          window.location.href = '/login';
-        }, 100);
+      // Handle 403 Forbidden errors
+      if (error.response.status === 403) {
+        console.error('Authorization error - You do not have permission for this action');
       }
     }
     

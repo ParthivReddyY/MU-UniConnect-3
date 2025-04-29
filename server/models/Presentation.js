@@ -135,4 +135,39 @@ const PresentationSchema = new mongoose.Schema({
   }
 });
 
+// Add any missing schema definitions if they don't exist
+// Ensure proper slot schemas for IDs
+
+// When creating slots, ensure each slot gets both MongoDB _id and a custom id:
+function generateTimeSlots(startTime, endTime, periodStart, periodEnd, duration, buffer) {
+  const slots = [];
+  const days = [];
+  
+  // Generate array of dates between start and end date
+  let currentDate = new Date(periodStart);
+  const endDate = new Date(periodEnd);
+  
+  // ...existing code...
+  
+  // For each day, generate slots
+  days.forEach(day => {
+    // ...existing code...
+    
+    // When creating slot objects:
+    const slot = {
+      id: mongoose.Types.ObjectId().toString(), // Ensure each slot has a string ID
+      time: new Date(slotTime),
+      booked: false,
+      status: 'available'
+      // ...other slot properties
+    };
+    // MongoDB will auto-generate _id when inserted into collection
+    
+    slots.push(slot);
+    // ...existing code...
+  });
+  
+  return slots;
+}
+
 module.exports = mongoose.model('Presentation', PresentationSchema);
