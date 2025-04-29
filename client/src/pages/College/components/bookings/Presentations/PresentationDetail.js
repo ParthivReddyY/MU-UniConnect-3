@@ -18,13 +18,6 @@ const PresentationDetail = () => {
   const [selectedSlot, setSelectedSlot] = useState(null);
   const [showGrading, setShowGrading] = useState(false);
   const [showStartConfirmation, setShowStartConfirmation] = useState(false);
-  const [stats, setStats] = useState({
-    totalSlots: 0,
-    availableSlots: 0,
-    bookedSlots: 0,
-    completedSlots: 0,
-    inProgressSlots: 0
-  });
 
   useEffect(() => {
     const fetchPresentationDetails = async () => {
@@ -37,29 +30,9 @@ const PresentationDetail = () => {
         
         setPresentation(response.data);
         
-        // Calculate statistics
-        const totalSlots = response.data.slots ? response.data.slots.length : 0;
-        
-        if (response.data && response.data.slots) {
-          const bookedSlots = response.data.slots.filter(slot => slot.booked).length || 0;
-          const completedSlots = response.data.slots.filter(slot => slot.status === 'completed').length || 0;
-          const inProgressSlots = response.data.slots.filter(slot => slot.status === 'in-progress').length || 0;
-          
-          setStats({ 
-            totalSlots, 
-            bookedSlots, 
-            completedSlots, 
-            inProgressSlots,
-            availableSlots: totalSlots - bookedSlots 
-          });
-        }
-        
-        setError(null);
-      } catch (err) {
-        console.error('Error fetching presentation details:', err);
-        
-        // Specific error handling for permission issues
-        if (err.response?.status === 403) {
+        // Note: All statistics are calculated directly in renderStatistics function
+        } catch (err) {
+          if (err.response?.status === 403) {
           setError('You don\'t have permission to view this presentation details.');
           toast.error('Access denied: You don\'t have permission to view this presentation');
         } else {
@@ -282,11 +255,46 @@ const PresentationDetail = () => {
   if (!presentation) return <div>No presentation found</div>;
 
   if (isEditing) {
+    // Create a properly formatted initial data object with the correct date formats
+    const registrationStart = presentation?.registrationPeriod?.start ? 
+      new Date(presentation.registrationPeriod.start).toISOString().split('T')[0] + 
+      'T' + new Date(presentation.registrationPeriod.start).toTimeString().slice(0, 5) : '';
+    
+    const registrationEnd = presentation?.registrationPeriod?.end ? 
+      new Date(presentation.registrationPeriod.end).toISOString().split('T')[0] + 
+      'T' + new Date(presentation.registrationPeriod.end).toTimeString().slice(0, 5) : '';
+    
+    const presentationStart = presentation?.presentationPeriod?.start ? 
+      new Date(presentation.presentationPeriod.start).toISOString().split('T')[0] : '';
+    
+    const presentationEnd = presentation?.presentationPeriod?.end ? 
+      new Date(presentation.presentationPeriod.end).toISOString().split('T')[0] : '';
+    
+    const initialEditData = {
+      ...presentation,
+      registrationPeriod: {
+        start: registrationStart,
+        end: registrationEnd
+      },
+      presentationPeriod: {
+        start: presentationStart,
+        end: presentationEnd
+      },
+      // Ensure grading criteria is properly passed
+      customGradingCriteria: !!presentation.customGradingCriteria,
+      gradingCriteria: presentation.gradingCriteria || [
+        { name: 'Content', weight: 30 },
+        { name: 'Delivery', weight: 30 },
+        { name: 'Visual Aids', weight: 20 },
+        { name: 'Q&A', weight: 20 }
+      ]
+    };
+    
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-6">Edit Presentation</h2>
         <PresentationCreationForm 
-          initialData={presentation}
+          initialData={initialEditData}
           onPresentationCreated={handleUpdatePresentation}
           onCancel={handleCancel}
         />
@@ -304,6 +312,188 @@ const PresentationDetail = () => {
     );
   }
 
+  // Remove duplicate status badges and make the UI more efficient
+
+  // Redesign the information sections to be more horizontal and compact
+  const renderPresentationInfo = () => {
+    if (!presentation) return null;
+    
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        {/* Presentation Information */}
+        <div className="bg-white p-5 rounded-lg shadow-md">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <i className="fas fa-info-circle mr-2 text-blue-500"></i>
+            Basic Information
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Host:</span>
+              <span className="font-medium text-gray-800">{presentation.facultyName}</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Department:</span>
+              <span className="font-medium text-gray-800">{presentation.hostDepartment || 'Not specified'}</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Venue:</span>
+              <span className="font-medium text-gray-800">{presentation.venue}</span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Type:</span>
+              <span className="font-medium text-gray-800">
+                {presentation.participationType === 'individual' ? 'Individual' : 
+                `Team (${presentation.teamSizeMin}-${presentation.teamSizeMax} members)`}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Time Information */}
+        <div className="bg-white p-5 rounded-lg shadow-md">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <i className="fas fa-calendar-alt mr-2 text-green-500"></i>
+            Schedule Information
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Registration:</span>
+              <span className="font-medium text-gray-800">
+                {formatDate(presentation.registrationPeriod.start)} - {formatDate(presentation.registrationPeriod.end)}
+              </span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Presentation:</span>
+              <span className="font-medium text-gray-800">
+                {formatDate(presentation.presentationPeriod.start)} - {formatDate(presentation.presentationPeriod.end)}
+              </span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Duration:</span>
+              <span className="font-medium text-gray-800">
+                {presentation.slotConfig.duration} min (with {presentation.slotConfig.buffer} min buffer)
+              </span>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Hours:</span>
+              <span className="font-medium text-gray-800">
+                {presentation.slotConfig.startTime} - {presentation.slotConfig.endTime}
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        {/* Target Audience */}
+        <div className="bg-white p-5 rounded-lg shadow-md">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <i className="fas fa-users mr-2 text-purple-500"></i>
+            Target Audience
+          </h3>
+          <div className="space-y-2">
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Year:</span>
+              <div className="flex flex-wrap">
+                {presentation.targetAudience?.year.map(year => (
+                  <span key={year} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-1 mb-1">
+                    Year {year}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">School:</span>
+              <div className="flex flex-wrap">
+                {presentation.targetAudience?.school.map(school => {
+                  const shortName = school.split('(')[1]?.replace(')', '') || school;
+                  return (
+                    <span key={school} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">
+                      {shortName}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="flex items-start">
+              <span className="text-gray-600 w-24 flex-shrink-0">Department:</span>
+              <div className="flex flex-wrap">
+                {presentation.targetAudience?.department.map(dept => (
+                  <span key={dept} className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded mr-1 mb-1">
+                    {dept}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Improve statistics display - remove duplicates
+  const renderStatistics = () => {
+    if (!presentation) return null;
+    
+    // Calculate statistics
+    const stats = {
+      total: presentation.slots?.length || 0,
+      booked: presentation.slots?.filter(slot => slot.status === 'booked').length || 0,
+      inProgress: presentation.slots?.filter(slot => slot.status === 'in-progress').length || 0,
+      completed: presentation.slots?.filter(slot => slot.status === 'completed').length || 0,
+      available: presentation.slots?.filter(slot => !slot.booked).length || 0,
+    };
+    
+    return (
+      <div className="bg-white rounded-lg shadow-md p-5 mb-6">
+        <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
+          <i className="fas fa-chart-pie mr-2 text-blue-500"></i>
+          Slot Statistics
+        </h3>
+        
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="bg-gray-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+            <div className="text-sm text-gray-500">Total Slots</div>
+          </div>
+          <div className="bg-blue-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-blue-600">{stats.booked}</div>
+            <div className="text-sm text-blue-700">Booked</div>
+          </div>
+          <div className="bg-orange-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
+            <div className="text-sm text-orange-700">In Progress</div>
+          </div>
+          <div className="bg-green-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-sm text-green-700">Completed</div>
+          </div>
+          <div className="bg-purple-50 p-3 rounded-lg text-center">
+            <div className="text-2xl font-bold text-purple-600">{stats.available}</div>
+            <div className="text-sm text-purple-700">Available</div>
+          </div>
+        </div>
+        
+        <div className="mt-4">
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="flex h-full">
+              <div 
+                className="bg-blue-500 h-full" 
+                style={{ width: `${(stats.booked / stats.total) * 100}%` }}
+              ></div>
+              <div 
+                className="bg-orange-500 h-full" 
+                style={{ width: `${(stats.inProgress / stats.total) * 100}%` }}
+              ></div>
+              <div 
+                className="bg-green-500 h-full" 
+                style={{ width: `${(stats.completed / stats.total) * 100}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex justify-between items-start mb-6">
@@ -317,156 +507,8 @@ const PresentationDetail = () => {
         </button>
       </div>
 
-      {/* Quick Stats Section */}
-      <div className="bg-blue-50 rounded-lg p-6 mb-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Quick Stats</h3>
-        <div className="flex justify-between mb-3">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.totalSlots}</div>
-            <div className="text-sm text-gray-500">Total Slots</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.availableSlots}</div>
-            <div className="text-sm text-gray-500">Available</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">{stats.bookedSlots}</div>
-            <div className="text-sm text-gray-500">Booked</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.completedSlots}</div>
-            <div className="text-sm text-gray-500">Completed</div>
-          </div>
-        </div>
-        <div className="mt-2">
-          <div className="bg-gray-200 h-2 rounded-full overflow-hidden">
-            <div className="flex h-full">
-              <div className="bg-green-500 h-full" style={{ width: `${(stats.availableSlots / stats.totalSlots) * 100}%` }}></div>
-              <div className="bg-yellow-500 h-full" style={{ width: `${(stats.bookedSlots / stats.totalSlots) * 100}%` }}></div>
-              <div className="bg-purple-500 h-full" style={{ width: `${(stats.completedSlots / stats.totalSlots) * 100}%` }}></div>
-            </div>
-          </div>
-          <div className="flex justify-between text-xs mt-1">
-            <span className="text-blue-600">
-              {stats.bookedSlots} booked
-            </span>
-            <span className="text-orange-500">
-              {stats.inProgressSlots} in progress
-            </span>
-            <span className="text-purple-600">
-              {stats.completedSlots} completed
-            </span>
-            <span className="text-green-600">
-              {stats.availableSlots} available
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* Presentation Information Section */}
-      <div className="bg-gray-50 rounded-lg p-6 mb-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Presentation Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-500">Description</p>
-            <p className="font-medium">{presentation.description || 'No description provided'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Venue</p>
-            <p className="font-medium">{presentation.venue}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Created By</p>
-            <p className="font-medium">{presentation.facultyName || 'Unknown'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Department</p>
-            <p className="font-medium">{presentation.hostDepartment || 'Not specified'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Participation Type</p>
-            <p className="font-medium capitalize">{presentation.participationType}</p>
-          </div>
-          {presentation.participationType === 'team' && (
-            <div>
-              <p className="text-sm text-gray-500">Team Size</p>
-              <p className="font-medium">{presentation.teamSizeMin} - {presentation.teamSizeMax} members</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Time Information Section */}
-      <div className="bg-gray-50 rounded-lg p-6 mb-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Time Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <p className="text-sm text-gray-500">Registration Period</p>
-            <p className="font-medium">
-              {formatDate(presentation.registrationPeriod?.start)} - {formatDate(presentation.registrationPeriod?.end)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Presentation Period</p>
-            <p className="font-medium">
-              {formatDate(presentation.presentationPeriod?.start)} - {formatDate(presentation.presentationPeriod?.end)}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Slot Duration</p>
-            <p className="font-medium">{presentation.slotConfig?.duration} minutes</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Buffer Time</p>
-            <p className="font-medium">{presentation.slotConfig?.buffer} minutes</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Target Audience Section */}
-      <div className="bg-gray-50 rounded-lg p-6 mb-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Target Audience</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {presentation.targetAudience?.year?.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-500">Academic Years</p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {presentation.targetAudience.year.map((year, idx) => (
-                  <span key={idx} className="bg-blue-100 text-blue-800 text-xs py-1 px-2 rounded">
-                    {year === '1' ? '1st' : year === '2' ? '2nd' : year === '3' ? '3rd' : `${year}th`} Year
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {presentation.targetAudience?.school?.length > 0 && (
-            <div>
-              <p className="text-sm text-gray-500">Schools</p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {presentation.targetAudience.school.map((school, idx) => (
-                  <span key={idx} className="bg-green-100 text-green-800 text-xs py-1 px-2 rounded">
-                    {school.replace(/\([^()]*\)/g, '').trim()}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          
-          {presentation.targetAudience?.department?.length > 0 && (
-            <div className="md:col-span-2">
-              <p className="text-sm text-gray-500">Departments</p>
-              <div className="flex flex-wrap gap-1 mt-1">
-                {presentation.targetAudience.department.map((dept, idx) => (
-                  <span key={idx} className="bg-purple-100 text-purple-800 text-xs py-1 px-2 rounded">
-                    {dept}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {renderStatistics()}
+      {renderPresentationInfo()}
 
       {/* Slots Management Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">

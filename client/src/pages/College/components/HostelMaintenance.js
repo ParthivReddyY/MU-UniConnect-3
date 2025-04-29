@@ -105,7 +105,7 @@ const HostelMaintenance = () => {
             <div className="flex flex-col items-center justify-center">
               <div className="border-2 border-dashed border-light-gray p-4 rounded-lg mb-4">
                 <img 
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://mahindra-university-outpass.com" 
+                  src="https://res.cloudinary.com/mu-uniconnect/image/upload/v1745917785/URL_QR_Code_uq6vh9.png" 
                   alt="Outpass QR Code" 
                   className="w-48 h-48"
                 />
