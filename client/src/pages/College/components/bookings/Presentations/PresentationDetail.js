@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import api from '../../../../../utils/axiosConfig';
@@ -10,7 +10,7 @@ import LoadingSpinner from '../../../../../components/LoadingSpinner';
 const PresentationDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  useAuth(); // Keep the hook but don't destructure if not using any values
   const [presentation, setPresentation] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,20 +19,15 @@ const PresentationDetail = () => {
   const [showGrading, setShowGrading] = useState(false);
   const [showStartConfirmation, setShowStartConfirmation] = useState(false);
 
+  // Fetch presentation details on component mount
   useEffect(() => {
     const fetchPresentationDetails = async () => {
       try {
         setLoading(true);
         const response = await api.get(`/api/presentations/${id}`);
-        
-        // Log response data for debugging
-        console.log("Fetched presentation:", response.data);
-        
         setPresentation(response.data);
-        
-        // Note: All statistics are calculated directly in renderStatistics function
-        } catch (err) {
-          if (err.response?.status === 403) {
+      } catch (err) {
+        if (err.response?.status === 403) {
           setError('You don\'t have permission to view this presentation details.');
           toast.error('Access denied: You don\'t have permission to view this presentation');
         } else {
@@ -49,64 +44,47 @@ const PresentationDetail = () => {
     fetchPresentationDetails();
   }, [id]);
 
-  // Format date for input fields (datetime-local and date)
-  const formatDateForInput = (dateString, dateOnly = false) => {
-    if (!dateString) return '';
-    
-    const date = new Date(dateString);
-    
-    if (dateOnly) {
-      // Format for date input: YYYY-MM-DD
-      return date.toISOString().split('T')[0];
-    } else {
-      // Format for datetime-local input: YYYY-MM-DDThh:mm
-      return date.toISOString().slice(0, 16);
-    }
-  };
-
+  // Handle edit mode toggle
   const handleEdit = () => {
     setIsEditing(true);
   };
 
+  // Handle presentation update
   const handleUpdatePresentation = async (updatedPresentation) => {
     try {
       setLoading(true);
-      await api.put(`/api/presentations/${id}`, updatedPresentation);
       
-      // Fetch the updated presentation
-      const response = await api.get(`/api/presentations/${id}`);
+      const response = await api.put(`/api/presentations/${id}`, updatedPresentation);
       
-      // Process dates to ensure they're in the correct format for editing
-      if (response.data) {
-        const processed = {
-          ...response.data,
-          registrationPeriod: {
-            start: formatDateForInput(response.data.registrationPeriod?.start),
-            end: formatDateForInput(response.data.registrationPeriod?.end)
-          },
-          presentationPeriod: {
-            start: formatDateForInput(response.data.presentationPeriod?.start, true),
-            end: formatDateForInput(response.data.presentationPeriod?.end, true)
-          }
-        };
-        setPresentation(processed);
+      if (response.data && response.status === 200) {
+        // Fetch the updated presentation
+        const updatedResponse = await api.get(`/api/presentations/${id}`);
+        
+        setPresentation(updatedResponse.data);
+        toast.success('Presentation details updated successfully');
+        setIsEditing(false);
       }
-      
-      toast.success('Presentation details updated successfully');
-      setIsEditing(false);
     } catch (err) {
       console.error('Error updating presentation:', err);
-      toast.error(err.response?.data?.message || 'Failed to update presentation details');
+      
+      // Improved error handling with specific messages
+      if (err.response?.status === 403) {
+        toast.error('You do not have permission to update this presentation');
+      } else {
+        toast.error(err.response?.data?.message || 'Failed to update presentation details');
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle cancel edit
   const handleCancel = () => {
     setIsEditing(false);
   };
 
-  const handleStartPresentation = async () => {
+  // Handle starting a presentation
+  const handleStartPresentation = () => {
     if (!selectedSlot) {
       toast.error('Please select a slot first');
       return;
@@ -116,46 +94,40 @@ const PresentationDetail = () => {
     setShowStartConfirmation(true);
   };
 
+  // Confirm and start presentation
   const confirmStartPresentation = async () => {
     try {
-      console.log("Starting presentation slot:", selectedSlot);
-      
-      // Use the correct ID field - prefer _id but fall back to id if _id doesn't exist
       const slotIdToUse = selectedSlot._id || selectedSlot.id;
       
-      // Log user info for debugging
-      console.log("Current user information:", currentUser);
-      console.log("Using slot ID:", slotIdToUse);
+      const response = await api.put(`/api/presentations/slots/${slotIdToUse}/start`);
       
-      const response = await api.put(`/api/presentations/slots/${slotIdToUse}/start`, {}, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      console.log("Presentation start response:", response.data);
-      toast.success('Presentation started successfully');
-      
-      // Refresh data
-      const updatedPresentation = await api.get(`/api/presentations/${id}`);
-      setPresentation(updatedPresentation.data);
-      
-      // Switch to grading view
-      setSelectedSlot(selectedSlot);
-      setShowGrading(true);
-      setShowStartConfirmation(false);
+      if (response.status === 200) {
+        toast.success('Presentation started successfully');
+        
+        // Refresh data
+        const updatedPresentation = await api.get(`/api/presentations/${id}`);
+        setPresentation(updatedPresentation.data);
+        
+        // Switch to grading view
+        setShowGrading(true);
+      }
     } catch (error) {
       console.error('Error starting presentation:', error);
-      const errorMessage = error.response?.data?.message || 'Failed to start presentation';
       
-      // Show more specific error message
-      toast.error(errorMessage);
+      // Improved error handling
+      if (error.response?.status === 403) {
+        toast.error('You do not have permission to start this presentation');
+      } else {
+        const errorMessage = error.response?.data?.message || 'Failed to start presentation';
+        toast.error(errorMessage);
+      }
+    } finally {
       setShowStartConfirmation(false);
     }
   };
 
+  // Handle grading completion
   const handleGradingComplete = async () => {
-    // Refresh data after grading is complete
     try {
       const response = await api.get(`/api/presentations/${id}`);
       setPresentation(response.data);
@@ -163,10 +135,13 @@ const PresentationDetail = () => {
       setSelectedSlot(null);
     } catch (error) {
       console.error('Error refreshing presentation data:', error);
+      toast.error('Failed to refresh presentation data');
     }
   };
 
+  // Format date for display
   const formatDate = (dateString) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -176,6 +151,7 @@ const PresentationDetail = () => {
 
   // Format time for display
   const formatTime = (dateString) => {
+    if (!dateString) return '';
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit'
@@ -198,23 +174,23 @@ const PresentationDetail = () => {
     }
   };
 
-  // New function to open comprehensive slot view
+  // Open comprehensive slot view
   const openSlotDetailView = (slot) => {
     setSelectedSlot(slot);
     document.body.classList.add('overflow-hidden'); // Prevent scrolling
-  }
+  };
 
   // Close comprehensive slot view
   const closeSlotDetailView = () => {
     setSelectedSlot(null);
     document.body.classList.remove('overflow-hidden'); // Restore scrolling
-  }
+  };
 
   // Calculate average score for a team member based on their grades
-  const calculateMemberScore = (member, individualGrades) => {
-    if (!individualGrades || !individualGrades[member.email]) return 0;
+  const calculateMemberScore = useCallback((member, individualGrades) => {
+    if (!individualGrades || !member?.email || !individualGrades[member.email]) return 0;
     
-    const criteria = presentation.customGradingCriteria ? presentation.gradingCriteria : [
+    const criteria = presentation?.customGradingCriteria ? presentation.gradingCriteria : [
       { name: 'Content', weight: 30 },
       { name: 'Delivery', weight: 30 },
       { name: 'Visual Aids', weight: 20 },
@@ -231,38 +207,37 @@ const PresentationDetail = () => {
     });
     
     return totalWeight > 0 ? Math.round(totalScore / totalWeight) : 0;
-  };
+  }, [presentation]);
 
-  if (loading) return <LoadingSpinner />;
-  
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center p-8">
-        <div className="text-red-500 mb-4">
-          <i className="fas fa-exclamation-circle text-4xl"></i>
-        </div>
-        <h2 className="text-xl font-bold mb-2 text-center">{error}</h2>
-        <button 
-          className="mt-4 bg-primary-red text-white px-4 py-2 rounded hover:bg-secondary-red transition-colors"
-          onClick={() => navigate('/college/bookings/host-presentation')}
-        >
-          Go Back
-        </button>
-      </div>
-    );
-  }
+  // Calculate statistics from presentation data
+  const statistics = useMemo(() => {
+    if (!presentation?.slots) return {
+      total: 0,
+      booked: 0,
+      inProgress: 0,
+      completed: 0,
+      available: 0
+    };
+    
+    return {
+      total: presentation.slots.length || 0,
+      booked: presentation.slots.filter(slot => slot.status === 'booked').length || 0,
+      inProgress: presentation.slots.filter(slot => slot.status === 'in-progress').length || 0,
+      completed: presentation.slots.filter(slot => slot.status === 'completed').length || 0,
+      available: presentation.slots.filter(slot => !slot.booked).length || 0,
+    };
+  }, [presentation]);
 
-  if (!presentation) return <div>No presentation found</div>;
-
-  if (isEditing) {
-    // Create a properly formatted initial data object with the correct date formats
+  // Prepare edit data when switching to edit mode
+  const prepareEditData = useCallback(() => {
+    if (!presentation) return null;
+    
+    // Create properly formatted initial data object with the correct date formats
     const registrationStart = presentation?.registrationPeriod?.start ? 
-      new Date(presentation.registrationPeriod.start).toISOString().split('T')[0] + 
-      'T' + new Date(presentation.registrationPeriod.start).toTimeString().slice(0, 5) : '';
+      new Date(presentation.registrationPeriod.start).toISOString().substring(0, 16) : '';
     
     const registrationEnd = presentation?.registrationPeriod?.end ? 
-      new Date(presentation.registrationPeriod.end).toISOString().split('T')[0] + 
-      'T' + new Date(presentation.registrationPeriod.end).toTimeString().slice(0, 5) : '';
+      new Date(presentation.registrationPeriod.end).toISOString().substring(0, 16) : '';
     
     const presentationStart = presentation?.presentationPeriod?.start ? 
       new Date(presentation.presentationPeriod.start).toISOString().split('T')[0] : '';
@@ -270,8 +245,9 @@ const PresentationDetail = () => {
     const presentationEnd = presentation?.presentationPeriod?.end ? 
       new Date(presentation.presentationPeriod.end).toISOString().split('T')[0] : '';
     
-    const initialEditData = {
+    return {
       ...presentation,
+      _id: presentation._id, // Ensure ID is included for updates
       registrationPeriod: {
         start: registrationStart,
         end: registrationEnd
@@ -280,7 +256,6 @@ const PresentationDetail = () => {
         start: presentationStart,
         end: presentationEnd
       },
-      // Ensure grading criteria is properly passed
       customGradingCriteria: !!presentation.customGradingCriteria,
       gradingCriteria: presentation.gradingCriteria || [
         { name: 'Content', weight: 30 },
@@ -289,32 +264,9 @@ const PresentationDetail = () => {
         { name: 'Q&A', weight: 20 }
       ]
     };
-    
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-6">Edit Presentation</h2>
-        <PresentationCreationForm 
-          initialData={initialEditData}
-          onPresentationCreated={handleUpdatePresentation}
-          onCancel={handleCancel}
-        />
-      </div>
-    );
-  }
+  }, [presentation]);
 
-  if (showGrading && selectedSlot) {
-    return (
-      <PresentationGrading 
-        presentation={presentation} 
-        activeSlotId={selectedSlot._id || selectedSlot.id}
-        onClose={handleGradingComplete}
-      />
-    );
-  }
-
-  // Remove duplicate status badges and make the UI more efficient
-
-  // Redesign the information sections to be more horizontal and compact
+  // Render presentation information section
   const renderPresentationInfo = () => {
     if (!presentation) return null;
     
@@ -359,25 +311,25 @@ const PresentationDetail = () => {
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Registration:</span>
               <span className="font-medium text-gray-800">
-                {formatDate(presentation.registrationPeriod.start)} - {formatDate(presentation.registrationPeriod.end)}
+                {formatDate(presentation.registrationPeriod?.start)} - {formatDate(presentation.registrationPeriod?.end)}
               </span>
             </div>
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Presentation:</span>
               <span className="font-medium text-gray-800">
-                {formatDate(presentation.presentationPeriod.start)} - {formatDate(presentation.presentationPeriod.end)}
+                {formatDate(presentation.presentationPeriod?.start)} - {formatDate(presentation.presentationPeriod?.end)}
               </span>
             </div>
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Duration:</span>
               <span className="font-medium text-gray-800">
-                {presentation.slotConfig.duration} min (with {presentation.slotConfig.buffer} min buffer)
+                {presentation.slotConfig?.duration} min (with {presentation.slotConfig?.buffer} min buffer)
               </span>
             </div>
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Hours:</span>
               <span className="font-medium text-gray-800">
-                {presentation.slotConfig.startTime} - {presentation.slotConfig.endTime}
+                {presentation.slotConfig?.startTime} - {presentation.slotConfig?.endTime}
               </span>
             </div>
           </div>
@@ -393,7 +345,7 @@ const PresentationDetail = () => {
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Year:</span>
               <div className="flex flex-wrap">
-                {presentation.targetAudience?.year.map(year => (
+                {presentation.targetAudience?.year?.map(year => (
                   <span key={year} className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-1 mb-1">
                     Year {year}
                   </span>
@@ -403,7 +355,7 @@ const PresentationDetail = () => {
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">School:</span>
               <div className="flex flex-wrap">
-                {presentation.targetAudience?.school.map(school => {
+                {presentation.targetAudience?.school?.map(school => {
                   const shortName = school.split('(')[1]?.replace(')', '') || school;
                   return (
                     <span key={school} className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded mr-1 mb-1">
@@ -416,7 +368,7 @@ const PresentationDetail = () => {
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Department:</span>
               <div className="flex flex-wrap">
-                {presentation.targetAudience?.department.map(dept => (
+                {presentation.targetAudience?.department?.map(dept => (
                   <span key={dept} className="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded mr-1 mb-1">
                     {dept}
                   </span>
@@ -429,18 +381,9 @@ const PresentationDetail = () => {
     );
   };
 
-  // Improve statistics display - remove duplicates
+  // Render statistics section
   const renderStatistics = () => {
     if (!presentation) return null;
-    
-    // Calculate statistics
-    const stats = {
-      total: presentation.slots?.length || 0,
-      booked: presentation.slots?.filter(slot => slot.status === 'booked').length || 0,
-      inProgress: presentation.slots?.filter(slot => slot.status === 'in-progress').length || 0,
-      completed: presentation.slots?.filter(slot => slot.status === 'completed').length || 0,
-      available: presentation.slots?.filter(slot => !slot.booked).length || 0,
-    };
     
     return (
       <div className="bg-white rounded-lg shadow-md p-5 mb-6">
@@ -451,48 +394,203 @@ const PresentationDetail = () => {
         
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="bg-gray-50 p-3 rounded-lg text-center">
-            <div className="text-2xl font-bold text-gray-800">{stats.total}</div>
+            <div className="text-2xl font-bold text-gray-800">{statistics.total}</div>
             <div className="text-sm text-gray-500">Total Slots</div>
           </div>
           <div className="bg-blue-50 p-3 rounded-lg text-center">
-            <div className="text-2xl font-bold text-blue-600">{stats.booked}</div>
+            <div className="text-2xl font-bold text-blue-600">{statistics.booked}</div>
             <div className="text-sm text-blue-700">Booked</div>
           </div>
           <div className="bg-orange-50 p-3 rounded-lg text-center">
-            <div className="text-2xl font-bold text-orange-600">{stats.inProgress}</div>
+            <div className="text-2xl font-bold text-orange-600">{statistics.inProgress}</div>
             <div className="text-sm text-orange-700">In Progress</div>
           </div>
           <div className="bg-green-50 p-3 rounded-lg text-center">
-            <div className="text-2xl font-bold text-green-600">{stats.completed}</div>
+            <div className="text-2xl font-bold text-green-600">{statistics.completed}</div>
             <div className="text-sm text-green-700">Completed</div>
           </div>
           <div className="bg-purple-50 p-3 rounded-lg text-center">
-            <div className="text-2xl font-bold text-purple-600">{stats.available}</div>
+            <div className="text-2xl font-bold text-purple-600">{statistics.available}</div>
             <div className="text-sm text-purple-700">Available</div>
           </div>
         </div>
         
-        <div className="mt-4">
-          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            <div className="flex h-full">
-              <div 
-                className="bg-blue-500 h-full" 
-                style={{ width: `${(stats.booked / stats.total) * 100}%` }}
-              ></div>
-              <div 
-                className="bg-orange-500 h-full" 
-                style={{ width: `${(stats.inProgress / stats.total) * 100}%` }}
-              ></div>
-              <div 
-                className="bg-green-500 h-full" 
-                style={{ width: `${(stats.completed / stats.total) * 100}%` }}
-              ></div>
+        {statistics.total > 0 && (
+          <div className="mt-4">
+            <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+              <div className="flex h-full">
+                <div 
+                  className="bg-blue-500 h-full" 
+                  style={{ width: `${(statistics.booked / statistics.total) * 100}%` }}
+                ></div>
+                <div 
+                  className="bg-orange-500 h-full" 
+                  style={{ width: `${(statistics.inProgress / statistics.total) * 100}%` }}
+                ></div>
+                <div 
+                  className="bg-green-500 h-full" 
+                  style={{ width: `${(statistics.completed / statistics.total) * 100}%` }}
+                ></div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     );
   };
+
+  // Render slots section
+  const renderSlots = () => {
+    if (!presentation?.slots || presentation.slots.length === 0) {
+      return (
+        <div className="text-center py-8 text-gray-500">
+          No slots available for this presentation
+        </div>
+      );
+    }
+    
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        {presentation.slots.map(slot => (
+          <div
+            key={slot.id || slot._id}
+            className={`
+              rounded-lg overflow-hidden border shadow-sm transition-all hover:shadow-md
+              ${slot.status === 'completed' ? 'border-green-200 bg-green-50' : 
+                slot.status === 'in-progress' ? 'border-orange-200 bg-orange-50' : 
+                slot.booked ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'
+              }
+            `}
+          >
+            <div className="p-4">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <div className="text-sm font-medium text-gray-600">
+                    {new Date(slot.time).toLocaleDateString()}
+                  </div>
+                  <div className="text-base font-bold text-gray-800">
+                    {formatTime(slot.time)}
+                  </div>
+                </div>
+                {getStatusBadge(slot.status)}
+              </div>
+              
+              <div className="mt-3">
+                {slot.booked ? (
+                  <div>
+                    <div className="text-sm mb-1">
+                      {slot.teamMembers && slot.teamMembers.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {slot.teamMembers.map((participant, i) => (
+                            <span 
+                              key={i} 
+                              className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full"
+                            >
+                              {participant.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-gray-600">{slot.studentName || 'Student'}</span>
+                      )}
+                    </div>
+                    {slot.teamName && (
+                      <div className="text-xs text-gray-500 mt-1">
+                        Team: {slot.teamName}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-sm text-gray-500">Available</div>
+                )}
+              </div>
+              
+              <div className="mt-3 flex justify-between items-center">
+                <div className="text-sm text-gray-600 truncate max-w-[150px]">
+                  {slot.topic || '-'}
+                </div>
+                <div>
+                  {slot.status === 'completed' && (
+                    <span className="text-green-600 font-medium text-sm">{(slot.totalScore || 0).toFixed(1)}/100</span>
+                  )}
+                </div>
+              </div>
+              
+              <div className="mt-3 pt-3 border-t border-gray-200">
+                <button
+                  onClick={() => openSlotDetailView(slot)}
+                  className="w-full py-1.5 px-3 text-center rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
+                >
+                  View Details
+                </button>
+              </div>
+              
+              {slot.status === 'booked' && (
+                <div className="mt-2">
+                  <button
+                    onClick={() => {
+                      setSelectedSlot(slot);
+                      setShowStartConfirmation(true);
+                    }}
+                    className="w-full py-1.5 px-3 text-center rounded-md text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
+                  >
+                    Start Presentation
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  if (loading) return <LoadingSpinner />;
+  
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8">
+        <div className="text-red-500 mb-4">
+          <i className="fas fa-exclamation-circle text-4xl"></i>
+        </div>
+        <h2 className="text-xl font-bold mb-2 text-center">{error}</h2>
+        <button 
+          className="mt-4 bg-primary-red text-white px-4 py-2 rounded hover:bg-secondary-red transition-colors"
+          onClick={() => navigate('/college/bookings/host-presentation')}
+        >
+          Go Back
+        </button>
+      </div>
+    );
+  }
+
+  if (!presentation) return <div>No presentation found</div>;
+
+  if (isEditing) {
+    const initialEditData = prepareEditData();
+    
+    return (
+      <div className="p-4">
+        <h2 className="text-2xl font-bold mb-6">Edit Presentation</h2>
+        <PresentationCreationForm 
+          initialData={initialEditData}
+          onPresentationCreated={handleUpdatePresentation}
+          onCancel={handleCancel}
+          isEditMode={true}
+        />
+      </div>
+    );
+  }
+
+  if (showGrading && selectedSlot) {
+    return (
+      <PresentationGrading 
+        presentation={presentation} 
+        activeSlotId={selectedSlot._id || selectedSlot.id}
+        onClose={handleGradingComplete}
+      />
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6">
@@ -513,107 +611,7 @@ const PresentationDetail = () => {
       {/* Slots Management Section */}
       <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">Slot Management</h3>
-        
-        {presentation.slots && presentation.slots.length > 0 ? (
-          <div className="overflow-hidden">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {presentation.slots.map(slot => (
-                <div
-                  key={slot.id || slot._id}
-                  className={`
-                    rounded-lg overflow-hidden border shadow-sm transition-all hover:shadow-md
-                    ${slot.status === 'completed' ? 'border-green-200 bg-green-50' : 
-                      slot.status === 'in-progress' ? 'border-orange-200 bg-orange-50' : 
-                      slot.booked ? 'border-blue-200 bg-blue-50' : 'border-gray-200 bg-gray-50'
-                    }
-                  `}
-                >
-                  <div className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <div className="text-sm font-medium text-gray-600">
-                          {new Date(slot.time).toLocaleDateString()}
-                        </div>
-                        <div className="text-base font-bold text-gray-800">
-                          {formatTime(slot.time)}
-                        </div>
-                      </div>
-                      {getStatusBadge(slot.status)}
-                    </div>
-                    
-                    <div className="mt-3">
-                      {slot.booked ? (
-                        <div>
-                          <div className="text-sm mb-1">
-                            {slot.teamMembers && slot.teamMembers.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {slot.teamMembers.map((participant, i) => (
-                                  <span 
-                                    key={i} 
-                                    className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full"
-                                  >
-                                    {participant.name}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-gray-600">{slot.studentName || 'Student'}</span>
-                            )}
-                          </div>
-                          {slot.teamName && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Team: {slot.teamName}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-gray-500">Available</div>
-                      )}
-                    </div>
-                    
-                    <div className="mt-3 flex justify-between items-center">
-                      <div className="text-sm text-gray-600 truncate max-w-[150px]">
-                        {slot.topic || '-'}
-                      </div>
-                      <div>
-                        {slot.status === 'completed' ? (
-                          <span className="text-green-600 font-medium text-sm">{(slot.totalScore || 0).toFixed(1)}/100</span>
-                        ) : null}
-                      </div>
-                    </div>
-                    
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <button
-                        onClick={() => openSlotDetailView(slot)}
-                        className="w-full py-1.5 px-3 text-center rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
-                      >
-                        View Details
-                      </button>
-                    </div>
-                    
-                    {slot.status === 'booked' && (
-                      <div className="mt-2">
-                        <button
-                          onClick={() => {
-                            setSelectedSlot(slot);
-                            setShowStartConfirmation(true);
-                          }}
-                          className="w-full py-1.5 px-3 text-center rounded-md text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
-                        >
-                          Start Presentation
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            No slots available for this presentation
-          </div>
-        )}
+        {renderSlots()}
       </div>
 
       {/* Comprehensive Slot Detail Modal */}
@@ -717,7 +715,7 @@ const PresentationDetail = () => {
                             <li key={idx} className="py-3 first:pt-0 last:pb-0">
                               <div className="flex items-center">
                                 <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
-                                  <span className="text-indigo-600 font-medium">{member.name.charAt(0).toUpperCase()}</span>
+                                  <span className="text-indigo-600 font-medium">{member.name?.charAt(0).toUpperCase() || 'U'}</span>
                                 </div>
                                 <div>
                                   <p className="font-medium text-gray-800">{member.name}</p>
@@ -750,40 +748,6 @@ const PresentationDetail = () => {
                             <div key={criterion} className="flex justify-between">
                               <span className="text-gray-700">{criterion}</span>
                               <span className="font-medium">{score}/100</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Individual Grades (if any) */}
-                  {selectedSlot.status === 'completed' && selectedSlot.individualGrades && Object.keys(selectedSlot.individualGrades).length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">Individual Grades</h4>
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <div className="space-y-4">
-                          {selectedSlot.teamMembers && selectedSlot.teamMembers.map((member, idx) => (
-                            <div key={idx} className="border-b border-gray-200 pb-3 last:border-0 last:pb-0">
-                              <p className="font-medium text-gray-800 mb-2">{member.name}</p>
-                              {selectedSlot.individualGrades[member.email] ? (
-                                <div className="grid grid-cols-2 gap-2 text-sm">
-                                  {Object.entries(selectedSlot.individualGrades[member.email]).map(([criterion, score]) => (
-                                    <div key={criterion} className="flex justify-between">
-                                      <span className="text-gray-600">{criterion}</span>
-                                      <span>{score}/100</span>
-                                    </div>
-                                  ))}
-                                  <div className="col-span-2 pt-2 mt-1 border-t border-gray-200 flex justify-between">
-                                    <span className="font-medium">Total Score</span>
-                                    <span className="font-medium text-green-600">
-                                      {calculateMemberScore(member, selectedSlot.individualGrades)}/100
-                                    </span>
-                                  </div>
-                                </div>
-                              ) : (
-                                <p className="text-gray-500 italic">No individual grades recorded</p>
-                              )}
                             </div>
                           ))}
                         </div>

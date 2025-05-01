@@ -33,6 +33,17 @@ const getAvailablePresentationSlots = async (req, res) => {
   }
 };
 
+// Helper function to check if user is authorized to manage a presentation
+const isAuthorizedForPresentation = (presentation, userId, userRole) => {
+  // Authorization passes if:
+  // 1. User is an admin, OR
+  // 2. User is the faculty who created the presentation
+  const presentationFacultyId = presentation.faculty.toString();
+  const currentUserId = userId.toString();
+  
+  return userRole === 'admin' || presentationFacultyId === currentUserId;
+};
+
 // Get presentation slots created by a faculty member
 const getFacultyPresentationSlots = async (req, res) => {
   try {
@@ -158,6 +169,14 @@ const bookPresentationSlot = async (req, res) => {
       slotId, topic, teamName, teamMembers 
     } = req.body;
     
+    console.log("Booking request received:", {
+      presentationId,
+      userId,
+      slotId,
+      topic,
+      teamMembers: teamMembers?.length
+    });
+    
     if (!slotId) {
       return res.status(400).json({ message: 'Slot ID is required' });
     }
@@ -170,7 +189,9 @@ const bookPresentationSlot = async (req, res) => {
     }
     
     // Find the specific slot
-    const slotIndex = presentation.slots.findIndex(slot => slot.id === slotId);
+    const slotIndex = presentation.slots.findIndex(slot => 
+      slot.id === slotId || slot._id.toString() === slotId
+    );
     
     if (slotIndex === -1) {
       return res.status(404).json({ message: 'Slot not found' });
@@ -178,7 +199,7 @@ const bookPresentationSlot = async (req, res) => {
     
     // Check if slot is already booked
     if (presentation.slots[slotIndex].booked) {
-      return res.status(400).json({ message: 'This slot is already booked' });
+      return res.status(409).json({ message: 'This slot is already booked' });
     }
     
     // Check if registration period is open
@@ -211,7 +232,7 @@ const bookPresentationSlot = async (req, res) => {
         processedTeamMembers = teamMembers.map(member => ({
           name: member.name,
           email: member.email,
-          studentId: member.studentId
+          studentId: member.studentId || member.id
         }));
       }
       
@@ -220,7 +241,7 @@ const bookPresentationSlot = async (req, res) => {
         processedTeamMembers.push({
           name: student.name,
           email: student.email,
-          studentId: student.studentId
+          studentId: student.studentId || student._id.toString()
         });
       }
       
@@ -230,7 +251,7 @@ const bookPresentationSlot = async (req, res) => {
       presentation.slots[slotIndex].teamMembers = [{
         name: student.name,
         email: student.email,
-        studentId: student.studentId
+        studentId: student.studentId || student._id.toString()
       }];
     }
     
@@ -298,9 +319,6 @@ const startPresentationSlot = async (req, res) => {
     const slotId = req.params.slotId;
     const userId = req.user.userId;
     
-    console.log(`Starting presentation slot with ID: ${slotId}`);
-    console.log(`Request made by user: ${userId}`);
-    
     // Find the presentation containing this slot (check both _id and id fields)
     const presentation = await Presentation.findOne({
       $or: [
@@ -310,27 +328,14 @@ const startPresentationSlot = async (req, res) => {
     });
     
     if (!presentation) {
-      console.error(`Presentation not found for slot ID: ${slotId}`);
       return res.status(404).json({
         success: false, 
         message: 'Presentation or slot not found'
       });
     }
     
-    console.log('Found presentation with ID:', presentation._id);
-    console.log('Presentation faculty ID:', presentation.faculty);
-    console.log('Current user ID:', userId);
-    console.log('User role:', req.user.role);
-    
-    // Convert IDs to strings for proper comparison
-    const presentationFaculty = presentation.faculty.toString();
-    const currentUserId = userId.toString();
-    
-    // Check if user is the faculty who created this presentation
-    if (presentationFaculty !== currentUserId && req.user.role !== 'admin') {
-      console.error(`Access denied: User ${userId} is not authorized to manage presentation ${presentation._id}`);
-      console.error(`Expected faculty: ${presentationFaculty}, actual user: ${currentUserId}`);
-      
+    // Check if user is authorized to manage this presentation
+    if (!isAuthorizedForPresentation(presentation, userId, req.user.role)) {
       return res.status(403).json({
         success: false, 
         message: 'You are not authorized to manage this presentation'
@@ -376,12 +381,9 @@ const completePresentationSlot = async (req, res) => {
   try {
     const slotId = req.params.slotId;
     const userId = req.user.userId;
-    const { grades, feedback, totalScore } = req.body;
+    const { grades, feedback, totalScore, individualGrades } = req.body;
     
-    console.log(`Completing presentation slot with ID: ${slotId}`);
-    console.log(`Request made by user: ${userId}`);
-    
-    // Find the presentation containing this slot (check both _id and id fields)
+    // Find the presentation containing this slot
     const presentation = await Presentation.findOne({
       $or: [
         { 'slots._id': slotId },
@@ -396,26 +398,15 @@ const completePresentationSlot = async (req, res) => {
       });
     }
     
-    console.log('Found presentation with ID:', presentation._id);
-    console.log('Presentation faculty ID:', presentation.faculty);
-    console.log('Current user ID:', userId);
-    
-    // Convert IDs to strings for proper comparison
-    const presentationFaculty = presentation.faculty.toString();
-    const currentUserId = userId.toString();
-    
-    // Check if user is the faculty who created this presentation
-    if (presentationFaculty !== currentUserId && req.user.role !== 'admin') {
-      console.error(`Access denied: User ${userId} is not authorized to manage presentation ${presentation._id}`);
-      console.error(`Expected faculty: ${presentationFaculty}, actual user: ${currentUserId}`);
-      
+    // Check if user is authorized to manage this presentation
+    if (!isAuthorizedForPresentation(presentation, userId, req.user.role)) {
       return res.status(403).json({
         success: false, 
         message: 'You are not authorized to manage this presentation'
       });
     }
     
-    // Find the slot in the slots array (try both _id and id)
+    // Find the slot in the slots array
     let slotIndex = presentation.slots.findIndex(slot => slot._id.toString() === slotId);
     
     // If not found by _id, try with id field
@@ -435,6 +426,12 @@ const completePresentationSlot = async (req, res) => {
     presentation.slots[slotIndex].grades = grades;
     presentation.slots[slotIndex].totalScore = totalScore;
     presentation.slots[slotIndex].feedback = feedback || '';
+    
+    // Add individual grades if provided
+    if (individualGrades) {
+      presentation.slots[slotIndex].individualGrades = individualGrades;
+    }
+    
     presentation.slots[slotIndex].completedAt = new Date();
     
     await presentation.save();
@@ -463,8 +460,8 @@ const deletePresentationSlot = async (req, res) => {
       return res.status(404).json({ message: 'Presentation not found' });
     }
     
-    // Ensure only the faculty who created it can delete it
-    if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
+    // Check if user is authorized to delete this presentation
+    if (!isAuthorizedForPresentation(presentation, userId, req.user.role)) {
       return res.status(403).json({ message: 'You are not authorized to delete this presentation' });
     }
     
@@ -485,39 +482,13 @@ const deletePresentationSlot = async (req, res) => {
 const getPresentationById = async (req, res) => {
   try {
     const presentationId = req.params.id;
-    const userId = req.user.userId;
 
     const presentation = await Presentation.findById(presentationId);
     
     if (!presentation) {
       return res.status(404).json({ message: 'Presentation not found' });
     }
-    
-    // Check if user has permission to view this presentation
-    const isFaculty = req.user.role === 'faculty';
-    const isAdmin = req.user.role === 'admin';
-    const isFacultyOwner = isFaculty && presentation.faculty.toString() === userId;
-    
-    // Allow access if:
-    // 1. User is admin, OR
-    // 2. User is the faculty who created it, OR
-    // 3. The presentation is explicitly published (isPublished === true)
-    // 4. For any other users (like students), allow access regardless of publication status
-    //    as they will only see available slots anyway
-    
-    // Only do permission check for non-admin, non-owner users
-    if (!isAdmin && !isFacultyOwner) {
-      console.log('User attempting to access presentation:', {
-        userId,
-        role: req.user.role,
-        presentationId,
-        presentationFaculty: presentation.faculty
-      });
-    }
-    
-    // For now, let's remove the restrictive permission check
-    // We'll rely on frontend to control what actions users can take
-    
+
     res.status(200).json(presentation);
   } catch (error) {
     console.error('Error getting presentation by ID:', error);
@@ -537,8 +508,8 @@ const updatePresentation = async (req, res) => {
       return res.status(404).json({ message: 'Presentation not found' });
     }
     
-    // Check permissions
-    if (presentation.faculty.toString() !== userId && req.user.role !== 'admin') {
+    // Check if user is authorized to update this presentation
+    if (!isAuthorizedForPresentation(presentation, userId, req.user.role)) {
       return res.status(403).json({ message: 'You are not authorized to update this presentation' });
     }
     

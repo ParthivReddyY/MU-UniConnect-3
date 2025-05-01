@@ -4,7 +4,7 @@ import { useAuth } from '../../../../../contexts/AuthContext';
 import api from '../../../../../utils/axiosConfig';
 import { academicStructure } from '../../../../../utils/academicDataUtils';
 
-const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData = null, defaultTargetAudience = null }) => {
+const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData = null, defaultTargetAudience = null, isEditMode = false }) => {
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -58,6 +58,23 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     { value: 'School of Hospitality Management(SOHM)', label: 'School of Hospitality Management' }
   ];
 
+  // Department search functionality
+  const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
+  const departmentDropdownRef = useRef(null);
+  
+  // Slot preview state
+  const [generatedSlots, setGeneratedSlots] = useState([]);
+  const [showSlotPreview, setShowSlotPreview] = useState(false);
+
+  const yearOptions = [
+    { value: '1', label: '1st Year' },
+    { value: '2', label: '2nd Year' },
+    { value: '3', label: '3rd Year' },
+    { value: '4', label: '4th Year' },
+    { value: '5', label: '5th Year' }
+  ];
+
   // Convert academicStructure to the format expected by the form
   const formatDepartments = (school) => {
     if (!school || !academicStructure[school]) return [];
@@ -83,41 +100,28 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     return acc;
   }, {});
 
-  const yearOptions = [
-    { value: '1', label: '1st Year' },
-    { value: '2', label: '2nd Year' },
-    { value: '3', label: '3rd Year' },
-    { value: '4', label: '4th Year' },
-    { value: '5', label: '5th Year' }
-  ];
-
-  // Department search functionality
-  const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
-  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
-  const departmentDropdownRef = useRef(null);
-  
-  // Slot preview state
-  const [generatedSlots, setGeneratedSlots] = useState([]);
-  const [showSlotPreview, setShowSlotPreview] = useState(false);
-
   // Handle clicks outside the department dropdown
   useEffect(() => {
-    function handleClickOutside(event) {
+    const handleClickOutside = (event) => {
       if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target)) {
         setShowDepartmentDropdown(false);
       }
-    }
+    };
     
     document.addEventListener("mousedown", handleClickOutside);
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [departmentDropdownRef]);
+  }, []);
 
   // Initialize form with data if provided
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      console.log("Initializing form with data:", initialData);
+      setFormData(prevData => ({
+        ...prevData,
+        ...initialData,
+      }));
     } else if (defaultTargetAudience) {
       // Use default target audience settings if no initial data
       setFormData(prev => ({
@@ -133,8 +137,8 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     if (currentUser) {
       setFormData(prev => ({
         ...prev,
-        hostName: currentUser.name || prev.hostName,
-        hostDepartment: currentUser.department || prev.hostDepartment
+        hostName: prev.hostName || currentUser.name || '',
+        hostDepartment: prev.hostDepartment || currentUser.department || ''
       }));
     }
   }, [initialData, defaultTargetAudience, currentUser]);
@@ -257,6 +261,61 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     generateSlots();
   };
 
+  // Department selection helpers
+  const getAvailableDepartments = () => {
+    if (formData.targetAudience.school.length === 0) {
+      return [];
+    }
+    
+    let availableDepts = [];
+    formData.targetAudience.school.forEach(school => {
+      const depts = academicData[school] || [];
+      availableDepts = [...availableDepts, ...depts];
+    });
+    
+    return availableDepts;
+  };
+
+  const handleAddDepartment = (value) => {
+    // Check if department's school is selected
+    const deptSchool = Object.entries(academicData).find(([school, depts]) => 
+      depts.some(dept => dept.value === value)
+    )?.[0];
+    
+    if (deptSchool && !formData.targetAudience.school.includes(deptSchool)) {
+      setFormData(prev => ({
+        ...prev,
+        targetAudience: {
+          ...prev.targetAudience,
+          school: [...prev.targetAudience.school, deptSchool]
+        }
+      }));
+    }
+    
+    if (!formData.targetAudience.department.includes(value)) {
+      setFormData(prev => ({
+        ...prev,
+        targetAudience: {
+          ...prev.targetAudience,
+          department: [...prev.targetAudience.department, value]
+        }
+      }));
+    }
+    
+    // Close dropdown after selection
+    setShowDepartmentDropdown(false);
+  };
+
+  const handleRemoveDepartment = (value) => {
+    setFormData(prev => ({
+      ...prev,
+      targetAudience: {
+        ...prev.targetAudience,
+        department: prev.targetAudience.department.filter(dept => dept !== value)
+      }
+    }));
+  };
+
   // Form validation
   const validateForm = () => {
     const errors = {};
@@ -377,11 +436,11 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
         title: formData.title,
         description: formData.description,
         venue: formData.venue,
-        hostName: formData.hostName || currentUser.name,
-        hostDepartment: formData.hostDepartment || currentUser.department,
+        hostName: formData.hostName || currentUser?.name,
+        hostDepartment: formData.hostDepartment || currentUser?.department,
         participationType: formData.participationType,
-        teamSizeMin: formData.teamSizeMin,
-        teamSizeMax: formData.teamSizeMax,
+        teamSizeMin: parseInt(formData.teamSizeMin, 10),
+        teamSizeMax: parseInt(formData.teamSizeMax, 10),
         targetAudience: formData.targetAudience,
         customGradingCriteria: formData.customGradingCriteria,
         gradingCriteria: formData.gradingCriteria,
@@ -398,74 +457,34 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
         presentationEnd: formData.presentationPeriod.end
       };
       
-      const response = await api.post('/api/presentations', dataToSubmit);
+      let response;
       
-      if (response.data.success) {
-        toast.success('Presentation event created successfully!');
-        onPresentationCreated(response.data.presentation);
+      if (initialData?._id) {
+        console.log("Updating presentation:", initialData._id, dataToSubmit);
+        response = await api.put(`/api/presentations/${initialData._id}`, dataToSubmit);
       } else {
-        toast.error(response.data.message || 'Failed to create presentation event');
+        console.log("Creating new presentation:", dataToSubmit);
+        response = await api.post('/api/presentations', dataToSubmit);
+      }
+      
+      // Check if the response is successful
+      if (response.status === 200 || response.status === 201) {
+        const successMessage = initialData ? 'Presentation updated successfully!' : 'Presentation created successfully!';
+        toast.success(successMessage);
+        
+        // Extract the presentation data depending on the response format
+        const presentation = response.data.presentation || response.data;
+        onPresentationCreated(presentation);
+      } else {
+        const errorMessage = response.data?.message || `Failed to ${initialData ? 'update' : 'create'} presentation event`;
+        toast.error(errorMessage);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to create presentation event');
+      console.error("Form submission error:", error);
+      toast.error(error.response?.data?.message || `Failed to ${initialData ? 'update' : 'create'} presentation event`);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Department selection helpers
-  const getAvailableDepartments = () => {
-    if (formData.targetAudience.school.length === 0) {
-      return [];
-    }
-    
-    let availableDepts = [];
-    formData.targetAudience.school.forEach(school => {
-      const depts = academicData[school] || [];
-      availableDepts = [...availableDepts, ...depts];
-    });
-    
-    return availableDepts;
-  };
-
-  const handleAddDepartment = (value) => {
-    // Check if department's school is selected
-    const deptSchool = Object.entries(academicData).find(([school, depts]) => 
-      depts.some(dept => dept.value === value)
-    )?.[0];
-    
-    if (deptSchool && !formData.targetAudience.school.includes(deptSchool)) {
-      setFormData(prev => ({
-        ...prev,
-        targetAudience: {
-          ...prev.targetAudience,
-          school: [...prev.targetAudience.school, deptSchool]
-        }
-      }));
-    }
-    
-    if (!formData.targetAudience.department.includes(value)) {
-      setFormData(prev => ({
-        ...prev,
-        targetAudience: {
-          ...prev.targetAudience,
-          department: [...prev.targetAudience.department, value]
-        }
-      }));
-    }
-    
-    // Close dropdown after selection
-    setShowDepartmentDropdown(false);
-  };
-
-  const handleRemoveDepartment = (value) => {
-    setFormData(prev => ({
-      ...prev,
-      targetAudience: {
-        ...prev.targetAudience,
-        department: prev.targetAudience.department.filter(dept => dept !== value)
-      }
-    }));
   };
 
   // Error summary display
@@ -500,10 +519,11 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     <div className="bg-gradient-to-br from-gray-100 to-blue-50 min-h-screen p-4 md:p-6">
       <div className="max-w-7xl mx-auto bg-white rounded-xl shadow-md overflow-hidden">
         <div className="px-6 py-4 bg-gray-50 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800">Create Presentation Event</h2>
+          <h2 className="text-xl font-semibold text-gray-800">{isEditMode || initialData ? 'Edit' : 'Create'} Presentation Event</h2>
           <button
             onClick={onCancel}
             className="text-gray-500 hover:text-gray-700"
+            aria-label="Close"
           >
             <i className="fas fa-times"></i>
           </button>
@@ -603,7 +623,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                       <label className="text-xs text-gray-500 mb-1 block">Start Date</label>
                       <input
                         type="datetime-local"
-                        name="registrationPeriod.start"
                         value={formData.registrationPeriod.start}
                         onChange={(e) => handleNestedChange('registrationPeriod', 'start', e.target.value)}
                         className={`w-full px-4 py-2 border ${formErrors['registrationPeriod.start'] ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -616,7 +635,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                       <label className="text-xs text-gray-500 mb-1 block">End Date</label>
                       <input
                         type="datetime-local"
-                        name="registrationPeriod.end"
                         value={formData.registrationPeriod.end}
                         onChange={(e) => handleNestedChange('registrationPeriod', 'end', e.target.value)}
                         className={`w-full px-4 py-2 border ${formErrors['registrationPeriod.end'] ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -635,7 +653,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                       <label className="text-xs text-gray-500 mb-1 block">Start Date</label>
                       <input
                         type="date"
-                        name="presentationPeriod.start"
                         value={formData.presentationPeriod.start}
                         onChange={(e) => handleNestedChange('presentationPeriod', 'start', e.target.value)}
                         className={`w-full px-4 py-2 border ${formErrors['presentationPeriod.start'] ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -648,7 +665,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                       <label className="text-xs text-gray-500 mb-1 block">End Date</label>
                       <input
                         type="date"
-                        name="presentationPeriod.end"
                         value={formData.presentationPeriod.end}
                         onChange={(e) => handleNestedChange('presentationPeriod', 'end', e.target.value)}
                         className={`w-full px-4 py-2 border ${formErrors['presentationPeriod.end'] ? 'border-red-500' : 'border-gray-300'} rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500`}
@@ -1024,6 +1040,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                         type="button"
                         onClick={() => removeGradingCriterion(index)}
                         className="text-red-500 hover:text-red-700"
+                        aria-label="Remove criterion"
                       >
                         <i className="fas fa-times"></i>
                       </button>
@@ -1064,10 +1081,10 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Creating...
+                    {isEditMode || initialData ? 'Updating...' : 'Creating...'}
                   </div>
                 ) : (
-                  <>Create Presentation</>
+                  <>{isEditMode || initialData ? 'Update' : 'Create'} Presentation</>
                 )}
               </button>
             </div>

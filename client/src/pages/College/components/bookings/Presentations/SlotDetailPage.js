@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import api from '../../../../../utils/axiosConfig'; // Fixed import path
+import api from '../../../../../utils/axiosConfig';
 import { useAuth } from '../../../../../contexts/AuthContext';
 import PresentationGrading from './PresentationGrading';
 import LoadingSpinner from '../../../../../components/LoadingSpinner';
@@ -9,7 +9,7 @@ import LoadingSpinner from '../../../../../components/LoadingSpinner';
 const SlotDetailPage = () => {
   const { presentationId, slotId } = useParams();
   const navigate = useNavigate();
-  useAuth(); // Keep the hook if authentication is needed for API calls
+  useAuth(); // Keep the hook if needed, but don't destructure unused variables
   
   const [presentation, setPresentation] = useState(null);
   const [slot, setSlot] = useState(null);
@@ -57,6 +57,7 @@ const SlotDetailPage = () => {
     
     try {
       const slotIdToUse = slot._id || slot.id;
+      
       const response = await api.put(`/api/presentations/slots/${slotIdToUse}/start`, {});
       
       if (response.status === 200) {
@@ -74,7 +75,13 @@ const SlotDetailPage = () => {
       }
     } catch (error) {
       console.error("Error starting presentation:", error);
-      toast.error("Failed to start presentation");
+      
+      // Improved error handling
+      if (error.response?.status === 403) {
+        toast.error("You do not have permission to start this presentation");
+      } else {
+        toast.error(error.response?.data?.message || "Failed to start presentation");
+      }
     } finally {
       setShowStartConfirmation(false);
     }
@@ -84,6 +91,7 @@ const SlotDetailPage = () => {
   const handleGradingComplete = async () => {
     try {
       // Refresh the data
+      console.log("Refreshing presentation data after grading");
       const response = await api.get(`/api/presentations/${presentationId}`);
       setPresentation(response.data);
       
@@ -93,13 +101,17 @@ const SlotDetailPage = () => {
       );
       
       if (updatedSlot) {
+        console.log("Updated slot data:", updatedSlot);
         setSlot(updatedSlot);
+      } else {
+        console.warn("Could not find updated slot data");
       }
       
       setShowGrading(false);
       toast.success("Presentation graded successfully");
     } catch (error) {
       console.error("Error refreshing data after grading:", error);
+      toast.error("Failed to refresh presentation data");
     }
   };
   
@@ -112,21 +124,29 @@ const SlotDetailPage = () => {
   
   // Calculate scores for a team member
   const calculateMemberScore = (member, gradesObj) => {
-    if (!gradesObj || !gradesObj[member.email]) return 0;
+    if (!gradesObj || !member?.email || !gradesObj[member.email]) return 0;
     
     const memberGrades = gradesObj[member.email];
-    const criteria = presentation.customGradingCriteria ? presentation.gradingCriteria : [
-      { name: 'Content', weight: 25 },
-      { name: 'Delivery', weight: 25 },
-      { name: 'Visual Aids', weight: 25 },
-      { name: 'Q&A', weight: 25 }
-    ];
+    const criteria = presentation?.customGradingCriteria 
+      ? presentation.gradingCriteria 
+      : [
+          { name: 'Content', weight: 25 },
+          { name: 'Delivery', weight: 25 },
+          { name: 'Visual Aids', weight: 25 },
+          { name: 'Q&A', weight: 25 }
+        ];
     
     let totalScore = 0;
+    let totalWeight = 0;
+    
     criteria.forEach(criterion => {
       const rawScore = memberGrades[criterion.name] || 0;
       totalScore += (rawScore * criterion.weight / 100);
+      totalWeight += criterion.weight;
     });
+    
+    // Return 0 if no weights to avoid division by zero
+    if (totalWeight === 0) return 0;
     
     // Fix decimal issues with proper rounding
     return Math.round(totalScore * 10) / 10;
@@ -178,12 +198,12 @@ const SlotDetailPage = () => {
                   {formatTime(slot?.time)}
                 </h2>
                 <p className="text-gray-300 mt-1">
-                  {new Date(slot?.time).toLocaleDateString('en-US', {
+                  {slot?.time ? new Date(slot.time).toLocaleDateString('en-US', {
                     weekday: 'long',
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric'
-                  })}
+                  }) : ''}
                 </p>
               </div>
               
@@ -240,7 +260,9 @@ const SlotDetailPage = () => {
                   <div className="bg-gray-50 p-5 rounded-lg border border-gray-200">
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Team Information</h3>
                     <p className="font-medium text-gray-800 mb-1">Team Name: <span className="text-indigo-700">{slot.teamName}</span></p>
-                    <p className="text-gray-600 text-sm">Booked on: {slot.bookedAt ? new Date(slot.bookedAt).toLocaleString() : 'Unknown'}</p>
+                    <p className="text-gray-600 text-sm">
+                      Booked on: {slot.bookedAt ? new Date(slot.bookedAt).toLocaleString() : 'Unknown'}
+                    </p>
                   </div>
                 )}
                 
@@ -258,7 +280,7 @@ const SlotDetailPage = () => {
                         >
                           <div className="flex items-center">
                             <div className="h-10 w-10 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-800 font-bold mr-3">
-                              {member.name.substring(0, 1).toUpperCase()}
+                              {member.name ? member.name.substring(0, 1).toUpperCase() : 'U'}
                             </div>
                             <div>
                               <p className="font-medium text-gray-800">{member.name}</p>
