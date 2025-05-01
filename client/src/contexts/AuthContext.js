@@ -11,30 +11,74 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isUserDataRefreshing, setIsUserDataRefreshing] = useState(false);
+
+  // Enhanced fetchUserData with better error handling and refresh state
+  const fetchUserData = async () => {
+    try {
+      setIsUserDataRefreshing(true);
+      const response = await api.get('/api/auth/me');
+      
+      if (response.data && response.data.user) {
+        const userData = response.data.user;
+        console.log('User data refreshed:', userData);
+        
+        // Ensure studentId and yearOfJoining are correctly handled
+        setCurrentUser(userData);
+        
+        // Update localStorage with fresh data
+        localStorage.setItem('user', JSON.stringify(userData));
+        
+        return userData;
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error?.response?.data || error.message);
+      
+      // Only clear auth data if the error is auth-related (401/403)
+      if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+      }
+      
+      throw error;
+    } finally {
+      setIsUserDataRefreshing(false);
+      setLoading(false);
+    }
+  };
+
+  // Function to force refresh user data - can be called from any component
+  const refreshUserData = async () => {
+    try {
+      const userData = await fetchUserData();
+      return { success: true, user: userData };
+    } catch (error) {
+      return { success: false, error };
+    }
+  };
 
   useEffect(() => {
     // Check if token exists in localStorage
     const token = localStorage.getItem('token');
+    const cachedUser = localStorage.getItem('user');
     
     if (token) {
+      // Set the cached user first for immediate display
+      if (cachedUser) {
+        try {
+          const parsedUser = JSON.parse(cachedUser);
+          setCurrentUser(parsedUser);
+        } catch (e) {
+          console.error('Error parsing cached user:', e);
+        }
+      }
+      
+      // Then fetch fresh data
       fetchUserData();
     } else {
       setLoading(false);
     }
   }, []);
-
-  const fetchUserData = async () => {
-    try {
-      const response = await api.get('/api/auth/current-user');
-      setCurrentUser(response.data.user);
-    } catch (error) {
-      // Handle token expiry/invalid token
-      console.error('Error fetching user data:', error);
-      localStorage.removeItem('token');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Fix login function to handle both object and separate parameters
   const login = async (emailOrData, passwordParam) => {
@@ -70,6 +114,7 @@ export function AuthProvider({ children }) {
       // If login successful, store the token and user data
       const { token, user } = response.data;
       localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(user));
       setCurrentUser(user);
       
       return { success: true, user };
@@ -90,6 +135,7 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setCurrentUser(null);
     // Instead of navigating here, return a flag that the component can use
     return { success: true, shouldRedirect: true };
@@ -103,9 +149,6 @@ export function AuthProvider({ children }) {
     // If roles is a string, convert to array
     const rolesToCheck = typeof roles === 'string' ? [roles] : roles;
     
-    // Debug log
-    console.log("Checking roles:", rolesToCheck, "User role:", currentUser.role);
-    
     // Check if current user's role is in the list
     return rolesToCheck.includes(currentUser.role);
   };
@@ -116,51 +159,48 @@ export function AuthProvider({ children }) {
   const isFaculty = () => hasRole(['faculty']);
   const isClubHead = () => hasRole(['clubHead', 'clubs']);
 
-  // On mount, check if user is already logged in
-  useEffect(() => {
-    const checkLoggedIn = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        const userData = localStorage.getItem('user');
+  // Update user profile data 
+  const updateUserProfile = async (updatedData) => {
+    try {
+      setError('');
+      
+      const response = await api.put('/api/auth/update-profile', updatedData);
+      
+      if (response.data.success) {
+        // Update the current user state with the updated data
+        setCurrentUser(prevUser => ({
+          ...prevUser,
+          ...response.data.user
+        }));
         
-        if (token && userData) {
-          const parsedUser = JSON.parse(userData);
-          
-          // Ensure userId is set properly
-          if (!parsedUser.userId && parsedUser._id) {
-            parsedUser.userId = parsedUser._id;
-          }
-          
-          setCurrentUser(parsedUser);
-          
-          // Debug user data on load
-          console.log("Loaded user from storage:", parsedUser);
-          console.log("User ID:", parsedUser.userId || parsedUser._id);
-        }
-      } catch (error) {
-        console.error('Error checking login status:', error);
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-      } finally {
-        setLoading(false);
+        // Update localStorage
+        localStorage.setItem('user', JSON.stringify(response.data.user));
+        
+        return { success: true, user: response.data.user };
+      } else {
+        throw new Error(response.data.message || 'Failed to update profile');
       }
-    };
-    
-    checkLoggedIn();
-  }, []);
+    } catch (error) {
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to update profile';
+      setError(errorMessage);
+      return { success: false, message: errorMessage };
+    }
+  };
 
   const value = {
     currentUser,
     loading,
     error,
+    isUserDataRefreshing,
     login,
     logout,
     hasRole,
     isAdmin,
     isStudent,
     isFaculty,
-    isClubHead
+    isClubHead,
+    refreshUserData,
+    updateUserProfile
   };
 
   return (

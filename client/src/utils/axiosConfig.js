@@ -64,9 +64,18 @@ api.interceptors.response.use(
       if (error.response.status === 401) {
         console.error('Authentication error - You may need to log in again');
         
-        // Optionally, redirect to login page or clear token
-        // localStorage.removeItem('token');
-        // window.location.href = '/login';
+        // Instead of immediately removing token, we'll check if this is a token validation issue
+        // and only clear token on specific errors to prevent unnecessary logouts
+        if (error.response.data?.message?.includes('expired') || 
+            error.response.data?.message?.includes('invalid') ||
+            error.response.data?.message?.includes('not found')) {
+          console.warn('Token invalid or expired, clearing authentication data');
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          
+          // Optional: redirect to login
+          // window.location.href = '/login';
+        }
       }
       
       // Handle 403 Forbidden errors

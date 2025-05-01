@@ -642,11 +642,18 @@ const changePassword = async (req, res) => {
     });
   }
 };
-// Add this function to handle user search - replaces the route in users.js
+// Function to handle user search - replaces the route in users.js
 const searchUsers = async (req, res) => {
   try {
     console.log(`Search request from user: ${req.user.userId}`);
     const { query, limit = 10 } = req.query;
+    
+    if (!query || query.length < 3) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Search query must be at least 3 characters long' 
+      });
+    }
     
     // Use the static method we added to the User model
     const users = await User.searchStudents(query, limit, req.user.userId); 
@@ -805,7 +812,7 @@ const updateClubHead = async (req, res) => {
     console.error('Error updating club association:', error);
     res.status(500).json({
       success: false,
-      message: 'An error occurred while updating club association',
+      message: 'Server error',
       error: error.message
     });
   }

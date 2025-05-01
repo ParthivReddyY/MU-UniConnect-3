@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
@@ -15,16 +15,67 @@ const PresentationSlot = () => {
   const [teamName, setTeamName] = useState('');
   const [topic, setTopic] = useState('');
   const [selectedSlot, setSelectedSlot] = useState(null);
+  const [attachmentFile, setAttachmentFile] = useState(null);
+  const [fileInfo, setFileInfo] = useState('');
   const navigate = useNavigate();
   const { currentUser } = useAuth();
+  
+  // User search functionality
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [searchingUser, setSearchingUser] = useState(false);
+  const [activeSearchIndex, setActiveSearchIndex] = useState(null);
+  const searchDropdownRef = useRef(null);
 
   useEffect(() => {
     const fetchPresentations = async () => {
       try {
         setLoading(true);
         const response = await api.get('/api/presentations/available');
-        setPresentations(response.data);
+        
+        // Log the response data to see what we're working with
+        console.log("Presentations API response:", response.data);
+        
+        if (Array.isArray(response.data)) {
+          // Ensure all slot data is properly formatted with required fields
+          const processedPresentations = response.data.map(presentation => {
+            // Make sure the slots array is always accessible
+            const slots = presentation.slots || [];
+            
+            // Filter to only show available slots
+            const availableSlots = Array.isArray(slots) 
+              ? slots.filter(slot => !slot.booked)
+              : [];
+            
+            return {
+              ...presentation,
+              // Properly format the date objects for presentation and registration periods
+              presentationPeriod: {
+                start: presentation.presentationPeriod?.start ? new Date(presentation.presentationPeriod.start) : null,
+                end: presentation.presentationPeriod?.end ? new Date(presentation.presentationPeriod.end) : null
+              },
+              registrationPeriod: {
+                start: presentation.registrationPeriod?.start ? new Date(presentation.registrationPeriod.start) : null,
+                end: presentation.registrationPeriod?.end ? new Date(presentation.registrationPeriod.end) : null
+              },
+              slots: availableSlots.map(slot => ({
+                ...slot,
+                // Ensure each slot has an id (either from slot.id or slot._id)
+                id: slot.id || (slot._id ? slot._id.toString() : null),
+                // Ensure time is a proper Date object
+                time: slot.time ? new Date(slot.time) : null
+              }))
+            };
+          });
+          
+          setPresentations(processedPresentations);
+        } else {
+          console.warn('API did not return an array of presentations:', response.data);
+          setPresentations([]);
+        }
       } catch (err) {
+        console.error('Error fetching presentations:', err);
         setError('Failed to load available presentation slots');
       } finally {
         setLoading(false);
@@ -34,12 +85,56 @@ const PresentationSlot = () => {
     fetchPresentations();
   }, []);
 
+  // Handle clicks outside of the search dropdown
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (searchDropdownRef.current && !searchDropdownRef.current.contains(event.target)) {
+        setShowSearchResults(false);
+      }
+    }
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Search for users when query changes
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 3) {
+      setSearchResults([]);
+      return;
+    }
+
+    setSearchingUser(true);
+    const timer = setTimeout(async () => {
+      try {
+        const response = await api.get(`/api/auth/search-users?query=${encodeURIComponent(searchQuery)}`);
+        setSearchResults(response.data || []);
+      } catch (error) {
+        console.error('Error searching for users:', error);
+        toast.error('Failed to search for users');
+      } finally {
+        setSearchingUser(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   const handlePresentationSelect = (presentation) => {
     setSelectedPresentation(presentation);
     setSelectedSlot(null);
-    setTeamMembers([{ id: currentUser._id, name: currentUser.name, email: currentUser.email }]);
+    setTeamMembers([{ 
+      id: currentUser._id, 
+      name: currentUser.name, 
+      email: currentUser.email, 
+      rollNumber: currentUser.studentId || '' 
+    }]);
     setTeamName('');
     setTopic('');
+    setAttachmentFile(null);
+    setFileInfo('');
   };
   
   const handleSlotSelect = (slot) => {
@@ -52,7 +147,9 @@ const PresentationSlot = () => {
       return;
     }
     
-    setTeamMembers([...teamMembers, { id: '', name: '', email: '' }]);
+    setTeamMembers([...teamMembers, { id: '', name: '', email: '', rollNumber: '' }]);
+    setActiveSearchIndex(teamMembers.length);
+    setSearchQuery('');
   };
   
   const removeTeamMember = (index) => {
@@ -68,6 +165,46 @@ const PresentationSlot = () => {
     const updatedMembers = [...teamMembers];
     updatedMembers[index] = { ...updatedMembers[index], [field]: value };
     setTeamMembers(updatedMembers);
+
+    // If we're changing the search field, update the search query
+    if (field === 'name' || field === 'email' || field === 'rollNumber') {
+      setActiveSearchIndex(index);
+      setSearchQuery(value);
+      setShowSearchResults(true);
+    }
+  };
+
+  const handleUserSelect = (user, index) => {
+    const updatedMembers = [...teamMembers];
+    updatedMembers[index] = { 
+      id: user._id, 
+      name: user.name, 
+      email: user.email, 
+      rollNumber: user.studentId || '' 
+    };
+    setTeamMembers(updatedMembers);
+    setShowSearchResults(false);
+    setSearchQuery('');
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) {
+      setAttachmentFile(null);
+      setFileInfo('');
+      return;
+    }
+
+    // Check file size (limit to 10MB)
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB in bytes
+    if (file.size > MAX_FILE_SIZE) {
+      toast.error('File size exceeds 10MB limit');
+      e.target.value = '';
+      return;
+    }
+
+    setAttachmentFile(file);
+    setFileInfo(`${file.name} (${(file.size / 1024 / 1024).toFixed(2)}MB)`);
   };
   
   const bookSlot = async () => {
@@ -99,10 +236,22 @@ const PresentationSlot = () => {
         return;
       }
       
-      // Validate team members have names
+      // Validate team members have names, emails and roll numbers
       const emptyNameIndex = teamMembers.findIndex((m, idx) => idx > 0 && !m.name.trim());
       if (emptyNameIndex !== -1) {
         toast.error(`Please enter a name for team member ${emptyNameIndex + 1}`);
+        return;
+      }
+
+      const emptyEmailIndex = teamMembers.findIndex((m, idx) => idx > 0 && !m.email.trim());
+      if (emptyEmailIndex !== -1) {
+        toast.error(`Please enter an email for team member ${emptyEmailIndex + 1}`);
+        return;
+      }
+
+      const emptyRollNumberIndex = teamMembers.findIndex((m, idx) => idx > 0 && !m.rollNumber.trim());
+      if (emptyRollNumberIndex !== -1) {
+        toast.error(`Please enter a roll number for team member ${emptyRollNumberIndex + 1}`);
         return;
       }
     }
@@ -116,15 +265,30 @@ const PresentationSlot = () => {
     try {
       setBookingInProgress(true);
       
-      const bookingData = {
+      // Create form data if there's a file attachment
+      let bookingData = {
         presentationId: selectedPresentation._id,
         slotId: selectedSlot.id,
         topic,
-        participants: teamMembers,
+        teamMembers: teamMembers,
         teamName: selectedPresentation.participationType === 'team' ? teamName : undefined
       };
+
+      let response;
       
-      const response = await api.post(`/api/presentations/${selectedPresentation._id}/book`, bookingData);
+      if (attachmentFile) {
+        const formData = new FormData();
+        formData.append('file', attachmentFile);
+        formData.append('data', JSON.stringify(bookingData));
+        
+        response = await api.post(`/api/presentations/${selectedPresentation._id}/book-with-file`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        response = await api.post(`/api/presentations/${selectedPresentation._id}/book`, bookingData);
+      }
       
       if (response.data.success) {
         toast.success('Presentation slot booked successfully!');
@@ -323,39 +487,140 @@ const PresentationSlot = () => {
                     
                     <div className="space-y-3">
                       {teamMembers.map((member, index) => (
-                        <div key={index} className="flex space-x-3">
-                          <div className="flex-1">
-                            <input
-                              type="text"
-                              value={member.name}
-                              onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Name"
-                              disabled={index === 0}  // First member is always the current user
-                            />
+                        <div key={index} className="flex flex-col space-y-3 border border-gray-200 p-3 rounded-md bg-gray-50">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium text-sm text-gray-700">
+                              {index === 0 ? 'Team Lead (You)' : `Member ${index}`}
+                            </span>
+                            {index > 0 && (
+                              <button
+                                type="button"
+                                onClick={() => removeTeamMember(index)}
+                                className="p-1 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50"
+                              >
+                                <i className="fas fa-times"></i>
+                              </button>
+                            )}
                           </div>
-                          <div className="flex-1">
-                            <input
-                              type="email"
-                              value={member.email}
-                              onChange={(e) => handleTeamMemberChange(index, 'email', e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                              placeholder="Email"
-                              disabled={index === 0}  // First member is always the current user
-                            />
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={member.name}
+                                onChange={(e) => handleTeamMemberChange(index, 'name', e.target.value)}
+                                onFocus={() => {
+                                  setActiveSearchIndex(index);
+                                  setShowSearchResults(member.name.length >= 3);
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Name"
+                                disabled={index === 0}  // First member is always the current user
+                              />
+                            </div>
+                            <div>
+                              <input
+                                type="email"
+                                value={member.email}
+                                onChange={(e) => handleTeamMemberChange(index, 'email', e.target.value)}
+                                onFocus={() => {
+                                  setActiveSearchIndex(index);
+                                  setShowSearchResults(member.email.length >= 3);
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Email"
+                                disabled={index === 0}  // First member is always the current user
+                              />
+                            </div>
+                            <div>
+                              <input
+                                type="text"
+                                value={member.rollNumber}
+                                onChange={(e) => handleTeamMemberChange(index, 'rollNumber', e.target.value)}
+                                onFocus={() => {
+                                  setActiveSearchIndex(index);
+                                  setShowSearchResults(member.rollNumber.length >= 3);
+                                }}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="Roll Number"
+                                disabled={index === 0}  // First member is always the current user
+                              />
+                            </div>
                           </div>
-                          {index > 0 && (
-                            <button
-                              type="button"
-                              onClick={() => removeTeamMember(index)}
-                              className="p-2 text-red-600 hover:text-red-800"
+                          
+                          {/* User search results dropdown - only show for the active field */}
+                          {index === activeSearchIndex && showSearchResults && (
+                            <div 
+                              ref={searchDropdownRef}
+                              className="absolute z-10 mt-1 w-full max-w-md bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-y-auto"
                             >
-                              <i className="fas fa-times"></i>
-                            </button>
+                              {searchingUser ? (
+                                <div className="p-3 text-center text-gray-500">
+                                  <div className="inline-block animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-500 mr-2"></div>
+                                  Searching...
+                                </div>
+                              ) : searchResults.length > 0 ? (
+                                <ul>
+                                  {searchResults.map((user) => (
+                                    <li 
+                                      key={user._id}
+                                      className="px-4 py-3 hover:bg-blue-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                      onClick={() => handleUserSelect(user, index)}
+                                    >
+                                      <div className="font-medium">{user.name}</div>
+                                      <div className="text-sm text-gray-600 flex justify-between">
+                                        <span>{user.email}</span>
+                                        <span className="text-blue-600">{user.studentId || 'No Roll Number'}</span>
+                                      </div>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : searchQuery.length >= 3 ? (
+                                <div className="p-3 text-center text-gray-500">
+                                  No users found
+                                </div>
+                              ) : (
+                                <div className="p-3 text-center text-gray-500">
+                                  Type at least 3 characters to search
+                                </div>
+                              )}
+                            </div>
                           )}
                         </div>
                       ))}
                     </div>
+                  </div>
+
+                  {/* File Attachment Section */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Attachment (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      onChange={handleFileChange}
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 border border-gray-300 rounded-md p-1 focus:outline-none focus:border-blue-500"
+                      accept=".pdf,.doc,.docx,.ppt,.pptx,.txt,.zip,.rar,.jpg,.jpeg,.png"
+                    />
+                    {fileInfo && (
+                      <div className="mt-1 text-sm text-gray-600 flex items-center">
+                        <i className="fas fa-file-alt mr-2"></i>
+                        {fileInfo}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAttachmentFile(null);
+                            setFileInfo('');
+                          }}
+                          className="ml-2 text-red-500 hover:text-red-700"
+                        >
+                          <i className="fas fa-times-circle"></i>
+                        </button>
+                      </div>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      Max 10MB. Allowed types: PDF, DOC, DOCX, PPT, PPTX, TXT, ZIP, RAR, JPG, PNG
+                    </p>
                   </div>
                 </div>
               </div>

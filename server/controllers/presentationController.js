@@ -5,24 +5,50 @@ const { v4: uuidv4 } = require('uuid');
 // Get all available presentation slots (for students)
 const getAvailablePresentationSlots = async (req, res) => {
   try {
+    // Find all active presentations (that haven't ended yet)
     const presentations = await Presentation.find({
-      'presentationPeriod.end': { $gte: new Date() } // Only presentations that haven't ended yet
+      'presentationPeriod.end': { $gte: new Date() }
     })
     .populate('faculty', 'name department email')
     .lean();
     
-    // Format the presentations for frontend
+    console.log(`Found ${presentations.length} active presentations`);
+    
+    // Format the presentations for frontend with enhanced date handling
     const formattedPresentations = presentations.map(presentation => {
-      // Count available slots
-      const availableSlots = presentation.slots.filter(slot => !slot.booked).length;
-      const totalSlots = presentation.slots.length;
+      // Ensure slots array exists
+      const slots = presentation.slots || [];
+      
+      // Only show available slots to students
+      const availableSlots = slots.filter(slot => !slot.booked)
+        .map(slot => ({
+          ...slot,
+          id: slot.id || (slot._id ? slot._id.toString() : null),
+          _id: slot._id ? slot._id.toString() : (slot.id || null),
+          time: slot.time ? new Date(slot.time).toISOString() : null
+        }));
+      
+      const totalSlots = slots.length;
+      
+      console.log(`Presentation ${presentation._id}: ${availableSlots.length}/${totalSlots} slots available`);
       
       return {
         ...presentation,
-        facultyName: presentation.faculty.name,
-        facultyDepartment: presentation.faculty.department,
-        availableSlots,
-        totalSlots
+        facultyName: presentation.faculty ? presentation.faculty.name : presentation.hostName,
+        facultyDepartment: presentation.faculty ? presentation.faculty.department : presentation.hostDepartment,
+        slots: availableSlots,
+        availableSlots: availableSlots.length,
+        totalSlots,
+        // Ensure consistent presentation period format with ISO strings
+        presentationPeriod: {
+          start: presentation.presentationPeriod?.start ? new Date(presentation.presentationPeriod.start).toISOString() : null,
+          end: presentation.presentationPeriod?.end ? new Date(presentation.presentationPeriod.end).toISOString() : null
+        },
+        // Ensure consistent registration period format with ISO strings
+        registrationPeriod: {
+          start: presentation.registrationPeriod?.start ? new Date(presentation.registrationPeriod.start).toISOString() : null,
+          end: presentation.registrationPeriod?.end ? new Date(presentation.registrationPeriod.end).toISOString() : null
+        }
       };
     });
     
@@ -53,23 +79,55 @@ const getFacultyPresentationSlots = async (req, res) => {
       .sort({ 'presentationPeriod.start': 1 })
       .lean();
     
-    // Add statistics for each presentation
-    const presentationsWithStats = presentations.map(presentation => {
-      const bookedSlots = presentation.slots.filter(slot => slot.booked).length;
-      const totalSlots = presentation.slots.length;
+    // Enhanced processing of presentations with proper date handling
+    const processedPresentations = presentations.map(presentation => {
+      // Ensure all dates are properly formatted as ISO strings
+      const processedPresentation = {
+        ...presentation,
+        registrationPeriod: {
+          start: presentation.registrationPeriod.start ? new Date(presentation.registrationPeriod.start).toISOString() : null,
+          end: presentation.registrationPeriod.end ? new Date(presentation.registrationPeriod.end).toISOString() : null
+        },
+        presentationPeriod: {
+          start: presentation.presentationPeriod.start ? new Date(presentation.presentationPeriod.start).toISOString() : null,
+          end: presentation.presentationPeriod.end ? new Date(presentation.presentationPeriod.end).toISOString() : null
+        }
+      };
+
+      // Process slots separately to keep the original data structure
+      const slots = presentation.slots || [];
+      
+      // Calculate stats
+      const totalSlots = slots.length;
+      const bookedSlots = slots.filter(slot => 
+        slot.status === 'booked' || 
+        slot.status === 'in-progress' || 
+        slot.status === 'completed'
+      ).length;
+      
+      // Ensure each slot has the necessary data with proper date formatting
+      const processedSlots = slots.map(slot => ({
+        ...slot,
+        id: slot.id || (slot._id ? slot._id.toString() : null),
+        _id: slot._id ? slot._id.toString() : (slot.id || null),
+        time: slot.time ? new Date(slot.time).toISOString() : null,
+        bookedAt: slot.bookedAt ? new Date(slot.bookedAt).toISOString() : null,
+        startedAt: slot.startedAt ? new Date(slot.startedAt).toISOString() : null,
+        completedAt: slot.completedAt ? new Date(slot.completedAt).toISOString() : null
+      }));
       
       return {
-        ...presentation,
-        slots: {
-          data: presentation.slots,
-          bookedCount: bookedSlots,
+        ...processedPresentation,
+        slots: processedSlots,
+        slotStats: {
           totalCount: totalSlots,
+          bookedCount: bookedSlots,
           availableCount: totalSlots - bookedSlots
         }
       };
     });
     
-    res.status(200).json(presentationsWithStats);
+    res.status(200).json(processedPresentations);
   } catch (error) {
     console.error('Error getting faculty presentation slots:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -99,10 +157,30 @@ const createPresentationSlot = async (req, res) => {
       return res.status(403).json({ message: 'Only faculty members can create presentation slots' });
     }
     
-    // Set presentation dates without time for the presentation period
-    // Adding a time component (00:00:00) since the input is date-only
-    const presentationStartDate = new Date(`${presentationStart}T00:00:00`);
-    const presentationEndDate = new Date(`${presentationEnd}T23:59:59`);
+    // Format date strings consistently
+    console.log('Original date inputs:', {
+      registrationStart,
+      registrationEnd,
+      presentationStart,
+      presentationEnd
+    });
+    
+    // Parse all date strings to Date objects to ensure consistency
+    const registrationStartDate = new Date(registrationStart);
+    const registrationEndDate = new Date(registrationEnd);
+    
+    // Set presentation dates with the correct time component
+    const presentationStartDate = new Date(presentationStart);
+    const presentationEndDate = new Date(presentationEnd);
+    // Ensure the end date is set to the end of the day
+    presentationEndDate.setHours(23, 59, 59, 999);
+    
+    console.log('Parsed dates:', {
+      registrationStartDate,
+      registrationEndDate,
+      presentationStartDate,
+      presentationEndDate
+    });
     
     // Generate time slots based on configuration
     const slots = generateTimeSlots(
@@ -123,8 +201,8 @@ const createPresentationSlot = async (req, res) => {
       facultyName: user.name,
       hostDepartment: hostDepartment || user.department || '',
       registrationPeriod: {
-        start: new Date(registrationStart),
-        end: new Date(registrationEnd)
+        start: registrationStartDate,
+        end: registrationEndDate
       },
       presentationPeriod: {
         start: presentationStartDate,
@@ -264,6 +342,147 @@ const bookPresentationSlot = async (req, res) => {
     });
   } catch (error) {
     console.error('Error booking presentation slot:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
+// Book a presentation slot with file attachment
+const bookPresentationSlotWithFile = async (req, res) => {
+  try {
+    const presentationId = req.params.id;
+    const userId = req.user.userId;
+    
+    // Check if we have the file and booking data
+    if (!req.file && !req.body.data) {
+      return res.status(400).json({ message: 'Missing file or booking data' });
+    }
+
+    // Parse the booking data from the form
+    let bookingData;
+    try {
+      bookingData = JSON.parse(req.body.data);
+    } catch (error) {
+      return res.status(400).json({ message: 'Invalid booking data format' });
+    }
+    
+    const { 
+      slotId, topic, teamName, teamMembers 
+    } = bookingData;
+    
+    console.log("Booking request with file received:", {
+      presentationId,
+      userId,
+      slotId,
+      topic,
+      hasFile: !!req.file,
+      fileName: req.file?.originalname,
+      teamMembers: teamMembers?.length
+    });
+    
+    if (!slotId) {
+      return res.status(400).json({ message: 'Slot ID is required' });
+    }
+    
+    // Find the presentation
+    const presentation = await Presentation.findById(presentationId);
+    
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation not found' });
+    }
+    
+    // Find the specific slot
+    const slotIndex = presentation.slots.findIndex(slot => 
+      slot.id === slotId || slot._id.toString() === slotId
+    );
+    
+    if (slotIndex === -1) {
+      return res.status(404).json({ message: 'Slot not found' });
+    }
+    
+    // Check if slot is already booked
+    if (presentation.slots[slotIndex].booked) {
+      return res.status(409).json({ message: 'This slot is already booked' });
+    }
+    
+    // Check if registration period is open
+    const now = new Date();
+    if (now < presentation.registrationPeriod.start || now > presentation.registrationPeriod.end) {
+      return res.status(400).json({ message: 'Registration period is closed' });
+    }
+    
+    // Get student information
+    const student = await User.findById(userId);
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+    
+    // Handle file attachment
+    let fileAttachment = null;
+    if (req.file) {
+      fileAttachment = {
+        filename: req.file.filename,
+        originalName: req.file.originalname,
+        path: req.file.path,
+        mimetype: req.file.mimetype,
+        size: req.file.size
+      };
+    }
+    
+    // Update the slot
+    presentation.slots[slotIndex].booked = true;
+    presentation.slots[slotIndex].bookedBy = userId;
+    presentation.slots[slotIndex].bookedAt = new Date();
+    presentation.slots[slotIndex].status = 'booked';
+    presentation.slots[slotIndex].topic = topic;
+    
+    // Add file attachment information
+    if (fileAttachment) {
+      presentation.slots[slotIndex].fileAttachment = fileAttachment;
+    }
+    
+    // Handle team-based presentations
+    if (presentation.participationType === 'team') {
+      presentation.slots[slotIndex].teamName = teamName;
+      
+      // Process team members
+      let processedTeamMembers = [];
+      
+      if (teamMembers && Array.isArray(teamMembers)) {
+        processedTeamMembers = teamMembers.map(member => ({
+          name: member.name,
+          email: member.email,
+          rollNumber: member.rollNumber || member.studentId || ''
+        }));
+      }
+      
+      // Always include the booking student
+      if (!processedTeamMembers.some(m => m.email === student.email)) {
+        processedTeamMembers.push({
+          name: student.name,
+          email: student.email,
+          rollNumber: student.studentId || ''
+        });
+      }
+      
+      presentation.slots[slotIndex].teamMembers = processedTeamMembers;
+    } else {
+      // Individual presentation - just add the booking student
+      presentation.slots[slotIndex].teamMembers = [{
+        name: student.name,
+        email: student.email,
+        rollNumber: student.studentId || ''
+      }];
+    }
+    
+    await presentation.save();
+    
+    res.status(200).json({
+      success: true,
+      message: 'Presentation slot booked successfully with file attachment',
+      slot: presentation.slots[slotIndex]
+    });
+  } catch (error) {
+    console.error('Error booking presentation slot with file:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -483,13 +702,42 @@ const getPresentationById = async (req, res) => {
   try {
     const presentationId = req.params.id;
 
-    const presentation = await Presentation.findById(presentationId);
+    // Use lean() to get a plain JS object that we can modify
+    const presentation = await Presentation.findById(presentationId).lean();
     
     if (!presentation) {
       return res.status(404).json({ message: 'Presentation not found' });
     }
 
-    res.status(200).json(presentation);
+    // Ensure consistent date format for client
+    const formattedPresentation = {
+      ...presentation,
+      // Format the registration period dates as ISO strings
+      registrationPeriod: {
+        start: presentation.registrationPeriod?.start ? new Date(presentation.registrationPeriod.start).toISOString() : null,
+        end: presentation.registrationPeriod?.end ? new Date(presentation.registrationPeriod.end).toISOString() : null
+      },
+      // Format the presentation period dates as ISO strings
+      presentationPeriod: {
+        start: presentation.presentationPeriod?.start ? new Date(presentation.presentationPeriod.start).toISOString() : null,
+        end: presentation.presentationPeriod?.end ? new Date(presentation.presentationPeriod.end).toISOString() : null
+      }
+    };
+    
+    // Process slots to ensure proper format including IDs and dates
+    if (Array.isArray(presentation.slots)) {
+      formattedPresentation.slots = presentation.slots.map(slot => ({
+        ...slot,
+        id: slot.id || (slot._id ? slot._id.toString() : null),
+        _id: slot._id ? slot._id.toString() : slot.id,
+        time: slot.time ? new Date(slot.time).toISOString() : null,
+        bookedAt: slot.bookedAt ? new Date(slot.bookedAt).toISOString() : null,
+        startedAt: slot.startedAt ? new Date(slot.startedAt).toISOString() : null,
+        completedAt: slot.completedAt ? new Date(slot.completedAt).toISOString() : null
+      }));
+    }
+
+    res.status(200).json(formattedPresentation);
   } catch (error) {
     console.error('Error getting presentation by ID:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -585,10 +833,16 @@ function generateTimeSlots(startTime, endTime, periodStart, periodEnd, duration,
   let currentDate = new Date(periodStart);
   const endDate = new Date(periodEnd);
   
+  // Ensure proper date handling
+  currentDate.setHours(0, 0, 0, 0);
+  endDate.setHours(23, 59, 59, 999);
+  
   while (currentDate <= endDate) {
     days.push(new Date(currentDate));
     currentDate.setDate(currentDate.getDate() + 1);
   }
+  
+  console.log(`Generating slots for ${days.length} days from ${periodStart} to ${periodEnd}`);
   
   // Parse time strings
   const [startHour, startMinute] = startTime.split(':').map(Number);
@@ -602,19 +856,28 @@ function generateTimeSlots(startTime, endTime, periodStart, periodEnd, duration,
     let endSlotTime = new Date(day);
     endSlotTime.setHours(endHour, endMinute, 0);
     
-    while (currentSlotTime <= endSlotTime) {
+    // Duration in milliseconds
+    const durationMs = duration * 60 * 1000;
+    const bufferMs = buffer * 60 * 1000;
+    const totalDurationMs = durationMs + bufferMs;
+    
+    while (currentSlotTime.getTime() + durationMs <= endSlotTime.getTime()) {
+      // Use UUID instead of mongoose ObjectId
+      const slotId = uuidv4();
+      
       slots.push({
-        id: uuidv4(),
+        id: slotId,
         time: new Date(currentSlotTime),
         booked: false,
         status: 'available'
       });
       
       // Move to next slot time (duration + buffer)
-      currentSlotTime = new Date(currentSlotTime.getTime() + (duration + buffer) * 60 * 1000);
+      currentSlotTime = new Date(currentSlotTime.getTime() + totalDurationMs);
     }
   });
   
+  console.log(`Generated ${slots.length} total slots`);
   return slots;
 }
 
@@ -623,6 +886,7 @@ module.exports = {
   getFacultyPresentationSlots,
   createPresentationSlot,
   bookPresentationSlot,
+  bookPresentationSlotWithFile,
   deletePresentationSlot,
   getPresentationSlots,
   startPresentationSlot,

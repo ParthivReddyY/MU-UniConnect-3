@@ -13,7 +13,8 @@ const {
   changePassword,
   requestPasswordChangeOTP,
   updateProfile, // Add this new controller function
-  updateClubHead // Add this new function for updating club head/club accounts
+  updateClubHead, // Add this new function for updating club head/club accounts
+  searchUsers // Add this new function for searching users
 } = require('../controllers/authController');
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
@@ -22,6 +23,9 @@ router.post('/register', register);
 router.post('/login', login);
 router.post('/verify-email', verifyEmail);
 router.post('/check-email', checkEmail);
+
+// User search route - protected, requires authentication
+router.get('/search-users', authenticateUser, searchUsers);
 
 // Password reset flow (OTP-based)
 router.post('/forgot-password', forgotPassword);

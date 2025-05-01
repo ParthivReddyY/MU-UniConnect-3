@@ -4,12 +4,13 @@ import { useAuth } from '../contexts/AuthContext';
 import { calculateAcademicProgress, formatAcademicYear } from '../utils/academicUtils';
 
 const Dashboard = () => {
-  const { currentUser, isAdmin, isFaculty, isClubHead } = useAuth();
+  const { currentUser, isAdmin, isFaculty, isClubHead, refreshUserData, isUserDataRefreshing } = useAuth();
   const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
   
   // Add state for academic info
   const [academicInfo, setAcademicInfo] = useState(null);
+  const [dataFetched, setDataFetched] = useState(false);
   
   // Stats for different user types
   const [stats] = useState({
@@ -46,6 +47,40 @@ const Dashboard = () => {
     else if (hour < 17) setGreeting('Good Afternoon');
     else setGreeting('Good Evening');
   }, []);
+
+  // Force refresh user data to ensure we have latest studentId and yearOfJoining
+  useEffect(() => {
+    const fetchData = async () => {
+      if (currentUser && !dataFetched) {
+        try {
+          // Refresh user data to ensure we have the latest info
+          const result = await refreshUserData();
+          if (result.success) {
+            setDataFetched(true);
+            console.log("User data refreshed successfully:", result.user);
+          } else {
+            console.error("Failed to refresh user data");
+          }
+        } catch (error) {
+          console.error("Error refreshing user data:", error);
+        }
+      }
+    };
+
+    fetchData();
+  }, [currentUser, dataFetched, refreshUserData]);
+
+  // Calculate academic info when user data is loaded
+  useEffect(() => {
+    if (currentUser && currentUser.role === 'student') {
+      if (currentUser.yearOfJoining) {
+        const progress = calculateAcademicProgress(currentUser.yearOfJoining);
+        setAcademicInfo(progress);
+      } else {
+        setAcademicInfo(null);
+      }
+    }
+  }, [currentUser]);
 
   // Format date to readable string
   const formatDate = (date) => {
@@ -377,19 +412,21 @@ const Dashboard = () => {
     }
   };
 
-  // Calculate academic info when user data is loaded - consolidated from multiple hooks
-  useEffect(() => {
-    if (currentUser && currentUser.role === 'student' && currentUser.yearOfJoining) {
-      const progress = calculateAcademicProgress(currentUser.yearOfJoining);
-      setAcademicInfo(progress);
-    }
-  }, [currentUser]);
-
   // Format academic year and semester info for better display
   const formatAcademicInfo = (academicInfo) => {
     if (!academicInfo || !academicInfo.isValidCalculation) return 'Not available';
     
     return `${academicInfo.year}${academicInfo.yearSuffix} Year, ${academicInfo.currentSemester}${academicInfo.semesterSuffix} Semester`;
+  };
+  
+  // Handler for updating profile
+  const handleUpdateProfile = () => {
+    navigate('/profile');
+  };
+
+  // Handler for adding student ID
+  const handleAddStudentId = () => {
+    navigate('/profile', { state: { focusField: 'studentId' } });
   };
   
   return (
@@ -440,7 +477,7 @@ const Dashboard = () => {
             <div className="relative z-10 px-6 py-10 md:px-10 md:py-14 text-white">
               <div className="max-w-3xl">
                 <h2 className="text-3xl md:text-4xl font-bold mb-3">
-                  {greeting}, {currentUser.name}!
+                  {greeting}, {currentUser?.name}!
                 </h2>
                 <p className="text-white/90 text-lg mb-6">{getWelcomeMessage()}</p>
                 
@@ -461,7 +498,7 @@ const Dashboard = () => {
           <div className="flex flex-col md:flex-row md:items-center p-6 border-t border-gray-100">
             <div className="flex items-center mb-4 md:mb-0">
               <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-sm mr-4">
-                {currentUser.profileImage ? (
+                {currentUser?.profileImage ? (
                   <img 
                     src={currentUser.profileImage} 
                     alt={currentUser.name} 
@@ -469,7 +506,7 @@ const Dashboard = () => {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-2xl font-bold text-gray-300">
-                    {currentUser.name.charAt(0).toUpperCase()}
+                    {currentUser?.name?.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
@@ -478,7 +515,7 @@ const Dashboard = () => {
                   {getUserRoleText()}
                 </span>
                 <p className="text-gray-500 text-sm mt-1">
-                  {currentUser.email}
+                  {currentUser?.email}
                 </p>
               </div>
             </div>
@@ -487,7 +524,7 @@ const Dashboard = () => {
               <QuickAction 
                 icon="fa-user-edit" 
                 label="Edit Profile" 
-                onClick={() => navigate('/profile')}
+                onClick={handleUpdateProfile}
                 color="primary" 
               />
               <QuickAction 
@@ -520,34 +557,42 @@ const Dashboard = () => {
               <i className="fas fa-user-shield mr-2 text-indigo-500"></i>
               Account Information
             </h3>
-            <Link to="/profile" className="text-sm text-indigo-600 hover:text-indigo-800">
-              View Details
-            </Link>
+            <div className="flex items-center">
+              {isUserDataRefreshing && (
+                <span className="mr-3 text-xs text-gray-500 flex items-center">
+                  <div className="w-3 h-3 border-2 border-gray-300 border-t-indigo-500 rounded-full animate-spin mr-1"></div>
+                  Refreshing...
+                </span>
+              )}
+              <Link to="/profile" className="text-sm text-indigo-600 hover:text-indigo-800">
+                View Details
+              </Link>
+            </div>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-4">
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">Email Address</span>
-                <span className="text-gray-800 font-medium">{currentUser.email}</span>
+                <span className="text-gray-800 font-medium">{currentUser?.email || 'Loading...'}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">Role</span>
-                <span className="text-gray-800 font-medium capitalize">{currentUser.role}</span>
+                <span className="text-gray-800 font-medium capitalize">{currentUser?.role || 'Loading...'}</span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">Student ID</span>
                 <div className="flex items-center">
-                  {currentUser.studentId ? (
+                  {currentUser?.studentId ? (
                     <span className="text-gray-800 font-medium">{currentUser.studentId}</span>
-                  ) : currentUser.role === 'student' ? (
+                  ) : currentUser?.role === 'student' ? (
                     <div className="flex items-center">
                       <span className="text-red-500 text-sm">Not set</span>
-                      <Link 
-                        to="/profile" 
+                      <button 
+                        onClick={handleAddStudentId}
                         className="ml-2 bg-red-50 hover:bg-red-100 text-red-600 px-2 py-1 rounded-md text-xs font-medium transition-all"
                       >
                         Add ID
-                      </Link>
+                      </button>
                     </div>
                   ) : (
                     <span className="text-gray-500 italic">N/A</span>
@@ -555,33 +600,58 @@ const Dashboard = () => {
                 </div>
               </div>
               
-              {/* Add Academic Year Information for Students */}
-              {currentUser.role === 'student' && (
+              {/* Academic Year Information for Students - Improved with clear status indicators */}
+              {currentUser?.role === 'student' && (
                 <>
                   <div className="flex flex-col">
                     <span className="text-xs text-gray-500 mb-1">Academic Year of Joining</span>
-                    <span className="text-gray-800 font-medium">
-                      {currentUser.yearOfJoining ? formatAcademicYear(currentUser.yearOfJoining) : 'Not available'}
-                      {!currentUser.yearOfJoining && (
-                        <Link to="/profile" className="ml-2 text-xs text-red-500 hover:text-red-700">
-                          (Add in Profile)
-                        </Link>
-                      )}
-                    </span>
+                    {isUserDataRefreshing ? (
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin mr-2"></div>
+                        <span className="text-gray-500">Loading...</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-800 font-medium">
+                        {currentUser?.yearOfJoining ? formatAcademicYear(currentUser.yearOfJoining) : 'Not available'}
+                        {!currentUser?.yearOfJoining && (
+                          <button
+                            onClick={handleUpdateProfile}
+                            className="ml-2 text-xs text-red-500 hover:text-red-700 underline"
+                          >
+                            (Add in Profile)
+                          </button>
+                        )}
+                      </span>
+                    )}
                   </div>
                   
-                  {academicInfo && academicInfo.isValidCalculation && (
+                  {isUserDataRefreshing ? (
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 mb-1">Current Academic Status</span>
+                      <div className="flex items-center">
+                        <div className="w-4 h-4 border-2 border-gray-200 border-t-indigo-500 rounded-full animate-spin mr-2"></div>
+                        <span className="text-gray-500">Calculating...</span>
+                      </div>
+                    </div>
+                  ) : academicInfo && academicInfo.isValidCalculation ? (
                     <div className="flex flex-col">
                       <span className="text-xs text-gray-500 mb-1">Current Academic Status</span>
                       <span className="text-gray-800 font-medium">
                         {formatAcademicInfo(academicInfo)}
                       </span>
                     </div>
-                  )}
+                  ) : currentUser?.yearOfJoining ? (
+                    <div className="flex flex-col">
+                      <span className="text-xs text-gray-500 mb-1">Current Academic Status</span>
+                      <span className="text-amber-600">
+                        Calculation unavailable
+                      </span>
+                    </div>
+                  ) : null}
                 </>
               )}
               
-              {currentUser.department && (
+              {currentUser?.department && (
                 <div className="flex flex-col">
                   <span className="text-xs text-gray-500 mb-1">Department</span>
                   <span className="text-gray-800 font-medium">{currentUser.department}</span>
@@ -590,13 +660,13 @@ const Dashboard = () => {
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">Member Since</span>
                 <span className="text-gray-800 font-medium">
-                  {currentUser.createdAt ? formatDate(currentUser.createdAt) : 'N/A'}
+                  {currentUser?.createdAt ? formatDate(currentUser.createdAt) : 'N/A'}
                 </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-xs text-gray-500 mb-1">Last Login</span>
                 <span className="text-gray-800 font-medium">
-                  {currentUser.lastLogin ? new Date(currentUser.lastLogin).toLocaleString() : 'First login'}
+                  {currentUser?.lastLogin ? new Date(currentUser.lastLogin).toLocaleString() : 'First login'}
                 </span>
               </div>
             </div>

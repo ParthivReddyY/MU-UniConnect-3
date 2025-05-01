@@ -51,27 +51,41 @@ const PresentationManagement = () => {
       const response = await api.get('/api/presentations/faculty');
       
       if (response.data && Array.isArray(response.data)) {
-        // Process slot statistics for each presentation
+        // Process data for consistent format
         const processedPresentations = response.data.map(presentation => {
-          // Calculate slot statistics if not already present
-          if (!presentation.slots?.totalCount && Array.isArray(presentation.slots)) {
-            const totalCount = presentation.slots.length;
-            const bookedCount = presentation.slots.filter(slot => 
-              slot.status === 'booked' || slot.status === 'in-progress' || slot.status === 'completed'
-            ).length;
-            
-            return {
-              ...presentation,
-              slots: {
-                ...presentation.slots,
-                totalCount,
-                bookedCount
-              }
-            };
-          }
-          return presentation;
+          // Ensure presentation has all required properties with proper date handling
+          return {
+            ...presentation,
+            // Make sure the date objects are properly formatted
+            registrationPeriod: {
+              start: presentation.registrationPeriod?.start ? new Date(presentation.registrationPeriod.start) : null,
+              end: presentation.registrationPeriod?.end ? new Date(presentation.registrationPeriod.end) : null
+            },
+            presentationPeriod: {
+              start: presentation.presentationPeriod?.start ? new Date(presentation.presentationPeriod.start) : null,
+              end: presentation.presentationPeriod?.end ? new Date(presentation.presentationPeriod.end) : null
+            },
+            // Ensure slots is always an array with properly formatted dates
+            slots: Array.isArray(presentation.slots) ? presentation.slots.map(slot => ({
+              ...slot,
+              // Ensure each slot has consistent date formats
+              time: slot.time ? new Date(slot.time) : null,
+              bookedAt: slot.bookedAt ? new Date(slot.bookedAt) : null,
+              startedAt: slot.startedAt ? new Date(slot.startedAt) : null,
+              completedAt: slot.completedAt ? new Date(slot.completedAt) : null
+            })) : [],
+            // Use slotStats if available from API, otherwise calculate
+            slotStats: presentation.slotStats || {
+              totalCount: Array.isArray(presentation.slots) ? presentation.slots.length : 0,
+              bookedCount: Array.isArray(presentation.slots) ? 
+                presentation.slots.filter(slot => 
+                  slot.status === 'booked' || slot.status === 'in-progress' || slot.status === 'completed'
+                ).length : 0
+            }
+          };
         });
         
+        console.log("Processed presentation data:", processedPresentations);
         setPresentations(processedPresentations);
       } else {
         console.warn("Response data is not an array:", response.data);

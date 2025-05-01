@@ -25,7 +25,33 @@ const PresentationDetail = () => {
       try {
         setLoading(true);
         const response = await api.get(`/api/presentations/${id}`);
-        setPresentation(response.data);
+        
+        // Process the presentation data with proper date handling
+        const processedPresentation = {
+          ...response.data,
+          // Make sure all dates are properly formatted as Date objects
+          registrationPeriod: {
+            start: response.data.registrationPeriod?.start ? new Date(response.data.registrationPeriod.start) : null,
+            end: response.data.registrationPeriod?.end ? new Date(response.data.registrationPeriod.end) : null
+          },
+          presentationPeriod: {
+            start: response.data.presentationPeriod?.start ? new Date(response.data.presentationPeriod.start) : null,
+            end: response.data.presentationPeriod?.end ? new Date(response.data.presentationPeriod.end) : null
+          },
+          // Process slots to ensure all dates are properly formatted
+          slots: Array.isArray(response.data.slots) ? response.data.slots.map(slot => ({
+            ...slot,
+            // Ensure each slot has an id and properly formatted dates
+            id: slot.id || (slot._id ? slot._id.toString() : null),
+            _id: slot._id ? slot._id.toString() : slot.id,
+            time: slot.time ? new Date(slot.time) : null,
+            bookedAt: slot.bookedAt ? new Date(slot.bookedAt) : null,
+            startedAt: slot.startedAt ? new Date(slot.startedAt) : null,
+            completedAt: slot.completedAt ? new Date(slot.completedAt) : null
+          })) : []
+        };
+        
+        setPresentation(processedPresentation);
       } catch (err) {
         if (err.response?.status === 403) {
           setError('You don\'t have permission to view this presentation details.');
@@ -232,18 +258,27 @@ const PresentationDetail = () => {
   const prepareEditData = useCallback(() => {
     if (!presentation) return null;
     
-    // Create properly formatted initial data object with the correct date formats
+    // Fix date format issues - ensure consistent datetime formats for the server
+    // For registration period, use ISO string format but truncate to minute precision
     const registrationStart = presentation?.registrationPeriod?.start ? 
       new Date(presentation.registrationPeriod.start).toISOString().substring(0, 16) : '';
     
     const registrationEnd = presentation?.registrationPeriod?.end ? 
       new Date(presentation.registrationPeriod.end).toISOString().substring(0, 16) : '';
     
+    // For presentation period, use date-only format (YYYY-MM-DD)
     const presentationStart = presentation?.presentationPeriod?.start ? 
       new Date(presentation.presentationPeriod.start).toISOString().split('T')[0] : '';
     
     const presentationEnd = presentation?.presentationPeriod?.end ? 
       new Date(presentation.presentationPeriod.end).toISOString().split('T')[0] : '';
+    
+    console.log('Preparing presentation data for edit:', {
+      registrationStart,
+      registrationEnd,
+      presentationStart,
+      presentationEnd
+    });
     
     return {
       ...presentation,

@@ -431,6 +431,19 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     setIsLoading(true);
     
     try {
+      // Format dates properly for backend
+      const formatDateForBackend = (dateString) => {
+        if (!dateString) return null;
+        
+        // If it's just a date (YYYY-MM-DD), append time
+        if (dateString.length === 10) {
+          return new Date(`${dateString}T00:00:00`).toISOString();
+        }
+        
+        // If it already has time component
+        return new Date(dateString).toISOString();
+      };
+      
       // Create data to submit with properly formatted dates
       const dataToSubmit = {
         title: formData.title,
@@ -450,12 +463,14 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
           startTime: formData.slotConfig.startTime,
           endTime: formData.slotConfig.endTime
         },
-        // Fields separated for the backend
-        registrationStart: formData.registrationPeriod.start,
-        registrationEnd: formData.registrationPeriod.end,
-        presentationStart: formData.presentationPeriod.start,
-        presentationEnd: formData.presentationPeriod.end
+        // Format dates properly
+        registrationStart: formatDateForBackend(formData.registrationPeriod.start),
+        registrationEnd: formatDateForBackend(formData.registrationPeriod.end),
+        presentationStart: formatDateForBackend(formData.presentationPeriod.start),
+        presentationEnd: formatDateForBackend(formData.presentationPeriod.end)
       };
+      
+      console.log("Submitting presentation data:", dataToSubmit);
       
       let response;
       
