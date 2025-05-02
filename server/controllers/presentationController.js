@@ -532,6 +532,56 @@ const getPresentationSlots = async (req, res) => {
   }
 };
 
+// Get a single slot by ID
+const getSlotById = async (req, res) => {
+  try {
+    const slotId = req.params.slotId;
+    
+    // Find the presentation that contains this slot
+    const presentation = await Presentation.findOne({
+      $or: [
+        { 'slots._id': slotId },
+        { 'slots.id': slotId }
+      ]
+    });
+    
+    if (!presentation) {
+      return res.status(404).json({ message: 'Presentation slot not found' });
+    }
+    
+    // Find the specific slot in the presentation
+    const slot = presentation.slots.find(s => 
+      (s._id && s._id.toString() === slotId) || (s.id === slotId)
+    );
+    
+    if (!slot) {
+      return res.status(404).json({ message: 'Slot not found' });
+    }
+    
+    // If this is a secured slot, check if the user is authorized
+    if (slot.booked && slot.bookedBy) {
+      // Convert both IDs to strings for comparison
+      const slotBooker = slot.bookedBy.toString();
+      const currentUser = req.user.userId.toString();
+      
+      // Check if the user is the faculty who created the presentation or is an admin
+      const isAuthorized = isAuthorizedForPresentation(presentation, req.user.userId, req.user.role);
+      
+      // Allow access if:
+      // 1. User is authorized (faculty or admin), OR
+      // 2. User is the student who booked the slot
+      if (!isAuthorized && slotBooker !== currentUser) {
+        return res.status(403).json({ message: 'You do not have permission to view this presentation slot' });
+      }
+    }
+    
+    res.status(200).json(slot);
+  } catch (error) {
+    console.error('Error fetching slot by ID:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+};
+
 // Start a presentation (change slot status to in-progress)
 const startPresentationSlot = async (req, res) => {
   try {
@@ -602,6 +652,11 @@ const completePresentationSlot = async (req, res) => {
     const userId = req.user.userId;
     const { grades, feedback, totalScore, individualGrades } = req.body;
     
+    // Validate input
+    if (!grades || typeof totalScore !== 'number') {
+      return res.status(400).json({ message: 'Missing required fields for grading' });
+    }
+
     // Find the presentation containing this slot
     const presentation = await Presentation.findOne({
       $or: [
@@ -611,20 +666,14 @@ const completePresentationSlot = async (req, res) => {
     });
     
     if (!presentation) {
-      return res.status(404).json({
-        success: false, 
-        message: 'Presentation or slot not found'
-      });
+      return res.status(404).json({ message: 'Presentation slot not found' });
     }
     
     // Check if user is authorized to manage this presentation
     if (!isAuthorizedForPresentation(presentation, userId, req.user.role)) {
-      return res.status(403).json({
-        success: false, 
-        message: 'You are not authorized to manage this presentation'
-      });
+      return res.status(403).json({ message: 'You do not have permission to grade this presentation' });
     }
-    
+
     // Find the slot in the slots array
     let slotIndex = presentation.slots.findIndex(slot => slot._id.toString() === slotId);
     
@@ -634,23 +683,20 @@ const completePresentationSlot = async (req, res) => {
     }
     
     if (slotIndex === -1) {
-      return res.status(404).json({
-        success: false, 
-        message: 'Slot not found in this presentation'
-      });
+      return res.status(404).json({ message: 'Slot not found in presentation' });
     }
     
-    // Update the slot with grading info
-    presentation.slots[slotIndex].status = 'completed';
+    // Check if the slot is booked
+    if (!presentation.slots[slotIndex].booked) {
+      return res.status(400).json({ message: 'Cannot grade an unbooked slot' });
+    }
+    
+    // Update the slot with grades and feedback
     presentation.slots[slotIndex].grades = grades;
-    presentation.slots[slotIndex].totalScore = totalScore;
+    presentation.slots[slotIndex].individualGrades = individualGrades || {};
     presentation.slots[slotIndex].feedback = feedback || '';
-    
-    // Add individual grades if provided
-    if (individualGrades) {
-      presentation.slots[slotIndex].individualGrades = individualGrades;
-    }
-    
+    presentation.slots[slotIndex].totalScore = totalScore;
+    presentation.slots[slotIndex].status = 'completed';
     presentation.slots[slotIndex].completedAt = new Date();
     
     await presentation.save();
@@ -661,7 +707,7 @@ const completePresentationSlot = async (req, res) => {
       slot: presentation.slots[slotIndex]
     });
   } catch (error) {
-    console.error('Error completing presentation:', error);
+    console.error('Error grading presentation:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -892,5 +938,6 @@ module.exports = {
   startPresentationSlot,
   completePresentationSlot,
   getPresentationById,
-  updatePresentation
+  updatePresentation,
+  getSlotById // Add this missing export
 };

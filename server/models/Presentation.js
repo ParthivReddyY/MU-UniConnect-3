@@ -1,22 +1,143 @@
 const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-const PresentationSchema = new mongoose.Schema({
-  title: {
+// Team member schema for presentation slots
+const TeamMemberSchema = new Schema({
+  name: {
     type: String,
-    required: true,
-    trim: true
+    required: true
+  },
+  email: {
+    type: String,
+    required: true
+  },
+  rollNumber: {
+    type: String
+  },
+  studentId: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  }
+});
+
+// File attachment schema
+const FileAttachmentSchema = new Schema({
+  originalName: {
+    type: String,
+    required: true
+  },
+  fileName: {
+    type: String,
+    required: true
+  },
+  mimeType: {
+    type: String,
+    required: true
+  },
+  size: {
+    type: Number,
+    required: true
+  },
+  path: {
+    type: String,
+    required: true
+  },
+  uploadedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
+// Slot schema
+const SlotSchema = new Schema({
+  id: {
+    type: String
+  },
+  time: {
+    type: Date,
+    required: true
+  },
+  booked: {
+    type: Boolean,
+    default: false
+  },
+  bookedBy: {
+    type: Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  bookedAt: {
+    type: Date
+  },
+  teamName: {
+    type: String
+  },
+  topic: {
+    type: String
   },
   description: {
+    type: String
+  },
+  status: {
     type: String,
-    trim: true
+    enum: ['available', 'booked', 'in-progress', 'completed'],
+    default: 'available'
+  },
+  teamMembers: [TeamMemberSchema],
+  fileAttachment: FileAttachmentSchema,
+  startedAt: {
+    type: Date
+  },
+  completedAt: {
+    type: Date
+  },
+  // Grading fields
+  grades: {
+    type: Schema.Types.Mixed,
+    default: {}
+  },
+  individualGrades: {
+    type: Schema.Types.Mixed,
+    default: {}
+  },
+  feedback: {
+    type: String
+  },
+  totalScore: {
+    type: Number
+  }
+});
+
+// Grading criteria schema
+const GradingCriteriaSchema = new Schema({
+  name: {
+    type: String,
+    required: true
+  },
+  weight: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100
+  }
+});
+
+// Main presentation schema
+const PresentationSchema = new Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String
   },
   faculty: {
-    type: mongoose.Schema.Types.ObjectId,
+    type: Schema.Types.ObjectId,
     ref: 'User',
     required: true
   },
   facultyName: {
-    type: String
+    type: String,
+    required: true
   },
   hostDepartment: {
     type: String
@@ -58,38 +179,7 @@ const PresentationSchema = new mongoose.Schema({
     type: Number,
     default: 1
   },
-  targetAudience: {
-    year: [{
-      type: String,
-      trim: true
-    }],
-    school: [{
-      type: String,
-      trim: true
-    }],
-    department: [{
-      type: String,
-      trim: true
-    }]
-  },
-  customGradingCriteria: {
-    type: Boolean,
-    default: false
-  },
-  gradingCriteria: [{
-    name: String,
-    weight: Number
-  }],
   slotConfig: {
-    duration: {
-      type: Number,
-      required: true,
-      default: 20 // in minutes
-    },
-    buffer: {
-      type: Number,
-      default: 5 // in minutes
-    },
     startTime: {
       type: String,
       required: true
@@ -97,77 +187,67 @@ const PresentationSchema = new mongoose.Schema({
     endTime: {
       type: String,
       required: true
+    },
+    duration: {
+      type: Number,
+      required: true
+    },
+    buffer: {
+      type: Number,
+      default: 5
     }
   },
-  slots: [
-    {
-      id: String,
-      time: Date,
-      booked: {
-        type: Boolean,
-        default: false
-      },
-      bookedBy: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
-      },
-      bookedAt: Date,
-      status: {
-        type: String,
-        enum: ['available', 'booked', 'in-progress', 'completed'],
-        default: 'available'
-      },
-      topic: String,
-      teamName: String,
-      teamMembers: [{
-        name: String,
-        email: String,
-        studentId: String
-      }],
-      feedback: String,
-      grades: mongoose.Schema.Types.Mixed,
-      totalScore: Number
-    }
-  ],
+  targetAudience: {
+    year: [Number],
+    school: [String],
+    department: [String]
+  },
+  customGradingCriteria: {
+    type: Boolean,
+    default: false
+  },
+  gradingCriteria: [GradingCriteriaSchema],
+  slots: [SlotSchema],
   createdAt: {
     type: Date,
     default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
   }
+}, {
+  timestamps: true
 });
 
-// Add any missing schema definitions if they don't exist
-// Ensure proper slot schemas for IDs
+// Add method to get slot by ID
+PresentationSchema.methods.getSlotById = function(slotId) {
+  if (!slotId) return null;
+  
+  // Check for both _id and custom id fields
+  return this.slots.find(slot => 
+    (slot._id && slot._id.toString() === slotId) || 
+    (slot.id && slot.id === slotId)
+  );
+};
 
-// When creating slots, ensure each slot gets both MongoDB _id and a custom id:
-function generateTimeSlots(startTime, endTime, periodStart, periodEnd, duration, buffer) {
-  const slots = [];
-  const days = [];
-  
-  // Generate array of dates between start and end date
-  let currentDate = new Date(periodStart);
-  const endDate = new Date(periodEnd);
-  
-  // ...existing code...
-  
-  // For each day, generate slots
-  days.forEach(day => {
-    // ...existing code...
-    
-    // When creating slot objects:
-    const slot = {
-      id: mongoose.Types.ObjectId().toString(), // Ensure each slot has a string ID
-      time: new Date(slotTime),
-      booked: false,
-      status: 'available'
-      // ...other slot properties
-    };
-    // MongoDB will auto-generate _id when inserted into collection
-    
-    slots.push(slot);
-    // ...existing code...
-  });
-  
-  return slots;
-}
+// Add virtual for slot statistics
+PresentationSchema.virtual('slotStats').get(function() {
+  const totalCount = this.slots.length;
+  const bookedCount = this.slots.filter(slot => slot.booked).length;
+  const inProgressCount = this.slots.filter(slot => slot.status === 'in-progress').length;
+  const completedCount = this.slots.filter(slot => slot.status === 'completed').length;
+  const availableCount = totalCount - bookedCount;
 
-module.exports = mongoose.model('Presentation', PresentationSchema);
+  return {
+    totalCount,
+    bookedCount,
+    inProgressCount,
+    completedCount,
+    availableCount
+  };
+});
+
+const Presentation = mongoose.model('Presentation', PresentationSchema);
+
+module.exports = Presentation;

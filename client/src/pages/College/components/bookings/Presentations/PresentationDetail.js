@@ -6,6 +6,9 @@ import { useAuth } from '../../../../../contexts/AuthContext';
 import PresentationCreationForm from './PresentationCreationForm';
 import PresentationGrading from './PresentationGrading';
 import LoadingSpinner from '../../../../../components/LoadingSpinner';
+import { CSVLink } from 'react-csv';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 const PresentationDetail = () => {
   const { id } = useParams();
@@ -166,14 +169,14 @@ const PresentationDetail = () => {
   };
 
   // Format date for display
-  const formatDate = (dateString) => {
+  const formatDate = useCallback((dateString) => {
     if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
-  };
+  }, []);
 
   // Format time for display
   const formatTime = (dateString) => {
@@ -301,6 +304,169 @@ const PresentationDetail = () => {
     };
   }, [presentation]);
 
+  // Calculate grading statistics
+  const calculateGradingStatistics = useCallback(() => {
+    if (!presentation?.slots) return null;
+    
+    // Get all completed slots with grades
+    const completedSlots = presentation.slots.filter(slot => 
+      slot.status === 'completed' && slot.totalScore !== undefined
+    );
+    
+    if (completedSlots.length === 0) return null;
+    
+    // Calculate statistics
+    const scores = completedSlots.map(slot => slot.totalScore || 0);
+    const totalScores = scores.reduce((sum, score) => sum + score, 0);
+    const averageScore = totalScores / scores.length;
+    const highestScore = Math.max(...scores);
+    const lowestScore = Math.min(...scores);
+    
+    // Count score ranges
+    const excellent = scores.filter(score => score >= 90).length;
+    const veryGood = scores.filter(score => score >= 80 && score < 90).length;
+    const good = scores.filter(score => score >= 70 && score < 80).length;
+    const average = scores.filter(score => score >= 60 && score < 70).length;
+    const belowAverage = scores.filter(score => score < 60).length;
+    
+    return {
+      totalGraded: completedSlots.length,
+      averageScore: Math.round(averageScore * 10) / 10,
+      highestScore,
+      lowestScore,
+      excellent,
+      veryGood,
+      good,
+      average,
+      belowAverage
+    };
+  }, [presentation]);
+
+  // Prepare export data
+  const prepareExportData = useCallback(() => {
+    if (!presentation?.slots) return [];
+    
+    const completedSlots = presentation.slots.filter(slot => 
+      slot.status === 'completed'
+    );
+    
+    return completedSlots.map(slot => {
+      // Basic slot info
+      const baseInfo = {
+        Date: new Date(slot.time).toLocaleDateString(),
+        Time: new Date(slot.time).toLocaleTimeString(),
+        Topic: slot.topic || 'N/A',
+        TeamName: slot.teamName || 'Individual',
+        TotalScore: slot.totalScore || 0
+      };
+      
+      // Add individual grades if available
+      let rowData = { ...baseInfo };
+      
+      // Add criteria grades
+      if (slot.grades) {
+        Object.entries(slot.grades).forEach(([criterion, score]) => {
+          rowData[`Team_${criterion}`] = score;
+        });
+      }
+      
+      // If team has individual grades, add those
+      if (slot.teamMembers && slot.teamMembers.length > 0 && slot.individualGrades) {
+        slot.teamMembers.forEach(member => {
+          if (slot.individualGrades[member.email]) {
+            rowData[`${member.name}_Score`] = calculateMemberScore(member, slot.individualGrades);
+            
+            // Add individual criteria scores
+            Object.entries(slot.individualGrades[member.email]).forEach(([criterion, score]) => {
+              rowData[`${member.name}_${criterion}`] = score;
+            });
+          }
+        });
+      }
+      
+      return rowData;
+    });
+  }, [presentation, calculateMemberScore]);
+
+  // Export to PDF
+  const exportToPDF = useCallback(() => {
+    if (!presentation) return;
+    
+    const doc = new jsPDF();
+    const stats = calculateGradingStatistics();
+    
+    // Add title
+    doc.setFontSize(18);
+    doc.text(`Presentation Grading Report: ${presentation.title}`, 14, 20);
+    
+    // Add presentation details
+    doc.setFontSize(12);
+    doc.text(`Venue: ${presentation.venue}`, 14, 30);
+    doc.text(`Period: ${formatDate(presentation.presentationPeriod?.start)} - ${formatDate(presentation.presentationPeriod?.end)}`, 14, 37);
+    
+    // Add statistics if available
+    if (stats) {
+      doc.setFontSize(14);
+      doc.text('Grading Statistics', 14, 47);
+      
+      const statsData = [
+        ['Total Graded', 'Average Score', 'Highest Score', 'Lowest Score'],
+        [`${stats.totalGraded}`, `${stats.averageScore}`, `${stats.highestScore}`, `${stats.lowestScore}`]
+      ];
+      
+      doc.autoTable({
+        startY: 52,
+        head: [statsData[0]],
+        body: [statsData[1]],
+        theme: 'grid'
+      });
+      
+      // Score distribution
+      const distributionData = [
+        ['Grade Range', 'Count', 'Percentage'],
+        ['Excellent (90-100)', stats.excellent, `${Math.round(stats.excellent/stats.totalGraded*100)}%`],
+        ['Very Good (80-89)', stats.veryGood, `${Math.round(stats.veryGood/stats.totalGraded*100)}%`],
+        ['Good (70-79)', stats.good, `${Math.round(stats.good/stats.totalGraded*100)}%`],
+        ['Average (60-69)', stats.average, `${Math.round(stats.average/stats.totalGraded*100)}%`],
+        ['Below Average (<60)', stats.belowAverage, `${Math.round(stats.belowAverage/stats.totalGraded*100)}%`]
+      ];
+      
+      doc.setFontSize(14);
+      doc.text('Score Distribution', 14, doc.autoTable.previous.finalY + 15);
+      
+      doc.autoTable({
+        startY: doc.autoTable.previous.finalY + 20,
+        head: [distributionData[0]],
+        body: distributionData.slice(1),
+        theme: 'grid'
+      });
+    }
+    
+    // Add detailed grading table
+    const exportData = prepareExportData();
+    if (exportData.length > 0) {
+      doc.addPage();
+      doc.setFontSize(14);
+      doc.text('Detailed Grading Results', 14, 20);
+      
+      // Convert to appropriate format for autoTable
+      const headers = Object.keys(exportData[0]);
+      const data = exportData.map(row => headers.map(key => row[key]));
+      
+      doc.autoTable({
+        startY: 25,
+        head: [headers],
+        body: data,
+        theme: 'grid',
+        styles: { fontSize: 8 },
+        columnStyles: { 0: { cellWidth: 20 } }
+      });
+    }
+    
+    // Save the PDF
+    doc.save(`${presentation.title}_Grading_Report.pdf`);
+  }, [presentation, formatDate, calculateGradingStatistics, prepareExportData]);
+
   // Render presentation information section
   const renderPresentationInfo = () => {
     if (!presentation) return null;
@@ -420,6 +586,8 @@ const PresentationDetail = () => {
   const renderStatistics = () => {
     if (!presentation) return null;
     
+    const stats = calculateGradingStatistics();
+    
     return (
       <div className="bg-white rounded-lg shadow-md p-5 mb-6">
         <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
@@ -467,6 +635,98 @@ const PresentationDetail = () => {
                   style={{ width: `${(statistics.completed / statistics.total) * 100}%` }}
                 ></div>
               </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Add Grading Statistics Section */}
+        {stats && (
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h3 className="font-semibold text-gray-800 mb-4 flex items-center">
+              <i className="fas fa-chart-line mr-2 text-green-500"></i>
+              Grading Statistics
+            </h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+              <div className="bg-white border border-gray-200 p-3 rounded-lg text-center shadow-sm">
+                <div className="text-xl font-bold text-blue-600">{stats.totalGraded}</div>
+                <div className="text-sm text-gray-700">Total Graded</div>
+              </div>
+              <div className="bg-white border border-gray-200 p-3 rounded-lg text-center shadow-sm">
+                <div className="text-xl font-bold text-green-600">{stats.averageScore}</div>
+                <div className="text-sm text-gray-700">Average Score</div>
+              </div>
+              <div className="bg-white border border-gray-200 p-3 rounded-lg text-center shadow-sm">
+                <div className="text-xl font-bold text-purple-600">{stats.highestScore}</div>
+                <div className="text-sm text-gray-700">Highest Score</div>
+              </div>
+              <div className="bg-white border border-gray-200 p-3 rounded-lg text-center shadow-sm">
+                <div className="text-xl font-bold text-orange-600">{stats.lowestScore}</div>
+                <div className="text-sm text-gray-700">Lowest Score</div>
+              </div>
+            </div>
+            
+            <h4 className="font-medium text-gray-700 mb-3">Score Distribution</h4>
+            <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+              <div className="flex h-8">
+                <div 
+                  className="bg-green-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                  style={{ width: `${stats.excellent / stats.totalGraded * 100}%` }}
+                >
+                  {stats.excellent > 0 ? `${stats.excellent}` : ''}
+                </div>
+                <div 
+                  className="bg-teal-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                  style={{ width: `${stats.veryGood / stats.totalGraded * 100}%` }}
+                >
+                  {stats.veryGood > 0 ? `${stats.veryGood}` : ''}
+                </div>
+                <div 
+                  className="bg-blue-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                  style={{ width: `${stats.good / stats.totalGraded * 100}%` }}
+                >
+                  {stats.good > 0 ? `${stats.good}` : ''}
+                </div>
+                <div 
+                  className="bg-yellow-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                  style={{ width: `${stats.average / stats.totalGraded * 100}%` }}
+                >
+                  {stats.average > 0 ? `${stats.average}` : ''}
+                </div>
+                <div 
+                  className="bg-red-500 h-full flex items-center justify-center text-xs text-white font-medium"
+                  style={{ width: `${stats.belowAverage / stats.totalGraded * 100}%` }}
+                >
+                  {stats.belowAverage > 0 ? `${stats.belowAverage}` : ''}
+                </div>
+              </div>
+              <div className="grid grid-cols-5 text-xs text-center py-1 bg-gray-50 border-t border-gray-200">
+                <div>Excellent<br/>90-100</div>
+                <div>Very Good<br/>80-89</div>
+                <div>Good<br/>70-79</div>
+                <div>Average<br/>60-69</div>
+                <div>Below Avg<br/>&lt;60</div>
+              </div>
+            </div>
+            
+            {/* Export buttons */}
+            <div className="mt-6 flex flex-wrap gap-3 justify-end">
+              <CSVLink
+                data={prepareExportData()}
+                filename={`${presentation.title}_Grades.csv`}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition flex items-center"
+              >
+                <i className="fas fa-file-csv mr-2"></i>
+                Export to CSV
+              </CSVLink>
+              
+              <button
+                onClick={exportToPDF}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition flex items-center"
+              >
+                <i className="fas fa-file-pdf mr-2"></i>
+                Export to PDF
+              </button>
             </div>
           </div>
         )}

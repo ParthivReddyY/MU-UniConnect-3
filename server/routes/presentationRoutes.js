@@ -46,37 +46,24 @@ const upload = multer({
 // Protected routes
 router.use(authenticateUser);
 
-// Get all available presentation slots (for students to book)
+// Public routes for students to view available presentations
 router.get('/available', presentationController.getAvailablePresentationSlots);
 
-// Get presentation slots created by a faculty member
+// Faculty routes to manage their presentations
 router.get('/faculty', presentationController.getFacultyPresentationSlots);
-
-// Create a new presentation
-router.post('/', isFacultyOrAdmin, presentationController.createPresentationSlot);
-
-// Get a single presentation by ID
+router.post('/create', isFacultyOrAdmin, presentationController.createPresentationSlot);
 router.get('/:id', presentationController.getPresentationById);
-
-// Update presentation details
 router.put('/:id', isFacultyOrAdmin, presentationController.updatePresentation);
-
-// Delete a presentation
 router.delete('/:id', isFacultyOrAdmin, presentationController.deletePresentationSlot);
 
-// Book a presentation slot
+// Booking routes for students
 router.post('/:id/book', presentationController.bookPresentationSlot);
-
-// Book a presentation slot with file attachment
 router.post('/:id/book-with-file', upload.single('file'), presentationController.bookPresentationSlotWithFile);
 
-// Get slots for a specific presentation
+// Routes for handling specific slots
+router.get('/slots/:slotId', presentationController.getSlotById);
 router.get('/:id/slots', presentationController.getPresentationSlots);
-
-// Start a presentation slot
 router.put('/slots/:slotId/start', isFacultyOrAdmin, presentationController.startPresentationSlot);
-
-// Complete a presentation with grading
-router.put('/slots/:slotId/complete', isFacultyOrAdmin, presentationController.completePresentationSlot);
+router.post('/slots/:slotId/grades', isFacultyOrAdmin, presentationController.completePresentationSlot);
 
 module.exports = router;
