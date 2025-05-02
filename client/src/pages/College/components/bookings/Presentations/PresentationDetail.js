@@ -7,7 +7,7 @@ import PresentationCreationForm from './PresentationCreationForm';
 import PresentationGrading from './PresentationGrading';
 import LoadingSpinner from '../../../../../components/LoadingSpinner';
 import { CSVLink } from 'react-csv';
-import { jsPDF } from 'jspdf';
+import { exportPresentationToPdf } from '../../../../../utils/pdfUtils';
 import 'jspdf-autotable';
 
 const PresentationDetail = () => {
@@ -388,83 +388,24 @@ const PresentationDetail = () => {
     });
   }, [presentation, calculateMemberScore]);
 
-  // Export to PDF
+  // Update the exportToPDF function to use the direct export function
   const exportToPDF = useCallback(() => {
     if (!presentation) return;
     
-    const doc = new jsPDF();
     const stats = calculateGradingStatistics();
-    
-    // Add title
-    doc.setFontSize(18);
-    doc.text(`Presentation Grading Report: ${presentation.title}`, 14, 20);
-    
-    // Add presentation details
-    doc.setFontSize(12);
-    doc.text(`Venue: ${presentation.venue}`, 14, 30);
-    doc.text(`Period: ${formatDate(presentation.presentationPeriod?.start)} - ${formatDate(presentation.presentationPeriod?.end)}`, 14, 37);
-    
-    // Add statistics if available
-    if (stats) {
-      doc.setFontSize(14);
-      doc.text('Grading Statistics', 14, 47);
-      
-      const statsData = [
-        ['Total Graded', 'Average Score', 'Highest Score', 'Lowest Score'],
-        [`${stats.totalGraded}`, `${stats.averageScore}`, `${stats.highestScore}`, `${stats.lowestScore}`]
-      ];
-      
-      doc.autoTable({
-        startY: 52,
-        head: [statsData[0]],
-        body: [statsData[1]],
-        theme: 'grid'
-      });
-      
-      // Score distribution
-      const distributionData = [
-        ['Grade Range', 'Count', 'Percentage'],
-        ['Excellent (90-100)', stats.excellent, `${Math.round(stats.excellent/stats.totalGraded*100)}%`],
-        ['Very Good (80-89)', stats.veryGood, `${Math.round(stats.veryGood/stats.totalGraded*100)}%`],
-        ['Good (70-79)', stats.good, `${Math.round(stats.good/stats.totalGraded*100)}%`],
-        ['Average (60-69)', stats.average, `${Math.round(stats.average/stats.totalGraded*100)}%`],
-        ['Below Average (<60)', stats.belowAverage, `${Math.round(stats.belowAverage/stats.totalGraded*100)}%`]
-      ];
-      
-      doc.setFontSize(14);
-      doc.text('Score Distribution', 14, doc.autoTable.previous.finalY + 15);
-      
-      doc.autoTable({
-        startY: doc.autoTable.previous.finalY + 20,
-        head: [distributionData[0]],
-        body: distributionData.slice(1),
-        theme: 'grid'
-      });
-    }
-    
-    // Add detailed grading table
     const exportData = prepareExportData();
-    if (exportData.length > 0) {
-      doc.addPage();
-      doc.setFontSize(14);
-      doc.text('Detailed Grading Results', 14, 20);
-      
-      // Convert to appropriate format for autoTable
-      const headers = Object.keys(exportData[0]);
-      const data = exportData.map(row => headers.map(key => row[key]));
-      
-      doc.autoTable({
-        startY: 25,
-        head: [headers],
-        body: data,
-        theme: 'grid',
-        styles: { fontSize: 8 },
-        columnStyles: { 0: { cellWidth: 20 } }
-      });
-    }
     
-    // Save the PDF
-    doc.save(`${presentation.title}_Grading_Report.pdf`);
+    const success = exportPresentationToPdf(
+      presentation,
+      stats,
+      exportData,
+      formatDate,
+      `${presentation.title}_Grading_Report.pdf`
+    );
+    
+    if (!success) {
+      toast.error('Failed to generate PDF. Please try again.');
+    }
   }, [presentation, formatDate, calculateGradingStatistics, prepareExportData]);
 
   // Render presentation information section
