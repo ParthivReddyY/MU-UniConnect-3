@@ -4,6 +4,7 @@ import '../App.css';
 import '../styles/Home.css';
 import { useAuth } from '../contexts/AuthContext'; // Import AuthContext
 import { getFeaturedNews } from '../services/newsService'; // Import news service
+import api from '../utils/axiosConfig';
 
 function Home() {
   // Create refs for the slider elements
@@ -19,6 +20,16 @@ function Home() {
   const [newsData, setNewsData] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsError, setNewsError] = useState(null);
+  
+  // Statistics state
+  const [stats, setStats] = useState({
+    facultyCount: '0',
+    clubsCount: '0',
+    eventsCount: '0',
+    studentsCount: '0',
+    schoolsCount: '0',
+    isLoading: true
+  });
   
   useEffect(() => {
     console.log("Home component mounted");
@@ -223,6 +234,81 @@ function Home() {
 
     fetchNews();
   }, []); // Empty dependency array means this runs once on component mount
+
+  // Fetch statistics data from various APIs
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        // Start with loading state
+        setStats(prevStats => ({ ...prevStats, isLoading: true }));
+        
+        // Fetch faculty count
+        const facultyResponse = await api.get('/api/faculty');
+        const facultyCount = facultyResponse?.data?.length || 0;
+        
+        // Fetch clubs count
+        const clubsResponse = await api.get('/api/clubs');
+        const clubsCount = clubsResponse?.data?.clubs?.length || 0;
+        
+        // Fetch events (both university events and club events)
+        const universityEventsResponse = await api.get('/api/events/university');
+        const universityEventsCount = universityEventsResponse?.data?.events?.length || 0;
+        
+        // Calculate club events by iterating through clubs
+        let clubEventsCount = 0;
+        if (clubsResponse?.data?.clubs) {
+          clubsResponse.data.clubs.forEach(club => {
+            if (club.events && Array.isArray(club.events)) {
+              clubEventsCount += club.events.length;
+            }
+          });
+        }
+        
+        // Get total events count
+        const eventsCount = universityEventsCount + clubEventsCount;
+        
+        // Count schools from academicDataUtils.js
+        // We already know there are 11 academic schools from the data
+        const schoolsCount = 11;
+        
+        // Fetch student count directly from MongoDB through the API
+        let studentsCount = 0;
+        try {
+          // Call our new stats API endpoint that will return all user counts
+          const usersResponse = await api.get('/api/auth/stats');
+          
+          if (usersResponse?.data?.success && usersResponse?.data?.studentCount) {
+            studentsCount = usersResponse.data.studentCount;
+            console.log(`Fetched student count from API: ${studentsCount}`);
+          } else {
+            console.log('Stats endpoint returned invalid data format');
+            studentsCount = 2500; // Fallback value
+          }
+        } catch (error) {
+          console.error('Error fetching student count from MongoDB:', error);
+          // Fallback to an approximation if API fails
+          studentsCount = 2500;
+        }
+        
+        // Update all statistics at once
+        setStats({
+          facultyCount: facultyCount.toString(),
+          clubsCount: clubsCount.toString(),
+          eventsCount: eventsCount.toString(),
+          studentsCount: studentsCount.toString(),
+          schoolsCount: schoolsCount.toString(),
+          isLoading: false
+        });
+        
+      } catch (error) {
+        console.error('Error fetching statistics:', error);
+        // Keep using default values in case of error
+        setStats(prevStats => ({ ...prevStats, isLoading: false }));
+      }
+    };
+    
+    fetchStats();
+  }, []);
 
   return (
     <div className="home-page container-fluid">
@@ -452,30 +538,66 @@ function Home() {
       {/* Statistics Section */}
       <section className="stats-section full-width bg-gradient-to-r from-primary-teal to-blue-600 text-white py-12 md:py-16">
         <div className="content-container px-4 md:px-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-6 md:gap-8 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6 md:gap-8 text-center">
             <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold mb-2 leading-none">150+</span>
+              <span className="text-5xl font-bold mb-2 leading-none">
+                {stats.isLoading ? (
+                  <div className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                ) : parseInt(stats.facultyCount) > 0 ? (
+                  stats.facultyCount
+                ) : (
+                  "300+"
+                )}
+              </span>
               <span className="text-lg text-white text-opacity-90">Faculty Members</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold mb-2 leading-none">40+</span>
+              <span className="text-5xl font-bold mb-2 leading-none">
+                {stats.isLoading ? (
+                  <div className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                ) : parseInt(stats.clubsCount) > 0 ? (
+                  stats.clubsCount
+                ) : (
+                  "40+"
+                )}
+              </span>
               <span className="text-lg text-white text-opacity-90">Campus Clubs</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold mb-2 leading-none">80+</span>
+              <span className="text-5xl font-bold mb-2 leading-none">
+                {stats.isLoading ? (
+                  <div className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                ) : parseInt(stats.eventsCount) > 0 ? (
+                  stats.eventsCount
+                ) : (
+                  "80+"
+                )}
+              </span>
               <span className="text-lg text-white text-opacity-90">Annual Events</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold mb-2 leading-none">4000+</span>
-              <span className="text-lg text-white text-opacity-90">Students Connected</span>
+              <span className="text-5xl font-bold mb-2 leading-none">
+                {stats.isLoading ? (
+                  <div className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                ) : parseInt(stats.studentsCount) > 0 ? (
+                  stats.studentsCount
+                ) : (
+                  "2500+"
+                )}
+              </span>
+              <span className="text-lg text-white text-opacity-90">Students Enrolled</span>
             </div>
             <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold mb-2 leading-none">12+</span>
-              <span className="text-lg text-white text-opacity-90">Academic Departments</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="text-5xl font-bold mb-2 leading-none">90%</span>
-              <span className="text-lg text-white text-opacity-90">Placement Rate</span>
+              <span className="text-5xl font-bold mb-2 leading-none">
+                {stats.isLoading ? (
+                  <div className="inline-block w-6 h-6 border-2 border-t-transparent border-white rounded-full animate-spin"></div>
+                ) : parseInt(stats.schoolsCount) > 0 ? (
+                  stats.schoolsCount
+                ) : (
+                  "11"
+                )}
+              </span>
+              <span className="text-lg text-white text-opacity-90">Academic Schools</span>
             </div>
           </div>
         </div>

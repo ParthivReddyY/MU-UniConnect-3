@@ -14,7 +14,8 @@ const {
   requestPasswordChangeOTP,
   updateProfile, // Add this new controller function
   updateClubHead, // Add this new function for updating club head/club accounts
-  searchUsers // Add this new function for searching users
+  searchUsers, // Add this new function for searching users
+  getUserStats // Add this new function for getting user statistics
 } = require('../controllers/authController');
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
@@ -38,6 +39,9 @@ router.post('/change-password', authenticateUser, changePassword);
 
 // Protected routes
 router.get('/me', authenticateUser, getCurrentUser);
+
+// Get user statistics by role - this endpoint can be used to get student count
+router.get('/stats', getUserStats);
 
 // Public user creation route for clubs
 router.post('/create-user', createUser);

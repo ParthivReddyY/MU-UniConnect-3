@@ -818,6 +818,40 @@ const updateClubHead = async (req, res) => {
   }
 };
 
+// Get user statistics by role
+const getUserStats = async (req, res) => {
+  try {
+    console.log('Fetching user statistics');
+    
+    // Count users by role
+    const studentCount = await User.countDocuments({ role: 'student' });
+    const facultyCount = await User.countDocuments({ role: 'faculty' });
+    const adminCount = await User.countDocuments({ role: 'admin' });
+    const clubsCount = await User.countDocuments({ role: { $in: ['clubs', 'clubHead'] } });
+    
+    // Total users
+    const totalUsers = await User.countDocuments({});
+    
+    console.log(`User stats: Students=${studentCount}, Faculty=${facultyCount}, Clubs=${clubsCount}, Admins=${adminCount}, Total=${totalUsers}`);
+    
+    res.status(200).json({
+      success: true,
+      studentCount,
+      facultyCount,
+      clubsCount,
+      adminCount,
+      totalUsers
+    });
+  } catch (error) {
+    console.error('Error fetching user statistics:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch user statistics',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   register,
   createUser,
@@ -832,5 +866,6 @@ module.exports = {
   changePassword,
   searchUsers,
   updateProfile,
-  updateClubHead  // Add the new function to exports
+  updateClubHead,
+  getUserStats  // Add the new function to exports
 };
