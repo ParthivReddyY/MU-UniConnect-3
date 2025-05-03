@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import '../App.css';
 import '../styles/Home.css';
 import { useAuth } from '../contexts/AuthContext'; // Import AuthContext
+import { getFeaturedNews } from '../services/newsService'; // Import news service
 
 function Home() {
   // Create refs for the slider elements
@@ -13,6 +14,11 @@ function Home() {
   
   // Get current user status from auth context
   const { currentUser } = useAuth();
+
+  // State for news data
+  const [newsData, setNewsData] = useState([]);
+  const [newsLoading, setNewsLoading] = useState(true);
+  const [newsError, setNewsError] = useState(null);
   
   useEffect(() => {
     console.log("Home component mounted");
@@ -185,6 +191,38 @@ function Home() {
   const toggleAnnouncementPause = () => {
     setIsPaused(prev => !prev);
   };
+
+  // Fetch news data from API
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setNewsLoading(true);
+        setNewsError(null);
+        
+        // Get featured news first - these are typically the most important ones
+        const response = await getFeaturedNews();
+        
+        if (response && Array.isArray(response.news)) {
+          // Sort news by date (newest first) in case they aren't already sorted
+          const sortedNews = response.news.sort((a, b) => 
+            new Date(b.createdAt) - new Date(a.createdAt)
+          );
+          
+          // Take the first 3 news items or less if fewer are available
+          setNewsData(sortedNews.slice(0, 3));
+        } else {
+          setNewsError("No news data available");
+        }
+      } catch (error) {
+        console.error("Error fetching news:", error);
+        setNewsError("Failed to fetch latest news");
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []); // Empty dependency array means this runs once on component mount
 
   return (
     <div className="home-page container-fluid">
@@ -447,64 +485,83 @@ function Home() {
       <section className="py-16 md:py-20 bg-white">
         <div className="content-container px-4 md:px-6">
           <h2 className="section-title text-3xl md:text-4xl font-bold text-center text-dark-gray mb-12 md:mb-14">Latest Campus Updates</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
-            <div className="news-card rounded-xl overflow-hidden shadow-lg hover:-translate-y-2 transition-all duration-300">
-              <div className="relative h-48 overflow-hidden">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='500' height='300' fill='%23f0f0f0'/%3E%3Ctext x='250' y='150' font-size='36' text-anchor='middle' fill='%23666'%3ENews%3C/text%3E%3C/svg%3E" alt="News" className="w-full h-full object-cover transition-transform duration-500" />
-                <div className="absolute top-4 left-4 bg-primary-red text-white rounded-md p-2 text-center z-10">
-                  <span className="block text-2xl font-bold">15</span>
-                  <span className="block text-sm">Oct</span>
-                </div>
-              </div>
-              <div className="p-6">
-                <span className="inline-block bg-red-light text-primary-red text-xs font-semibold px-3 py-1 rounded-md mb-3">Research</span>
-                <h3 className="text-xl font-semibold text-dark-gray mb-3 leading-tight">MU Research Team Secures Major Grant</h3>
-                <p className="text-medium-gray mb-5">The School of Engineering has secured a ₹3 crore grant for Smart Mobility research and innovation.</p>
-                <button type="button" className="news-link inline-flex items-center text-primary-red font-semibold">
-                  Read More <i className="fas fa-long-arrow-alt-right ml-2"></i>
-                </button>
-              </div>
+          
+          {newsLoading ? (
+            <div className="flex justify-center items-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-red"></div>
             </div>
-            
-            <div className="news-card rounded-xl overflow-hidden shadow-lg hover:-translate-y-2 transition-all duration-300">
-              <div className="relative h-48 overflow-hidden">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='100%25' height='100%25' fill='%23f0f0f0'/%3E%3Crect x='50' y='50' width='400' height='200' fill='%23e0e0e0'/%3E%3Ctext x='250' y='150' font-size='32' text-anchor='middle' alignment-baseline='middle' font-family='Arial, sans-serif' fill='%23666666'%3EEvent News%3C/text%3E%3C/svg%3E" alt="Event news" className="w-full h-full object-cover transition-transform duration-500" />
-                <div className="absolute top-4 left-4 bg-primary-red text-white rounded-md p-2 text-center z-10">
-                  <span className="block text-2xl font-bold">12</span>
-                  <span className="block text-sm">Oct</span>
-                </div>
-              </div>
-              <div className="p-6">
-                <span className="inline-block bg-red-light text-primary-red text-xs font-semibold px-3 py-1 rounded-md mb-3">Event</span>
-                <h3 className="text-xl font-semibold text-dark-gray mb-3 leading-tight">Mahindra Ecolectica 2023 Dates Announced</h3>
-                <p className="text-medium-gray mb-5">Mark your calendars for Mahindra Ecolectica 2023, the biggest technical and cultural extravaganza of the year, happening next month.</p>
-                <button type="button" className="news-link inline-flex items-center text-primary-red font-semibold">
-                  Read More <i className="fas fa-long-arrow-alt-right ml-2"></i>
-                </button>
-              </div>
+          ) : newsError ? (
+            <div className="text-center py-10">
+              <p className="text-gray-600 mb-4">{newsError}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary-red text-white rounded-md hover:bg-secondary-red transition-colors"
+              >
+                Retry
+              </button>
             </div>
-            
-            <div className="news-card rounded-xl overflow-hidden shadow-lg hover:-translate-y-2 transition-all duration-300">
-              <div className="relative h-48 overflow-hidden">
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='100%25' height='100%25' fill='%23f0f0f0'/%3E%3Crect x='75' y='50' width='150' height='100' fill='%23cccccc'/%3E%3Cpolygon points='150,25 75,125 225,125' fill='%23bbbbbb'/%3E%3Ctext x='150' y='170' font-size='16' text-anchor='middle' font-family='Arial' fill='%23555555'%3EAcademic News%3C/text%3E%3C/svg%3E" alt="Academic news" className="w-full h-full object-cover transition-transform duration-500" />
-                <div className="absolute top-4 left-4 bg-primary-red text-white rounded-md p-2 text-center z-10">
-                  <span className="block text-2xl font-bold">08</span>
-                  <span className="block text-sm">Oct</span>
-                </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8 mb-12">
+                {newsData.length > 0 ? (
+                  newsData.map((news, index) => {
+                    // Parse the date string to extract day and month
+                    const dateObj = new Date(news.createdAt);
+                    const day = dateObj.getDate();
+                    const month = dateObj.toLocaleString('default', { month: 'short' });
+                    
+                    return (
+                      <div 
+                        key={`news-${news._id || index}`} 
+                        className="news-card rounded-xl overflow-hidden shadow-lg hover:-translate-y-2 transition-all duration-300"
+                      >
+                        <div className="relative h-48 overflow-hidden">
+                          <img 
+                            src={news.image || `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='500' height='300' fill='%23f0f0f0'/%3E%3Ctext x='250' y='150' font-size='36' text-anchor='middle' fill='%23666'%3ENews%3C/text%3E%3C/svg%3E`} 
+                            alt={news.title} 
+                            className="w-full h-full object-cover transition-transform duration-500" 
+                            onError={(e) => {
+                              e.target.onerror = null;
+                              e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='300' viewBox='0 0 500 300'%3E%3Crect width='500' height='300' fill='%23f0f0f0'/%3E%3Ctext x='250' y='150' font-size='36' text-anchor='middle' fill='%23666'%3ENews%3C/text%3E%3C/svg%3E`;
+                            }}
+                          />
+                          <div className="absolute top-4 left-4 bg-primary-red text-white rounded-md p-2 text-center z-10">
+                            <span className="block text-2xl font-bold">{day}</span>
+                            <span className="block text-sm">{month}</span>
+                          </div>
+                        </div>
+                        <div className="p-6">
+                          <span className="inline-block bg-red-light text-primary-red text-xs font-semibold px-3 py-1 rounded-md mb-3">
+                            {news.categoryLabel || news.category}
+                          </span>
+                          <h3 className="text-xl font-semibold text-dark-gray mb-3 leading-tight">{news.title}</h3>
+                          <p className="text-medium-gray mb-5">{news.excerpt}</p>
+                          <Link 
+                            to={`/college?tab=news&id=${news._id}`}
+                            className="news-link inline-flex items-center text-primary-red font-semibold"
+                          >
+                            Read More <i className="fas fa-long-arrow-alt-right ml-2"></i>
+                          </Link>
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="col-span-1 md:col-span-3 text-center py-10">
+                    <p className="text-gray-600">No news items available at the moment.</p>
+                  </div>
+                )}
               </div>
-              <div className="p-6">
-                <span className="inline-block bg-red-light text-primary-red text-xs font-semibold px-3 py-1 rounded-md mb-3">Academic</span>
-                <h3 className="text-xl font-semibold text-dark-gray mb-3 leading-tight">New International Exchange Program Launched</h3>
-                <p className="text-medium-gray mb-5">Students can now apply for semester exchange programs with partner universities in France, Germany, and Singapore.</p>
-                <button type="button" className="news-link inline-flex items-center text-primary-red font-semibold">
-                  Read More <i className="fas fa-long-arrow-alt-right ml-2"></i>
-                </button>
+              <div className="text-center">
+                <Link 
+                  to="/college?tab=news" 
+                  className="px-6 py-3 border-2 border-dark-gray text-dark-gray font-semibold rounded-lg hover:bg-dark-gray hover:text-white transition-colors"
+                >
+                  View All News
+                </Link>
               </div>
-            </div>
-          </div>
-          <div className="text-center">
-            <button type="button" className="px-6 py-3 border-2 border-dark-gray text-dark-gray font-semibold rounded-lg hover:bg-dark-gray hover:text-white transition-colors">View All News</button>
-          </div>
+            </>
+          )}
         </div>
       </section>
 
