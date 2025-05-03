@@ -23,6 +23,7 @@ const ClubsEvents = () => {
   const [passwordError, setPasswordError] = useState('');
   const [allEvents, setAllEvents] = useState([]); // New state for all events
   const [shouldScrollToClubs, setShouldScrollToClubs] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(''); // Added search query state
   // Event modal states
   const [showEventModal, setShowEventModal] = useState(false);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -169,6 +170,27 @@ const ClubsEvents = () => {
     }
   };
 
+  // Handle search clubs
+  const handleSearchClubs = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+    
+    if (!query.trim()) {
+      // If search is cleared, revert to category filter
+      filterClubsByCategory(activeCategory);
+      return;
+    }
+
+    const results = clubsData.filter(club => {
+      const nameMatch = club.name.toLowerCase().includes(query);
+      const descMatch = club.description && club.description.toLowerCase().includes(query);
+      const categoryMatch = club.category && club.category.toLowerCase().includes(query);
+      return nameMatch || descMatch || categoryMatch;
+    });
+    
+    setFilteredClubs(results);
+  };
+
   // Handle logo image upload
   const handleLogoChange = (e) => {
     const file = e.target.files[0];
@@ -212,6 +234,8 @@ const ClubsEvents = () => {
           email: mentor.email
         }));
 
+      let clubUserId; // Define variable to store user ID if account is created
+
       // Create club object with all the collected data
       const newClub = {
         name: formData.clubName,
@@ -226,27 +250,12 @@ const ClubsEvents = () => {
           email: formData.headEmail || '',
           phone: formData.headPhone || ''
         },
-        viceHead: {
-          name: formData.viceHeadName || '',
-          email: formData.viceHeadEmail || '',
-          phone: formData.viceHeadPhone || ''
-        },
-        mentors: mentors,
-        members: []
+        mentors: mentors
       };
 
-      // Create club head account if the option is selected
-      let clubUserId = null; // Define the variable to store user ID
-      
-      if (createClubHeadAccount && formData.clubEmail && clubHeadPassword) {
+      // Create user account for club if the option is selected
+      if (createClubHeadAccount) {
         try {
-          console.log("Creating club account with:", {
-            name: formData.clubName,
-            email: formData.clubEmail,
-            role: 'clubs'
-          });
-          
-          // Create user account for club
           const userResponse = await api.post('/api/auth/create-user', {
             name: formData.clubName,
             email: formData.clubEmail,
@@ -783,37 +792,67 @@ const ClubsEvents = () => {
 
       {/* Club Categories Navigation */}
       <div className="sticky top-16 md:top-20 z-30 w-full bg-gray-50 border-b border-gray-200 py-4">
-        <div className="max-w-5xl mx-auto px-4 flex overflow-x-auto gap-4 scrollbar-hide">
-          <button 
-            className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'all' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
-            onClick={() => filterClubsByCategory('all')}
-          >
-            All Clubs
-          </button>
-          <button 
-            className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'technical' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
-            onClick={() => filterClubsByCategory('technical')}
-          >
-            Technical
-          </button>
-          <button 
-            className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'non-technical' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
-            onClick={() => filterClubsByCategory('non-technical')}
-          >
-            Non-Technical
-          </button>
-          <button 
-            className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'arts' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
-            onClick={() => filterClubsByCategory('arts')}
-          >
-            Arts & Culture
-          </button>
-          <button 
-            className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'sports' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
-            onClick={() => filterClubsByCategory('sports')}
-          >
-            Sports
-          </button>
+        <div className="max-w-5xl mx-auto px-4 flex items-center flex-wrap gap-4">
+          {/* Search input */}
+          <div className="flex-grow max-w-xs mr-2">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search clubs..."
+                value={searchQuery}
+                onChange={handleSearchClubs}
+                className="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-primary-red focus:border-primary-red text-sm"
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <i className="fas fa-search text-gray-400"></i>
+              </div>
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    filterClubsByCategory(activeCategory);
+                  }}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times"></i>
+                </button>
+              )}
+            </div>
+          </div>
+          
+          {/* Filter buttons */}
+          <div className="flex overflow-x-auto gap-4 scrollbar-hide">
+            <button 
+              className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'all' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
+              onClick={() => filterClubsByCategory('all')}
+            >
+              All Clubs
+            </button>
+            <button 
+              className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'technical' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
+              onClick={() => filterClubsByCategory('technical')}
+            >
+              Technical
+            </button>
+            <button 
+              className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'non-technical' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
+              onClick={() => filterClubsByCategory('non-technical')}
+            >
+              Non-Technical
+            </button>
+            <button 
+              className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'arts' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
+              onClick={() => filterClubsByCategory('arts')}
+            >
+              Arts & Culture
+            </button>
+            <button 
+              className={`whitespace-nowrap rounded-full px-5 py-2 ${activeCategory === 'sports' ? 'bg-primary-red text-white' : 'text-gray-700 hover:bg-gray-100'} font-medium transition-colors`}
+              onClick={() => filterClubsByCategory('sports')}
+            >
+              Sports
+            </button>
+          </div>
         </div>
       </div>
 
@@ -2804,7 +2843,12 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                           <h4 className="text-lg font-semibold text-gray-800 mb-2">{event.title}</h4>
                           <p className="text-gray-600 text-sm mb-3 leading-relaxed">{event.caption}</p>
                           {event.galleryLink && (
-                            <a href={event.galleryLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1.5 group">
+                            <a 
+                              href={event.galleryLink} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-sm text-blue-600 hover:text-blue-800 font-medium inline-flex items-center gap-1.5 group"
+                            >
                               View Gallery <i className="fas fa-images text-xs group-hover:translate-x-1 transition-transform"></i>
                             </a>
                           )}
