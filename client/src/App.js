@@ -255,6 +255,15 @@ function App() {
                   </ProtectedRoute>
                 } />
                 
+                {/* Faculty Appointment Booking page - accessible to students and clubs */}
+                <Route path="/faculty-appointments/book" element={
+                  <ProtectedRoute>
+                    <PageContainer fullWidth>
+                      <FacultyAppointments bookingMode={true} />
+                    </PageContainer>
+                  </ProtectedRoute>
+                } />
+                
                 {/* Admin routes */}
                 <Route path="/admin/*" element={
                   <ProtectedRoute allowedRoles={['admin']}>

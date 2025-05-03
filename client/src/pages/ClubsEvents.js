@@ -447,18 +447,36 @@ const ClubsEvents = () => {
     return filteredClubs.map((club) => (
       <div 
         key={club._id}
-        className="bg-white rounded-xl shadow-lg overflow-hidden cursor-pointer hover:-translate-y-2 transition-all duration-300 h-full flex flex-col"
-        onClick={() => setSelectedClub(club)}
+        className="bg-white rounded-xl shadow-lg overflow-hidden hover:-translate-y-2 transition-all duration-300 h-full flex flex-col relative"
       >
-        <div className="overflow-hidden bg-gray-100 relative w-full" style={{paddingTop: '66.67%'}}>
+        <div 
+          className="overflow-hidden bg-gray-100 relative w-full cursor-pointer" 
+          style={{paddingTop: '66.67%'}}
+          onClick={() => setSelectedClub(club)}
+        >
           <img 
             src={club.image || `/api/placeholder/150/150?text=${encodeURIComponent(club.name)}`} // Added fallback
             alt={`${club.name} logo`}
             className="absolute top-0 left-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105"
           />
         </div>
-        <h3 className="px-5 pt-5 pb-2 text-lg font-semibold text-gray-800">{club.name}</h3>
-        <p className="px-5 pb-5 text-gray-600 text-sm line-clamp-3 flex-grow">{club.description}</p>
+        <div className="flex flex-col flex-grow">
+          <h3 className="px-5 pt-5 pb-2 text-lg font-semibold text-gray-800 cursor-pointer" onClick={() => setSelectedClub(club)}>
+            {club.name}
+          </h3>
+          <p className="px-5 pb-14 text-gray-600 text-sm line-clamp-2 flex-grow">
+            {club.description ? (club.description.length > 60 ? club.description.substring(0, 60) + '...' : club.description) : ''}
+          </p>
+          <div className="absolute bottom-0 right-0 p-5">
+            <button 
+              className="text-primary-red hover:text-secondary-red text-sm px-1 py-1 transition-colors flex items-center gap-1.5"
+              onClick={() => setSelectedClub(club)}
+            >
+              <span>View Details</span>
+              <i className="fas fa-arrow-right text-xs"></i>
+            </button>
+          </div>
+        </div>
       </div>
     ));
   };

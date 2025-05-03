@@ -278,7 +278,7 @@ function Navbar() {
                   </div>
                   <div className="dropdown-section">
                     <h3 className="dropdown-title">Events</h3>
-                    <Link to="/clubs-events?type=upcoming" className="dropdown-item">
+                    <Link to="/college?tab=bookings&section=events" className="dropdown-item">
                       <i className="fas fa-calendar-day text-primary-red"></i>
                       <div>
                         <span>Upcoming Events</span>
@@ -331,20 +331,22 @@ function Navbar() {
                   </div>
                   <div className="dropdown-section">
                     <h3 className="dropdown-title">Faculty Services</h3>
-                    <Link to="/faculty-appointments" className="dropdown-item">
+                    <Link to={currentUser && (currentUser.role === 'faculty' || currentUser.role === 'admin') ? "/faculty-appointments" : "/college/bookings/faculty-appointment"} className="dropdown-item">
                       <i className="fas fa-calendar-check text-primary-teal"></i>
                       <div>
                         <span>Faculty Appointments</span>
                         <span className="dropdown-description">Schedule meetings</span>
                       </div>
                     </Link>
-                    <Link to="/faculty/research" className="dropdown-item">
-                      <i className="fas fa-microscope text-blue-600"></i>
-                      <div>
-                        <span>Research Projects</span>
-                        <span className="dropdown-description">Ongoing research work</span>
-                      </div>
-                    </Link>
+                    {currentUser && currentUser.role === 'admin' && (
+                      <Link to="/faculty/research" className="dropdown-item">
+                        <i className="fas fa-microscope text-blue-600"></i>
+                        <div>
+                          <span>Research Projects</span>
+                          <span className="dropdown-description">Ongoing research work</span>
+                        </div>
+                      </Link>
+                    )}
                   </div>
                 </div>
               }
