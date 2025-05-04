@@ -48,6 +48,8 @@ router.use(authenticateUser);
 
 // Public routes for students to view available presentations
 router.get('/available', presentationController.getAvailablePresentationSlots);
+router.get('/my-bookings', presentationController.getMyBookings);
+router.post('/check-team-bookings', presentationController.checkTeamBookings);
 
 // Faculty routes to manage their presentations
 router.get('/faculty', presentationController.getFacultyPresentationSlots);
