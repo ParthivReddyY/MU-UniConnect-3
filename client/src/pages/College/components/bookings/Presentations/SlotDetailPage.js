@@ -9,7 +9,7 @@ import LoadingSpinner from '../../../../../components/LoadingSpinner';
 const SlotDetailPage = () => {
   const { presentationId, slotId } = useParams();
   const navigate = useNavigate();
-  useAuth();
+  const { currentUser } = useAuth();
   
   const [presentation, setPresentation] = useState(null);
   const [slot, setSlot] = useState(null);
@@ -256,6 +256,8 @@ const SlotDetailPage = () => {
     );
   }
 
+  const isFaculty = currentUser?.role === 'faculty' || currentUser?.role === 'admin';
+
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
       {/* Header */}
@@ -288,7 +290,7 @@ const SlotDetailPage = () => {
               </button>
               
               {/* Action buttons for different states - Simplified access to grading */}
-              {slot?.status === 'booked' && (
+              {isFaculty && slot?.status === 'booked' && (
                 <button
                   onClick={() => setShowStartConfirmation(true)}
                   className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"

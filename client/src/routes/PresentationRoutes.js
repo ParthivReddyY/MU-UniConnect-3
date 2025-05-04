@@ -1,22 +1,22 @@
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
+import PresentationCreationForm from '../pages/College/components/bookings/Presentations/PresentationCreationForm';
 import PresentationManagement from '../pages/College/components/bookings/Presentations/PresentationManagement';
-import PresentationDetail from '../pages/College/components/bookings/Presentations/PresentationDetail';
 import PresentationSlot from '../pages/College/components/bookings/Presentations/PresentationSlot';
-import HostPresentation from '../pages/College/components/bookings/Presentations/HostPresentation';
-import SlotDetailPage from '../pages/College/components/bookings/Presentations/SlotDetailPage';
+import PresentationGrading from '../pages/College/components/bookings/Presentations/PresentationGrading';
 import MyBookings from '../pages/College/components/bookings/Presentations/MyBookings';
+import { PrivateRoute } from './PrivateRoute';
 
 const PresentationRoutes = () => {
   return (
     <Routes>
-      <Route path="/manage-presentations" element={<PresentationManagement />} />
-      <Route path="/presentation/:id/details" element={<PresentationDetail />} />
-      <Route path="/presentation/:id/edit" element={<PresentationDetail isEditMode={true} />} />
-      <Route path="/presentation/:presentationId/slot/:slotId" element={<SlotDetailPage />} />
-      <Route path="/host-presentation" element={<HostPresentation />} />
-      <Route path="/book-presentation" element={<PresentationSlot />} />
-      <Route path="/my-bookings" element={<MyBookings />} />
+      <Route path="/" element={<PrivateRoute />}>
+        <Route path="/create" element={<PresentationCreationForm />} />
+        <Route path="/manage" element={<PresentationManagement />} />
+        <Route path="/book" element={<PresentationSlot />} />
+        <Route path="/grade/:presentationId/:slotId" element={<PresentationGrading />} />
+        <Route path="/my-bookings" element={<MyBookings />} />
+      </Route>
     </Routes>
   );
 };
