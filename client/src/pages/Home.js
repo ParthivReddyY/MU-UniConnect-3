@@ -712,7 +712,7 @@ function Home() {
               <Link to="/college" className="inline-block px-6 py-3 bg-transparent text-primary-red border-2 border-primary-red font-semibold rounded-lg hover:bg-red-light transition-colors">Learn More About MU</Link>
             </div>
             <div className="flex-1 min-w-0 lg:min-w-[300px] h-[300px] md:h-[360px] w-full rounded-xl overflow-hidden shadow-xl">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'%3E%3Crect width='600' height='400' fill='%23f0f0f0'/%3E%3Cpath d='M300,100 L150,300 L450,300 Z' fill='%23d0d0d0'/%3E%3Crect x='250' y='300' width='100' height='75' fill='%23d0d0d0'/%3E%3Ctext x='300' y='200' font-size='36' text-anchor='middle' fill='%23666'%3ECampus%3C/text%3E%3C/svg%3E" alt="Mahindra University Campus" className="w-full h-full object-cover" />
+              <img src="https://res.cloudinary.com/dmny4ymqp/image/upload/v1746258098/MU_Building_2_12_zhpzto.webp" alt="Mahindra University Campus" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
