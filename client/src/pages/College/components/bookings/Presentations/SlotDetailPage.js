@@ -9,14 +9,14 @@ import LoadingSpinner from '../../../../../components/LoadingSpinner';
 const SlotDetailPage = () => {
   const { presentationId, slotId } = useParams();
   const navigate = useNavigate();
-  useAuth(); // Keep the hook if needed, but don't destructure unused variables
+  const { currentUser } = useAuth();
   
   const [presentation, setPresentation] = useState(null);
   const [slot, setSlot] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showGrading, setShowGrading] = useState(false);
   const [showStartConfirmation, setShowStartConfirmation] = useState(false);
-  const [activeTab, setActiveTab] = useState('details'); // 'details', 'members', 'grades'
+  const [activeTab, setActiveTab] = useState('details');
 
   // Fetch presentation and slot data
   useEffect(() => {
@@ -24,35 +24,34 @@ const SlotDetailPage = () => {
       try {
         setLoading(true);
         
-        // First get the presentation
-        const presResponse = await api.get(`/api/presentations/${presentationId}`);
-        setPresentation(presResponse.data);
+        // Fetch the presentation data
+        const presentationResponse = await api.get(`/api/presentations/${presentationId}`);
+        setPresentation(presentationResponse.data);
         
-        // Find the specific slot
-        if (presResponse.data && presResponse.data.slots) {
-          const matchingSlot = presResponse.data.slots.find(s => 
-            (s._id === slotId || s.id === slotId)
-          );
-          
-          if (matchingSlot) {
-            setSlot(matchingSlot);
-          } else {
-            toast.error("Slot not found");
-            navigate(`/college/bookings/presentation/${presentationId}`);
-          }
+        // Find the slot in the presentation data
+        const foundSlot = presentationResponse.data.slots.find(s => 
+          (s._id === slotId || s.id === slotId)
+        );
+        
+        if (foundSlot) {
+          setSlot(foundSlot);
+        } else {
+          // If slot wasn't found in presentation data, try to fetch it directly
+          const slotResponse = await api.get(`/api/presentations/slots/${slotId}`);
+          setSlot(slotResponse.data);
         }
       } catch (error) {
-        console.error("Error fetching slot details:", error);
-        toast.error("Failed to load presentation details");
+        console.error("Error fetching presentation or slot data:", error);
+        toast.error(error.response?.data?.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
     };
     
     fetchData();
-  }, [presentationId, slotId, navigate]);
-  
-  // Handle start presentation
+  }, [presentationId, slotId]);
+
+  // Handle starting a presentation
   const handleStartPresentation = async () => {
     if (!slot) return;
     
@@ -71,7 +70,7 @@ const SlotDetailPage = () => {
           startedAt: new Date()
         });
         
-        // Show grading view
+        // Show grading view immediately
         setShowGrading(true);
       }
     } catch (error) {
@@ -92,7 +91,6 @@ const SlotDetailPage = () => {
   const handleGradingComplete = async () => {
     try {
       // Refresh the data
-      console.log("Refreshing presentation data after grading");
       const response = await api.get(`/api/presentations/${presentationId}`);
       setPresentation(response.data);
       
@@ -102,8 +100,9 @@ const SlotDetailPage = () => {
       );
       
       if (updatedSlot) {
-        console.log("Updated slot data:", updatedSlot);
         setSlot(updatedSlot);
+        // Auto-switch to grades tab after grading is completed
+        setActiveTab('grades');
       } else {
         console.warn("Could not find updated slot data");
       }
@@ -119,40 +118,130 @@ const SlotDetailPage = () => {
   // Format time for display
   const formatTime = (timeStr) => {
     if (!timeStr) return '';
-    const date = new Date(timeStr);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(timeStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
   
-  // Calculate scores for a team member
-  const calculateMemberScore = (member, gradesObj) => {
-    if (!gradesObj || !member?.email || !gradesObj[member.email]) return 0;
+  // Calculate individual score for a team member
+  const calculateMemberScore = (member, individualGrades) => {
+    if (!individualGrades || !member || !member.email || !individualGrades[member.email]) return 0;
     
-    const memberGrades = gradesObj[member.email];
-    const criteria = presentation?.customGradingCriteria 
-      ? presentation.gradingCriteria 
-      : [
-          { name: 'Content', weight: 25 },
-          { name: 'Delivery', weight: 25 },
-          { name: 'Visual Aids', weight: 25 },
-          { name: 'Q&A', weight: 25 }
-        ];
+    // Get criteria from presentation or use default
+    const criteria = presentation?.gradingCriteria || [
+      { name: 'Content', weight: 30 },
+      { name: 'Delivery', weight: 30 },
+      { name: 'Visual Aids', weight: 20 },
+      { name: 'Q&A', weight: 20 }
+    ];
     
     let totalScore = 0;
     let totalWeight = 0;
     
     criteria.forEach(criterion => {
-      const rawScore = memberGrades[criterion.name] || 0;
+      const rawScore = individualGrades[member.email][criterion.name] || 0;
       totalScore += (rawScore * criterion.weight / 100);
       totalWeight += criterion.weight;
     });
     
-    // Return 0 if no weights to avoid division by zero
     if (totalWeight === 0) return 0;
-    
-    // Fix decimal issues with proper rounding
     return Math.round(totalScore * 10) / 10;
   };
+
+  // Render team members table with roll numbers
+  const renderTeamMembersTable = () => {
+    if (!slot?.teamMembers || slot.teamMembers.length === 0) {
+      return <div className="text-gray-500 italic">No team members information available</div>;
+    }
+
+    return (
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll Number</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {slot.teamMembers.map((member, idx) => (
+              <tr key={idx} className={idx === 0 ? "bg-blue-50" : ""}>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
+                      {member.name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="ml-4 font-medium text-gray-900">{member.name}</div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{member.email}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  {member.rollNumber ? member.rollNumber : 'Not specified'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  {idx === 0 ? (
+                    <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800 font-medium">
+                      Team Lead
+                    </span>
+                  ) : (
+                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-800">
+                      Member
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
   
+  // Render individual grades table with roll numbers
+  const renderIndividualGrades = () => {
+    if (!slot?.teamMembers || !slot.individualGrades) return null;
+
+    return (
+      <div className="mt-6">
+        <h4 className="font-medium text-gray-700 mb-3">Individual Scores</h4>
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll Number</th>
+                <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Score</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {slot.teamMembers.map((member, idx) => (
+                <tr key={idx}>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center">
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-semibold">
+                        {member.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="ml-3 text-sm font-medium text-gray-900">{member.name}</div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                    {member.rollNumber ? member.rollNumber : 'Not specified'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                    <span className="text-lg font-semibold text-gray-900">
+                      {calculateMemberScore(member, slot.individualGrades)}
+                    </span>
+                    <span className="text-gray-500 text-sm">/100</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+
   if (loading) {
     return <LoadingSpinner />;
   }
@@ -166,7 +255,9 @@ const SlotDetailPage = () => {
       />
     );
   }
-  
+
+  const isFaculty = currentUser?.role === 'faculty' || currentUser?.role === 'admin';
+
   return (
     <div className="bg-gray-50 min-h-screen pb-10">
       {/* Header */}
@@ -175,76 +266,57 @@ const SlotDetailPage = () => {
           <div className="flex justify-between items-center">
             <div>
               <h1 className="text-2xl font-bold">{presentation?.title || 'Presentation'}</h1>
-              <p className="text-blue-200">{presentation?.venue || 'Venue not specified'}</p>
+              <p className="text-blue-200 mt-1">
+                {slot?.time ? new Date(slot.time).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  year: 'numeric', 
+                  month: 'short',
+                  day: 'numeric'
+                }) : ''}
+                <span className="mx-2">•</span>
+                <span className="font-medium">
+                  {slot?.time ? formatTime(slot.time) : ''}
+                </span>
+              </p>
             </div>
-            <button 
-              onClick={() => navigate(`/college/bookings/presentation/${presentationId}`)}
-              className="bg-white/20 hover:bg-white/30 transition-colors text-white px-4 py-2 rounded-md flex items-center"
-            >
-              <i className="fas fa-arrow-left mr-2"></i> Back to Presentation
-            </button>
+            
+            <div className="flex space-x-3">
+              <button
+                onClick={() => navigate(`/college/bookings/presentation/${presentationId}/details`)}
+                className="px-4 py-2 bg-white/20 rounded-md hover:bg-white/30 transition"
+              >
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Presentation
+              </button>
+              
+              {/* Action buttons for different states - Simplified access to grading */}
+              {isFaculty && slot?.status === 'booked' && (
+                <button
+                  onClick={() => setShowStartConfirmation(true)}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                >
+                  <i className="fas fa-play mr-2"></i>
+                  Start Presentation
+                </button>
+              )}
+              
+              {(slot?.status === 'in-progress' || slot?.status === 'completed') && (
+                <button
+                  onClick={() => setShowGrading(true)}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
+                >
+                  <i className="fas fa-clipboard-check mr-2"></i>
+                  {slot?.status === 'completed' ? 'Edit Grading' : 'Grade Now'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
-      
+    
       {/* Main Content */}
       <div className="container mx-auto px-4">
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          {/* Slot Header */}
-          <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-6">
-            <div className="flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-bold flex items-center">
-                  <i className="fas fa-clock mr-3 text-blue-300"></i>
-                  {formatTime(slot?.time)}
-                </h2>
-                <p className="text-gray-300 mt-1">
-                  {slot?.time ? new Date(slot.time).toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
-                  }) : ''}
-                </p>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-3">
-                <div className={`
-                  px-4 py-2 rounded-full font-medium text-sm
-                  ${slot?.status === 'completed' ? 'bg-green-500' :
-                    slot?.status === 'in-progress' ? 'bg-orange-500' :
-                    slot?.status === 'booked' ? 'bg-blue-500' : 'bg-gray-500'
-                  }
-                `}>
-                  {slot?.status === 'booked' ? 'Booked' :
-                   slot?.status === 'in-progress' ? 'In Progress' :
-                   slot?.status === 'completed' ? 'Completed' : 'Available'}
-                </div>
-                
-                {/* Action buttons for different states */}
-                {slot?.status === 'booked' && (
-                  <button
-                    onClick={() => setShowStartConfirmation(true)}
-                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
-                  >
-                    <i className="fas fa-play mr-2"></i>
-                    Start Presentation
-                  </button>
-                )}
-                
-                {slot?.status === 'in-progress' && (
-                  <button
-                    onClick={() => setShowGrading(true)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm transition-colors"
-                  >
-                    <i className="fas fa-clipboard-check mr-2"></i>
-                    Go to Grading
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-          
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
           {/* Tab Navigation */}
           <div className="border-b border-gray-200">
             <div className="flex overflow-x-auto">
@@ -370,6 +442,7 @@ const SlotDetailPage = () => {
                     )}
                   </div>
                 </div>
+                {renderTeamMembersTable()}
               </div>
             )}
             
@@ -441,14 +514,16 @@ const SlotDetailPage = () => {
                   <div className="flex flex-col md:flex-row gap-6 mb-6">
                     {/* Circle Progress */}
                     <div className="md:w-1/3 flex justify-center">
-                      <div className="relative w-40 h-40">
+                      <div className="relative w-48 h-48">
                         <svg className="w-full h-full" viewBox="0 0 36 36">
+                          {/* Background circle */}
                           <path
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                             fill="none"
                             stroke="#E5E7EB"
                             strokeWidth="3"
                           />
+                          {/* Progress circle */}
                           <path
                             d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                             fill="none"
@@ -457,10 +532,27 @@ const SlotDetailPage = () => {
                             strokeDasharray={`${slot.totalScore || 0}, 100`}
                             strokeLinecap="round"
                           />
-                          <text x="18" y="18" textAnchor="middle" className="text-3xl font-bold" fill="#10B981">
+                          {/* Main score number */}
+                          <text 
+                            x="18" 
+                            y="17" 
+                            textAnchor="middle" 
+                            dominantBaseline="middle" 
+                            fill="#10B981"
+                            fontSize="10px"
+                            fontWeight="bold"
+                          >
                             {slot.totalScore || 0}
                           </text>
-                          <text x="18" y="23" textAnchor="middle" className="text-xs" fill="#6B7280">
+                          {/* /100 label */}
+                          <text 
+                            x="18" 
+                            y="24" 
+                            textAnchor="middle" 
+                            dominantBaseline="middle" 
+                            fill="#6B7280"
+                            fontSize="3.5px"
+                          >
                             /100
                           </text>
                         </svg>
@@ -487,53 +579,7 @@ const SlotDetailPage = () => {
                     </div>
                   </div>
                 </div>
-                
-                {/* Individual Scores Card */}
-                {slot.teamMembers && slot.teamMembers.length > 1 && (
-                  <div className="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
-                    <h3 className="font-semibold text-gray-800 mb-4">Individual Member Scores</h3>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {slot.teamMembers.map((member, idx) => (
-                        <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                          <div className="flex items-center mb-3">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold mr-3">
-                              {member.name.charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <h4 className="font-medium text-gray-800">{member.name}</h4>
-                              <p className="text-sm text-gray-600">{member.email}</p>
-                            </div>
-                            <div className="ml-auto">
-                              <div className="text-xl font-bold text-green-600">
-                                {calculateMemberScore(member, slot.individualGrades)}/100
-                              </div>
-                            </div>
-                          </div>
-                          
-                          {slot.individualGrades && slot.individualGrades[member.email] && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              {Object.entries(slot.individualGrades[member.email]).map(([criterion, score]) => (
-                                <div key={criterion} className="mb-2">
-                                  <div className="flex justify-between mb-1">
-                                    <span className="text-xs font-medium text-gray-700">{criterion}</span>
-                                    <span className="text-xs text-gray-600">{score}/100</span>
-                                  </div>
-                                  <div className="w-full bg-gray-200 rounded-full h-1.5">
-                                    <div 
-                                      className="bg-blue-600 h-1.5 rounded-full" 
-                                      style={{ width: `${score}%` }}
-                                    ></div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                {renderIndividualGrades()}
                 
                 {/* Feedback Card */}
                 {slot.feedback && (

@@ -184,6 +184,44 @@ const PresentationManagement = () => {
     }
   };
 
+  // Add this reusable function to calculate time left
+  const getTimeLeft = (targetDate) => {
+    if (!targetDate) return { text: 'N/A', className: 'text-gray-500' };
+    
+    const now = new Date();
+    const target = new Date(targetDate);
+    const diff = target - now;
+    
+    // If date is in the past
+    if (diff < 0) return { text: 'Closed', className: 'text-red-600' };
+    
+    // Calculate remaining time
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    let text = '';
+    
+    if (days > 0) {
+      text = `${days}d ${hours}h remaining`;
+    } else if (hours > 0) {
+      text = `${hours}h ${minutes}m remaining`;
+    } else {
+      text = `${minutes}m remaining`;
+    }
+    
+    // Change color based on urgency
+    let className = 'text-green-600';
+    if (days === 0 && hours < 12) {
+      className = 'text-orange-600';
+    }
+    if (days === 0 && hours < 3) {
+      className = 'text-red-600 font-semibold';
+    }
+    
+    return { text, className };
+  };
+
   // Filter presentations based on selected filter
   const filteredPresentations = React.useMemo(() => {
     if (!Array.isArray(presentations)) return [];
@@ -461,6 +499,11 @@ const PresentationManagement = () => {
                                   <p className="text-gray-800">
                                     {formatDate(presentation.presentationPeriod?.start)} - {formatDate(presentation.presentationPeriod?.end)}
                                   </p>
+                                  {presentation.registrationPeriod?.end && new Date() < new Date(presentation.registrationPeriod.end) && (
+                                    <p className={getTimeLeft(presentation.registrationPeriod.end).className}>
+                                      <i className="fas fa-clock mr-1"></i> {getTimeLeft(presentation.registrationPeriod.end).text}
+                                    </p>
+                                  )}
                                 </div>
                               </div>
                               <div className="flex items-start">

@@ -370,24 +370,46 @@ const PresentationGrading = ({ presentation, activeSlotId, onClose }) => {
               <div className="md:w-1/2 bg-white p-5 rounded-lg shadow-sm">
                 <h3 className="font-semibold text-gray-800 mb-3">Current Score Summary</h3>
                 <div className="flex justify-center items-center mb-4">
-                  <div className="relative w-32 h-32">
+                  <div className="relative w-48 h-48">
                     <svg className="w-full h-full" viewBox="0 0 36 36">
+                      {/* Background circle */}
                       <path
                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                         fill="none"
                         stroke="#E5E7EB"
                         strokeWidth="3"
                       />
+                      {/* Progress circle */}
                       <path
                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                         fill="none"
-                        stroke="#3B82F6"
+                        stroke="#10B981"
                         strokeWidth="3"
                         strokeDasharray={`${calculateTotalScore()}, 100`}
                         strokeLinecap="round"
                       />
-                      <text x="18" y="22" textAnchor="middle" className="text-3xl font-bold" fill="#3B82F6">
+                      {/* Main score number */}
+                      <text 
+                        x="18" 
+                        y="17" 
+                        textAnchor="middle" 
+                        dominantBaseline="middle" 
+                        fill="#10B981"
+                        fontSize="10px"
+                        fontWeight="bold"
+                      >
                         {calculateTotalScore()}
+                      </text>
+                      {/* /100 label */}
+                      <text 
+                        x="18" 
+                        y="24" 
+                        textAnchor="middle" 
+                        dominantBaseline="middle" 
+                        fill="#6B7280"
+                        fontSize="3.5px"
+                      >
+                        /100
                       </text>
                     </svg>
                   </div>
@@ -553,7 +575,7 @@ const PresentationGrading = ({ presentation, activeSlotId, onClose }) => {
                             <h4 className="font-medium text-gray-800 mb-1">{selectedTeamMember.name}</h4>
                             <p className="text-sm text-gray-600">{selectedTeamMember.email}</p>
                             {selectedTeamMember.rollNumber && (
-                              <p className="text-sm text-gray-500">Roll: {selectedTeamMember.rollNumber}</p>
+                              <p className="text-sm text-gray-500 mb-3">Roll Number: {selectedTeamMember.rollNumber}</p>
                             )}
                           </div>
                         </div>
@@ -680,10 +702,49 @@ const PresentationGrading = ({ presentation, activeSlotId, onClose }) => {
                   </p>
                 </div>
                 <div className="flex items-center mt-4 md:mt-0">
-                  <div className="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-2xl shadow-md">
-                    {calculateTotalScore()}
+                  <div className="relative w-48 h-48">
+                    <svg className="w-full h-full" viewBox="0 0 36 36">
+                      {/* Background circle */}
+                      <path
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="#E5E7EB"
+                        strokeWidth="3"
+                      />
+                      {/* Progress circle */}
+                      <path
+                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                        fill="none"
+                        stroke="#10B981"
+                        strokeWidth="3"
+                        strokeDasharray={`${calculateTotalScore()}, 100`}
+                        strokeLinecap="round"
+                      />
+                      {/* Main score number */}
+                      <text 
+                        x="18" 
+                        y="17" 
+                        textAnchor="middle" 
+                        dominantBaseline="middle" 
+                        fill="#10B981"
+                        fontSize="10px"
+                        fontWeight="bold"
+                      >
+                        {calculateTotalScore()}
+                      </text>
+                      {/* /100 label */}
+                      <text 
+                        x="18" 
+                        y="24" 
+                        textAnchor="middle" 
+                        dominantBaseline="middle" 
+                        fill="#6B7280"
+                        fontSize="3.5px"
+                      >
+                        /100
+                      </text>
+                    </svg>
                   </div>
-                  <span className="text-4xl font-bold text-gray-400 ml-1">/100</span>
                 </div>
               </div>
               

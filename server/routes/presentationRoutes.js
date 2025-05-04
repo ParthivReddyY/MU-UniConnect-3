@@ -48,6 +48,8 @@ router.use(authenticateUser);
 
 // Public routes for students to view available presentations
 router.get('/available', presentationController.getAvailablePresentationSlots);
+router.get('/my-bookings', presentationController.getMyBookings);
+router.post('/check-team-bookings', presentationController.checkTeamBookings);
 
 // Faculty routes to manage their presentations
 router.get('/faculty', presentationController.getFacultyPresentationSlots);
@@ -63,6 +65,8 @@ router.post('/:id/book-with-file', upload.single('file'), presentationController
 // Routes for handling specific slots
 router.get('/slots/:slotId', presentationController.getSlotById);
 router.get('/:id/slots', presentationController.getPresentationSlots);
+
+// Protected faculty-only routes for managing presentations
 router.put('/slots/:slotId/start', isFacultyOrAdmin, presentationController.startPresentationSlot);
 router.post('/slots/:slotId/grades', isFacultyOrAdmin, presentationController.completePresentationSlot);
 
