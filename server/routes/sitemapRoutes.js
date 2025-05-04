@@ -8,9 +8,9 @@ const router = express.Router();
 let sitemap;
 
 router.get('/sitemap.xml', async (req, res) => {
+  // Set Content-Type explicitly without gzip to ensure proper XML content type recognition
   res.header('Content-Type', 'application/xml');
-  res.header('Content-Encoding', 'gzip');
-
+  
   // If sitemap exists in memory, serve it
   if (sitemap) {
     res.send(sitemap);
@@ -25,9 +25,8 @@ router.get('/sitemap.xml', async (req, res) => {
 
     // Create a new sitemap stream
     const smStream = new SitemapStream({ hostname });
-    const pipeline = smStream.pipe(createGzip());
-
-    // Add static pages with their importance - only include category pages, not individual items
+    
+    // Add static pages with their importance - only include category pages
     smStream.write({ url: '/', changefreq: 'daily', priority: 1.0 });
     smStream.write({ url: '/login', changefreq: 'monthly', priority: 0.8 });
     smStream.write({ url: '/signup', changefreq: 'monthly', priority: 0.8 });
@@ -41,13 +40,13 @@ router.get('/sitemap.xml', async (req, res) => {
     smStream.write({ url: '/about', changefreq: 'monthly', priority: 0.5 });
     smStream.write({ url: '/contact', changefreq: 'monthly', priority: 0.5 });
     
-    // No more individual item URLs - we're only including the category pages
-    
     smStream.end();
     
-    // Generate sitemap and store it
-    sitemap = await streamToPromise(pipeline);
-    res.send(sitemap);
+    // Generate sitemap without gzip compression for better compatibility
+    sitemap = await streamToPromise(smStream);
+    
+    // Send the XML content
+    res.send(sitemap.toString());
     
     // Regenerate the sitemap periodically (every 24 hours)
     setTimeout(() => {
