@@ -16,6 +16,7 @@ const routes = require('./routes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
+const sitemapRoutes = require('./routes/sitemapRoutes');
 
 // Import controllers for initialization
 const newsController = require('./controllers/newsController');
@@ -78,6 +79,10 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Serve sitemap.xml from the root for better SEO
+// Fix: Mount sitemap routes at root level instead of at specific path
+app.use(sitemapRoutes);
 
 // API connectivity test endpoint
 app.get('/api/test-connection', (req, res) => {
