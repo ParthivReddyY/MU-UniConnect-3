@@ -2,27 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 
 const Overview = () => {
-  const [activeGalleryImage, setActiveGalleryImage] = useState(0);
   const [activeProgram, setActiveProgram] = useState('engineering');
   const [activeFacility, setActiveFacility] = useState(0);
-
-  const galleryImages = [
-    {
-      src: "https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-      alt: "University Campus",
-      caption: "Main Academic Building"
-    },
-    {
-      src: "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-      alt: "Library",
-      caption: "Central Library"
-    },
-    {
-      src: "https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-      alt: "Innovation Lab",
-      caption: "Innovation & Research Center"
-    }
-  ];
 
   const universityStats = [
     { label: "Founded", value: "2014", icon: "fas fa-calendar-day" },
@@ -33,7 +14,7 @@ const Overview = () => {
   
   const academicPrograms = {
     engineering: {
-      name: "Jacob School of Engineering",
+      name: "Mahindra Ecole School of Engineering",
       icon: "fas fa-cogs",
       color: "#e74c3c",
       programs: ["B.Tech. (Multiple Specializations)", "M.Tech.", "Ph.D."],
@@ -163,7 +144,6 @@ const Overview = () => {
     }
   };
 
-
   return (
     <motion.div
       variants={containerVariants}
@@ -196,48 +176,6 @@ const Overview = () => {
               </div>
             </motion.div>
           ))}
-        </div>
-      </motion.div>
-      
-      {/* University Gallery with Caption Overlay */}
-      <motion.div variants={itemVariants} className="w-full overflow-hidden rounded-2xl shadow-xl mb-12 bg-gray-800">
-        <div className="relative aspect-[16/9] max-h-[600px]">
-          {galleryImages.map((image, index) => (
-            <motion.div
-              key={index}
-              initial={false}
-              animate={{ opacity: activeGalleryImage === index ? 1 : 0 }}
-              transition={{ duration: 0.8 }}
-              className="absolute inset-0"
-            >
-              <img
-                src={image.src}
-                alt={image.alt}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-              <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
-                <h2 className="text-white text-2xl md:text-3xl font-bold mb-3">{image.caption}</h2>
-                <p className="text-white/80 text-lg max-w-2xl">
-                  Experience the vibrant atmosphere of our campus, designed to inspire learning and innovation.
-                </p>
-              </div>
-            </motion.div>
-          ))}
-          
-          {/* Gallery Navigation */}
-          <div className="absolute bottom-6 right-6 flex space-x-2 z-10">
-            {galleryImages.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setActiveGalleryImage(index)}
-                className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                  index === activeGalleryImage ? 'bg-white scale-125' : 'bg-white/40'
-                }`}
-                aria-label={`View image ${index + 1}`}
-              />
-            ))}
-          </div>
         </div>
       </motion.div>
       
@@ -465,8 +403,6 @@ const Overview = () => {
           </div>
         </div>
       </motion.section>
-      
-      {/* Removed Research and Innovation Section with Progress Bars */}
       
       {/* Global Collaborations - Make this a standalone section now that Research section is removed */}
       <motion.section variants={itemVariants} className="bg-gray-50 rounded-2xl shadow-md p-8">
