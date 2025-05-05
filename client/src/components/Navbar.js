@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useCallback, memo } from 'react';
+import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import { useAuth } from '../contexts/AuthContext';
 
-// Enhanced NavLink component with dropdown support
+// Optimized NavLink component with proper dropdown handling
 const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   
-  // Only display dropdown if it has content and we're on desktop
   const handleMouseEnter = () => {
     if (hasDropdown && window.innerWidth >= 768) {
       setShowDropdown(true);
@@ -20,8 +20,25 @@ const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) 
     }
   };
   
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!showDropdown) return;
+    
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
+  
   return (
     <div 
+      ref={dropdownRef}
       className={`nav-item ${hasDropdown ? 'has-dropdown' : ''}`}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
@@ -32,13 +49,17 @@ const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) 
         aria-current={isActive ? 'page' : undefined}
       >
         {children}
-        {hasDropdown && <i className="fas fa-chevron-down text-xs ml-1.5 transition-transform duration-300" style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0)' }}></i>}
+        {hasDropdown && (
+          <i 
+            className="fas fa-chevron-down text-xs ml-1.5 transition-transform duration-300" 
+            style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0)' }}
+          />
+        )}
       </Link>
       
       {hasDropdown && showDropdown && (
         <>
-          {/* Invisible connector to prevent hover gap issues */}
-          <div className="dropdown-connector"></div>
+          <div className="dropdown-connector" />
           <div className="nav-dropdown">
             {dropdownContent}
           </div>
@@ -49,17 +70,20 @@ const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) 
 });
 
 function Navbar() {
+  // State variables
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-
   const { currentUser, logout } = useAuth();
 
-  // Optimized scroll handler with debounce concept
+  // Optimized scroll handler with proper throttling
   const handleScroll = useCallback(() => {
-    const shouldBeScrolled = window.scrollY > 50;
+    const scrollThreshold = 50;
+    const shouldBeScrolled = window.scrollY > scrollThreshold;
+    
     if (shouldBeScrolled !== scrolled) {
       setScrolled(shouldBeScrolled);
     }
@@ -70,47 +94,78 @@ function Navbar() {
     setMenuOpen(false);
   }, [location.pathname]);
 
-  // Close profile menu when clicking outside
+  // Handle clicking outside profile menu
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (showProfileMenu && 
-          !event.target.closest('.auth-section') && 
-          !event.target.closest('.auth-section-mobile')) {
+    if (!showProfileMenu) return;
+    
+    const handleClickOutside = (event) => {
+      if (
+        profileMenuRef.current && 
+        !profileMenuRef.current.contains(event.target) &&
+        !event.target.closest('.auth-icon-btn')
+      ) {
         setShowProfileMenu(false);
       }
-    }
-
+    };
+    
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [showProfileMenu]);
 
-  // Attach scroll listener with performance optimization
+  // Set up scroll listener
   useEffect(() => {
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    
     // Initial check
     handleScroll();
     
-    return () => {
-      window.removeEventListener('scroll', handleScroll);
+    // Throttled scroll event
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          handleScroll();
+          ticking = false;
+        });
+        ticking = true;
+      }
     };
+    
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [handleScroll]);
 
+  // Overflow handling for body when mobile menu is open
+  useEffect(() => {
+    if (menuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [menuOpen]);
+
+  // Toggle mobile menu
   const toggleMenu = () => {
     setMenuOpen(prevState => !prevState);
   };
 
-  const isActive = (path) => location.pathname === path;
+  // Check if current path matches link
+  const isActive = useCallback((path) => {
+    if (path === '/' && location.pathname !== '/') {
+      return false;
+    }
+    return location.pathname.startsWith(path);
+  }, [location.pathname]);
 
-  // Auth button handler
+  // Handle auth button click
   const handleAuthClick = () => {
     if (currentUser) {
-      // Show dropdown menu for logged in users
-      setShowProfileMenu(!showProfileMenu);
+      setShowProfileMenu(prev => !prev);
     } else {
-      // Redirect to login page for logged out users
       navigate('/login');
     }
   };
@@ -122,16 +177,16 @@ function Navbar() {
     navigate('/');
   };
 
-  // Get role-specific class for badge
+  // Get role-specific badge class
   const getRoleBadgeClass = (role) => {
     if (role === 'admin') return 'admin';
     if (role === 'faculty') return 'faculty';
     return '';
   };
   
-  // Function for profile dropdown content - reused in both mobile and desktop
+  // Profile dropdown content
   const renderProfileDropdown = () => (
-    <div className="profile-dropdown">
+    <div className="profile-dropdown" ref={profileMenuRef}>
       <div className="profile-dropdown-header">
         <p className="name truncate">{currentUser.name}</p>
         <p className="email truncate">{currentUser.email}</p>
@@ -175,7 +230,7 @@ function Navbar() {
     </div>
   );
 
-  // Common NavLinks configuration used in both mobile and desktop
+  // Navigation links data
   const navLinks = [
     { 
       to: "/", 
@@ -359,17 +414,17 @@ function Navbar() {
 
   return (
     <header className={`header ${scrolled ? 'scrolled' : ''}`} role="banner">
-      {/* DESKTOP NAVIGATION - Hidden on mobile */}
+      {/* DESKTOP NAVBAR */}
       <div className="desktop-navbar hidden md:flex justify-between items-center w-full max-w-7xl mx-auto">
         {/* Desktop Logo */}
         <div className="desktop-logo">
-          <Link to="/">
+          <Link to="/" aria-label="MU-UniConnect Home">
             <img 
               src="/img/uniconnectTB.png" 
               alt="UniConnect Logo" 
               className="desktop-logo-image" 
-              width="234"  /* Increased by 30% from 180 */
-              height="59"  /* Increased by 30% from 45 */
+              width="280"
+              height="70"
             />
           </Link>
         </div>
@@ -392,7 +447,7 @@ function Navbar() {
         {/* Desktop Auth Button */}
         <div className="desktop-auth-section">
           <button 
-            className="auth-icon-btn relative group" 
+            className="auth-icon-btn relative" 
             onClick={handleAuthClick}
             title={currentUser ? "Account menu" : "Login"}
             aria-label={currentUser ? "Account menu" : "Login"}
@@ -419,20 +474,20 @@ function Navbar() {
         </div>
       </div>
 
-      {/* MOBILE NAVIGATION - Hidden on desktop */}
+      {/* MOBILE NAVBAR */}
       <div className="mobile-navbar md:hidden w-full">
         <div className={`mobile-header-container ${menuOpen ? 'menu-open' : ''}`}>
           {/* Top bar with logo and controls */}
           <div className="mobile-header-top">
-            {/* Mobile Logo - Smaller than desktop */}
+            {/* Mobile Logo */}
             <div className="mobile-logo">
-              <Link to="/">
+              <Link to="/" aria-label="MU-UniConnect Home">
                 <img 
                   src="/img/uniconnectTB.png" 
                   alt="UniConnect Logo" 
                   className="mobile-logo-image" 
-                  width="140"
-                  height="35" 
+                  width="168"
+                  height="42"
                 />
               </Link>
             </div>
@@ -471,7 +526,7 @@ function Navbar() {
               {/* Mobile menu button */}
               <button 
                 className="mobile-menu-button"
-                onClick={toggleMenu} 
+                onClick={toggleMenu}
                 aria-expanded={menuOpen}
                 aria-controls="mobile-navigation"
                 aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -481,7 +536,7 @@ function Navbar() {
             </div>
           </div>
 
-          {/* Mobile menu content - Only shown when menu is open */}
+          {/* Mobile menu content */}
           <div 
             className={`mobile-menu ${menuOpen ? 'show' : ''}`} 
             id="mobile-navigation"
@@ -489,19 +544,109 @@ function Navbar() {
             {/* Mobile Navigation Links */}
             <nav className="mobile-nav-links" aria-label="Mobile navigation">
               {navLinks.map((link, index) => (
-                <Link 
-                  key={`mobile-${index}`}
-                  to={link.to}
-                  className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
-                  onClick={() => setMenuOpen(false)}
-                >
-                  {link.label}
-                </Link>
+                <div key={`mobile-${index}`} className="mobile-nav-item">
+                  {link.hasDropdown ? (
+                    <div className="mobile-dropdown">
+                      <div 
+                        className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
+                        onClick={() => {
+                          // Toggle expanded state for this specific item
+                          const item = document.getElementById(`mobile-dropdown-${index}`);
+                          if (item) {
+                            item.classList.toggle('expanded');
+                          }
+                        }}
+                      >
+                        <span>{link.label}</span>
+                        <i className="fas fa-chevron-down ml-2"></i>
+                      </div>
+                      
+                      <div id={`mobile-dropdown-${index}`} className="mobile-dropdown-content">
+                        {/* Safe rendering of mobile dropdown content */}
+                        <div className="px-4 py-2 space-y-2">
+                          {React.Children.toArray(link.dropdownContent.props.children).map((section, sIdx) => {
+                            // Safety check for section
+                            if (!section || !section.props || !section.props.children) {
+                              return null;
+                            }
+                            
+                            // Get the section title safely
+                            const sectionTitle = React.Children.toArray(section.props.children)[0];
+                            const sectionTitleText = sectionTitle && sectionTitle.props && sectionTitle.props.children 
+                              ? sectionTitle.props.children 
+                              : `Section ${sIdx+1}`;
+                            
+                            // Get the links safely
+                            const links = React.Children.toArray(section.props.children).slice(1);
+                            
+                            return (
+                              <div key={sIdx} className="mb-4">
+                                <h4 className="font-semibold text-sm text-gray-600 mb-2">
+                                  {sectionTitleText}
+                                </h4>
+                                <div className="space-y-2">
+                                  {links.map((item, iIdx) => {
+                                    // Safety check for item
+                                    if (!item || !item.props) {
+                                      return null;
+                                    }
+                                    
+                                    return (
+                                      <Link
+                                        key={iIdx}
+                                        to={item.props.to || '/'}
+                                        className="block py-2 px-3 text-gray-700 hover:bg-gray-100 rounded-md text-sm"
+                                        onClick={() => setMenuOpen(false)}
+                                      >
+                                        <div className="flex items-center">
+                                          {item.props.children && item.props.children[0] && (
+                                            <i className={item.props.children[0].props?.className || "fas fa-link"}></i>
+                                          )}
+                                          <span className="ml-3">
+                                            {item.props.children && item.props.children[1] && 
+                                             item.props.children[1].props && 
+                                             item.props.children[1].props.children && 
+                                             item.props.children[1].props.children[0] && 
+                                             item.props.children[1].props.children[0].props
+                                              ? item.props.children[1].props.children[0].props.children
+                                              : `Link ${iIdx+1}`
+                                            }
+                                          </span>
+                                        </div>
+                                      </Link>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <Link 
+                      to={link.to}
+                      className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <span>{link.label}</span>
+                    </Link>
+                  )}
+                </div>
               ))}
             </nav>
           </div>
         </div>
       </div>
+      
+      {/* Mobile menu backdrop */}
+      {menuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" 
+          onClick={toggleMenu}
+          aria-hidden="true"
+        />
+      )}
     </header>
   );
 }

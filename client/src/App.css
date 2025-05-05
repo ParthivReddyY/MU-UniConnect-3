@@ -990,41 +990,40 @@ body.hide-navbar .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.4rem 1.5rem; /* Decreased even more for a more compact navbar */
-  min-height: 54px; /* Reduced from 56px for smaller overall navbar */
+  padding: 0.5rem 1.5rem; /* Increased vertical padding from 0.4rem to 0.5rem */
+  min-height: 64px; /* Increased from 54px for a taller navbar */
 }
 
 .desktop-logo {
   display: flex;
   align-items: center;
-  margin-bottom: -8px; /* This helps vertically center the larger logo */
+  margin-bottom: -8px;
+  margin-left: -15px;
+  position: relative;
+  overflow: visible;
+  height: 64px; /* Increased from 54px to match new navbar height */
 }
 
 .desktop-logo-image {
-  height: 72px; /* Keep the 30% increase from 52px */
+  height: 88px; /* Slightly increased from 86px */
   width: auto;
-  transition: height 0.3s ease;
-}
-
-.header.scrolled .desktop-logo-image {
-  height: 57px; /* Keep the 30% increase from 44px */
+  transition: height 0.3s ease, margin-left 0.3s ease;
+  position: relative;
+  margin-top: -14px; /* Adjusted from -16px for better vertical centering */
+  margin-bottom: -14px; /* Adjusted from -16px for better vertical centering */
 }
 
 .desktop-nav-links {
   display: flex;
-  gap: 1.8rem; /* Reduced from 2.34rem */
+  gap: 4rem; /* Increased from 6rem to create more space between navigation items */
   align-items: center;
+  padding-top: 4px; /* Added small padding to vertically center links in taller navbar */
 }
 
 .desktop-nav-links a {
-  font-size: 1.22rem; /* Even smaller font for more compact navbar */
-  padding: 9px 18px; /* Reduced padding */
-}
-
-/* Decrease auth button size to match smaller navbar */
-.desktop-auth-section .auth-icon-btn {
-  width: 3rem; /* Reduced from 3.24rem */
-  height: 3rem; /* Reduced from 3.24rem */
+  font-size: 1.35rem; /* Increased from 1.22rem for larger text */
+  font-weight: 600; /* Increased from default 540 for bolder text */
+  padding: 9px 18px;
 }
 
 /* MOBILE NAVBAR STYLES */
@@ -1047,15 +1046,25 @@ body.hide-navbar .navbar {
 .mobile-logo {
   display: flex;
   align-items: center;
+  margin-left: -8px; /* Move logo slightly to the left in static state */
+  position: relative; /* Add this for better positioning control */
+  overflow: visible; /* Allow logo to extend outside container */
 }
 
 .mobile-logo-image {
-  height: 35px;
+  height: 42px; /* Increased from 35px */
   width: auto;
+  transition: height 0.3s ease, margin-left 0.3s ease;
+  position: relative; /* Add this for better control */
+  margin-top: -4px; /* Negative top margin to prevent navbar expansion */
+  margin-bottom: -4px; /* Negative bottom margin to prevent navbar expansion */
 }
 
 .header.scrolled .mobile-logo-image {
-  height: 30px;
+  height: 30px; /* Keep the same as before */
+  margin-left: 0; /* Reset left margin when scrolled */
+  margin-top: 0; /* Reset margin when scrolled */
+  margin-bottom: 0; /* Reset margin when scrolled */
 }
 
 .mobile-controls {
@@ -1141,4 +1150,190 @@ body.hide-navbar .navbar {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* UPDATED MOBILE NAVBAR STYLES */
+.mobile-navbar {
+  width: 100%;
+}
+
+.mobile-header-container {
+  width: 100%;
+}
+
+.mobile-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  width: 100%;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  margin-left: -8px; /* Move logo slightly to the left in static state */
+  position: relative; /* Add this for better positioning control */
+  overflow: visible; /* Allow logo to extend outside container */
+  height: 42px;
+}
+
+.mobile-logo-image {
+  height: 42px; /* Size for non-scrolled state */
+  width: auto;
+  transition: height 0.3s ease, margin-left 0.3s ease;
+  position: relative; /* Add this for better control */
+  margin-top: -4px; /* Negative top margin to prevent navbar expansion */
+  margin-bottom: -4px; /* Negative bottom margin to prevent navbar expansion */
+}
+
+.header.scrolled .mobile-logo-image {
+  height: 30px; /* Size for scrolled state */
+  margin-left: 0; /* Reset left margin when scrolled */
+  margin-top: 0; /* Reset margin when scrolled */
+  margin-bottom: 0; /* Reset margin when scrolled */
+}
+
+.mobile-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mobile-auth-section {
+  position: relative;
+}
+
+.mobile-auth-btn {
+  width: 2.5rem;
+  height: 2.5rem;
+}
+
+/* New mobile menu styles */
+.mobile-menu {
+  display: none;
+  width: 100%;
+  background: white;
+  border-top: 1px solid rgba(224, 224, 224, 0.5);
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-in-out;
+}
+
+.mobile-menu.show {
+  display: block;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: slideDown 0.3s ease forwards;
+}
+
+.mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.mobile-nav-item {
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
+}
+
+.mobile-nav-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  font-size: 1rem;
+  color: var(--dark-gray);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.mobile-nav-link.active {
+  color: var(--primary-red);
+  background-color: var(--red-light);
+}
+
+.mobile-dropdown-content {
+  display: none;
+  background-color: #f9f9f9;
+  border-top: 1px solid rgba(224, 224, 224, 0.5);
+}
+
+.mobile-dropdown-content.expanded {
+  display: block;
+  animation: slideDown 0.3s ease forwards;
+}
+
+/* UPDATED DESKTOP NAVBAR STYLES */
+.desktop-navbar {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1.5rem; /* Compact navbar */
+  min-height: 64px;
+}
+
+.desktop-logo {
+  display: flex;
+  align-items: center;
+  margin-bottom: -8px; /* Center larger logo */
+  margin-left: -15px; /* Move logo left in static state */
+  position: relative;
+  overflow: visible;
+  height: 64px; /* Set fixed height to prevent layout shifts */
+}
+
+.desktop-logo-image {
+  height: 88px; /* Logo size */
+  width: auto;
+  transition: height 0.3s ease, margin-left 0.3s ease;
+  position: relative;
+  margin-top: -14px; /* Prevent navbar expansion */
+  margin-bottom: -14px; /* Prevent navbar expansion */
+}
+
+.header.scrolled .desktop-logo-image {
+  height: 70px; /* Increased from 57px for a larger scrolled logo */
+  margin-left: 0; /* Reset left margin when scrolled */
+  margin-top: -10px; /* Adjusted to compensate for larger logo */
+  margin-bottom: -10px; /* Adjusted to compensate for larger logo */
+}
+
+.desktop-nav-links {
+  display: flex;
+  gap: 4rem; /* Increased from 4rem to create even more space between navigation items */
+  align-items: center;
+  padding-top: 4px; /* Added small padding to vertically center links in taller navbar */
+}
+
+/* Improved dropdown appearance and behavior */
+.dropdown-connector {
+  position: absolute;
+  height: 12px;
+  width: 100%;
+  left: 0;
+  top: 100%;
+  z-index: 101;
+  background-color: transparent;
+}
+
+.nav-dropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 520px;
+  max-width: 90vw;
+  background: rgba(255, 255, 255, 0.98);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  border-radius: 12px;
+  padding: 1.25rem;
+  z-index: 100;
+  margin-top: 0;
+  opacity: 0;
+  animation: fadeInDropdown 0.3s forwards;
+  border: 1px solid rgba(230, 230, 230, 0.8);
 }
