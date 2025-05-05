@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import { useAuth } from '../contexts/AuthContext';
 
-// Optimized NavLink component with proper dropdown handling - used only for desktop
+// NavLink component for desktop navigation only
 const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -69,30 +69,36 @@ const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) 
   );
 });
 
-// Create a new MobileNavbar component
+// Completely separate MobileNavbar component
 const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showProfileMenu, renderProfileDropdown }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedDropdowns, setExpandedDropdowns] = useState({});
   
   const location = useLocation();
+  const menuRef = useRef(null);
 
   // Close mobile menu when route changes
   useEffect(() => {
     setMobileMenuOpen(false);
+    setExpandedDropdowns({});
   }, [location.pathname]);
 
-  // Toggle mobile menu
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(prev => !prev);
-  };
-
-  // Toggle specific dropdown section
-  const toggleDropdown = (index) => {
-    setExpandedDropdowns(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
+  // Handle clicks outside the menu to close it
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target) && 
+          !event.target.closest('.mobile-menu-button')) {
+        setMobileMenuOpen(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [mobileMenuOpen]);
 
   // Body overflow control when menu is open
   useEffect(() => {
@@ -107,11 +113,24 @@ const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showPr
     };
   }, [mobileMenuOpen]);
 
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(prev => !prev);
+  };
+
+  // Toggle specific dropdown section
+  const toggleDropdown = (index) => {
+    setExpandedDropdowns(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
   return (
-    <div className="mobile-navbar md:hidden">
-      <div className="mobile-header-container shadow-sm">
+    <div className="mobile-navbar block md:hidden">
+      <div className="mobile-header-container">
         {/* Mobile Top Bar */}
-        <div className="mobile-header-top flex justify-between items-center py-2 px-4">
+        <div className="mobile-header-top">
           {/* Logo */}
           <div className="mobile-logo">
             <Link to="/" aria-label="MU-UniConnect Home">
@@ -126,7 +145,7 @@ const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showPr
           </div>
 
           {/* Controls */}
-          <div className="mobile-controls flex items-center gap-3">
+          <div className="mobile-controls">
             {/* Auth Button */}
             <div className="mobile-auth-section">
               <button 
@@ -156,29 +175,33 @@ const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showPr
               {showProfileMenu && currentUser && renderProfileDropdown()}
             </div>
             
-            {/* Mobile Menu Button */}
+            {/* Hamburger Menu Button - Improved visibility and touch target */}
             <button 
-              className="mobile-menu-button"
+              className="mobile-menu-button flex items-center justify-center"
               onClick={toggleMobileMenu}
               aria-expanded={mobileMenuOpen}
               aria-controls="mobile-menu"
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
-              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`} aria-hidden="true"></i>
+              <span className="sr-only">{mobileMenuOpen ? "Close menu" : "Open menu"}</span>
+              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`} aria-hidden="true"></i>
             </button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
+        {/* Mobile Menu Overlay */}
         {mobileMenuOpen && (
-          <div className="mobile-menu-overlay" onClick={toggleMobileMenu} aria-hidden="true" />
+          <div className="mobile-menu-overlay fixed inset-0 bg-black/50 z-40" onClick={toggleMobileMenu} aria-hidden="true" />
         )}
         
+        {/* Mobile Menu Panel */}
         <div 
           id="mobile-menu"
-          className={`mobile-menu ${mobileMenuOpen ? 'show' : ''}`}
+          ref={menuRef}
+          className={`mobile-menu ${mobileMenuOpen ? 'show' : ''} fixed z-50`}
+          aria-hidden={!mobileMenuOpen}
         >
-          <nav className="mobile-nav-links">
+          <nav className="mobile-nav-links" aria-label="Mobile navigation">
             {navLinks.map((link, index) => (
               <div key={`mobile-${index}`} className="mobile-nav-item">
                 {link.hasDropdown ? (
@@ -276,10 +299,10 @@ const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showPr
   );
 };
 
-// Create a new DesktopNavbar component
+// Desktop-only navbar component
 const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showProfileMenu, renderProfileDropdown }) => {
   return (
-    <div className="desktop-navbar hidden md:flex justify-between items-center w-full max-w-7xl mx-auto">
+    <div className="desktop-navbar hidden md:flex">
       {/* Desktop Logo */}
       <div className="desktop-logo">
         <Link to="/" aria-label="MU-UniConnect Home">
@@ -340,7 +363,7 @@ const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showP
   );
 };
 
-// Main Navbar component that includes both mobile and desktop versions
+// Main Navbar component
 function Navbar() {
   // Shared state variables
   const [scrolled, setScrolled] = useState(false);
@@ -350,7 +373,7 @@ function Navbar() {
   const navigate = useNavigate();
   const { currentUser, logout } = useAuth();
 
-  // Optimized scroll handler with proper throttling
+  // Optimized scroll handler with throttling
   const handleScroll = useCallback(() => {
     const scrollThreshold = 50;
     const shouldBeScrolled = window.scrollY > scrollThreshold;
@@ -382,10 +405,8 @@ function Navbar() {
 
   // Set up scroll listener
   useEffect(() => {
-    // Initial check
     handleScroll();
     
-    // Throttled scroll event
     let ticking = false;
     const onScroll = () => {
       if (!ticking) {

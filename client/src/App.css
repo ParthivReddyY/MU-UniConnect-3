@@ -43,21 +43,15 @@
 .header {
   position: fixed;
   top: 0;
-  left: 50%;
+  left: 0;
   width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding: 6px; /* Reduced from 8.1px */
-  min-height: 22px; /* Reduced from 27.5px */
-  background: var(--white); /* Changed from rgba(255, 255, 255, 0.92) to solid white */
+  background: var(--white);
   box-shadow: 0 2px 8px rgba(38, 50, 56, 0.06);
-  transform: translateX(-50%);
-  transition: all 0.8s cubic-bezier(0.4, 0.0, 0.2, 1);
-  will-change: transform, width, padding;
-  transform-origin: center;
-  border-bottom: 1px solid rgba(224, 224, 224, 0.8); /* Changed to match light-gray color */
+  transition: all 0.3s ease;
 }
 
 /* Hide navbar when modal is open */
@@ -86,11 +80,11 @@ body.modal-open main {
 
 /* Optimized scrolled state styling */
 .header.scrolled {
-  width: 82.4%;
-  top: 20px;
+  width: 95%;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
   border-radius: 16px;
-  padding: 4px; /* Reduced from 4.9px */
-  min-height: 26px; /* Reduced from 32.4px */
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.7) 0%, rgba(245, 245, 245, 0.7) 100%);
   -webkit-backdrop-filter: blur(15px);
   backdrop-filter: blur(15px);
@@ -451,9 +445,9 @@ body.modal-open main {
 
 .profile-dropdown a:hover,
 .profile-dropdown button:hover {
-  background-color: var(--teal-light);
-  border-left: 4px solid var(--primary-teal);
-  color: var(--primary-teal);
+  background-color: var(--red-light);
+  border-left: 3px solid var(--primary-red);
+  color: var(--primary-red);
 }
 
 .profile-dropdown i {
@@ -461,6 +455,7 @@ body.modal-open main {
   width: 20px;
   text-align: center;
   font-size: 1rem;
+  color: var(--primary-red);
   transition: transform 0.2s ease;
 }
 
@@ -558,7 +553,7 @@ body.modal-open main {
 .profile-dropdown .sign-out-btn {
   border-top: 1px solid var(--light-gray);
   margin-top: 4px;
-  color: var(--primary-red);
+  color: var (--primary-red);
   font-weight: 500;
 }
 
@@ -1278,10 +1273,8 @@ body.hide-navbar .navbar {
 .mobile-nav-link.active {
   color: var(--primary-red);
   background-color: var(--red-light);
-  font-weight: 500;
 }
 
-/* Improved dropdown content for mobile */
 .mobile-dropdown-content {
   display: none;
   background-color: #f9f9f9;
@@ -1331,12 +1324,13 @@ body.hide-navbar .navbar {
 .mobile-navbar {
   width: 100%;
   position: relative;
-  z-index: 50;
+  z-index: 999; /* Increased z-index to ensure it's above all content */
 }
 
 .mobile-header-container {
   width: 100%;
   background-color: var(--white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .mobile-header-top {
@@ -1344,8 +1338,8 @@ body.hide-navbar .navbar {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
   height: 64px;
+  padding: 0 16px;
 }
 
 .mobile-logo {
@@ -1373,6 +1367,7 @@ body.hide-navbar .navbar {
 .mobile-controls {
   display: flex;
   align-items: center;
+  gap: 16px; /* Increased gap for better touch targets */
 }
 
 .mobile-auth-section {
@@ -1397,9 +1392,10 @@ body.hide-navbar .navbar {
   transform: scale(0.95);
 }
 
+/* Enhanced hamburger button styling */
 .mobile-menu-button {
-  width: 40px;
-  height: 40px;
+  width: 44px; /* Larger touch target */
+  height: 44px; /* Larger touch target */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1407,8 +1403,8 @@ body.hide-navbar .navbar {
   color: var(--dark-gray);
   border: 1px solid rgba(224, 224, 224, 0.8);
   background-color: var(--white);
-  font-size: 18px;
-  transition: background-color 0.2s ease;
+  font-size: 20px; /* Larger icon */
+  transition: all 0.2s ease-in-out;
 }
 
 .mobile-menu-button:hover,
@@ -1416,6 +1412,11 @@ body.hide-navbar .navbar {
   background-color: rgba(224, 224, 224, 0.3);
 }
 
+.mobile-menu-button:active {
+  transform: scale(0.95);
+}
+
+/* Improved overlay with smooth fade-in animation */
 .mobile-menu-overlay {
   position: fixed;
   top: 64px;
@@ -1423,46 +1424,62 @@ body.hide-navbar .navbar {
   right: 0;
   bottom: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 45;
+  z-index: 990;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .header.scrolled .mobile-menu-overlay {
   top: 56px;
 }
 
+/* Enhanced mobile menu with slide-in animation */
 .mobile-menu {
-  display: none;
-  position: absolute;
-  top: 100%;
+  position: fixed;
+  top: 64px;
   left: 0;
   right: 0;
+  bottom: 0;
+  width: 80%; /* Menu takes 80% of screen width */
+  max-width: 320px; /* Maximum width */
+  height: calc(100vh - 64px);
   background-color: white;
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.3s ease, box-shadow 0.3s ease;
-  z-index: 46;
-  box-shadow: none;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
+  z-index: 995;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
 }
 
 .mobile-menu.show {
-  display: block;
-  max-height: calc(100vh - 64px);
-  overflow-y: auto;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transform: translateX(0); /* Slide in from left */
 }
 
-.header.scrolled .mobile-menu.show {
-  max-height: calc(100vh - 56px);
+.header.scrolled .mobile-menu {
+  top: 56px;
+  height: calc(100vh - 56px);
 }
 
+/* Improved mobile navigation links */
 .mobile-nav-links {
   display: flex;
   flex-direction: column;
   width: 100%;
+  padding: 12px 0;
 }
 
 .mobile-nav-item {
   border-bottom: 1px solid rgba(224, 224, 224, 0.5);
+}
+
+.mobile-nav-item:last-child {
+  border-bottom: none;
 }
 
 .mobile-nav-link {
@@ -1470,7 +1487,7 @@ body.hide-navbar .navbar {
   justify-content: space-between;
   align-items: center;
   width: 100%;
-  padding: 16px;
+  padding: 16px 20px;
   font-size: 16px;
   font-weight: 500;
   color: var(--dark-gray);
@@ -1491,16 +1508,21 @@ body.hide-navbar .navbar {
   font-weight: 600;
 }
 
+/* Improved dropdown styling */
 .mobile-dropdown-content {
   display: none;
   overflow: hidden;
   background-color: #f8f9fa;
   border-top: 1px solid rgba(224, 224, 224, 0.5);
+  max-height: 0;
+  opacity: 0;
+  transition: max-height 0.3s ease, opacity 0.3s ease;
 }
 
 .mobile-dropdown-content.expanded {
   display: block;
-  animation: slideDown 0.2s ease-out;
+  max-height: 2000px;
+  opacity: 1;
 }
 
 .mobile-dropdown-section {
@@ -1530,7 +1552,7 @@ body.hide-navbar .navbar {
 .mobile-dropdown-link {
   display: flex;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px;
   margin: 2px 0;
   border-radius: 8px;
   text-decoration: none;
@@ -1594,5 +1616,172 @@ body.hide-navbar .navbar {
   .mobile-auth-section .profile-dropdown {
     width: calc(100vw - 32px);
     right: -16px;
+  }
+  
+  .mobile-menu {
+    width: 85%; /* Slightly wider on very small screens */
+  }
+}
+
+/* ======= MOBILE NAVBAR STYLES ======= */
+.mobile-navbar {
+  width: 100%;
+  position: relative;
+  z-index: 999;
+}
+
+.mobile-header-container {
+  width: 100%;
+  background-color: var(--white);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.mobile-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  height: 64px;
+  padding: 0 16px;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  overflow: visible;
+}
+
+.mobile-logo-image {
+  height: 44px;
+  width: auto;
+  transition: height 0.2s ease;
+  object-fit: contain;
+}
+
+.header.scrolled .mobile-header-top {
+  height: 56px;
+}
+
+.header.scrolled .mobile-logo-image {
+  height: 38px;
+}
+
+.mobile-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.mobile-auth-section {
+  position: relative;
+}
+
+.mobile-auth-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-red);
+  box-shadow: 0 2px 6px rgba(211, 47, 47, 0.25);
+  border: none;
+  color: white;
+  transition: transform 0.2s ease;
+}
+
+.mobile-auth-btn:active {
+  transform: scale(0.95);
+}
+
+/* Enhanced hamburger button styling */
+.mobile-menu-button {
+  width: 44px; 
+  height: 44px; 
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, 0.05);
+  color: var(--dark-gray);
+  border: none;
+  font-size: 20px; 
+  transition: all 0.2s ease-in-out;
+}
+
+.mobile-menu-button:hover,
+.mobile-menu-button:focus {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.mobile-menu-button:active {
+  transform: scale(0.95);
+}
+
+/* Mobile menu overlay */
+.mobile-menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 990;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Mobile menu panel with proper slide-in effect */
+.mobile-menu {
+  position: fixed;
+  top: 64px;
+  left: -100%;
+  bottom: 0;
+  width: 80%;
+  max-width: 320px;
+  height: calc(100vh - 64px);
+  background-color: white;
+  overflow-y: auto;
+  transition: left 0.3s ease;
+  z-index: 995;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-menu.show {
+  left: 0;
+}
+
+.header.scrolled .mobile-menu {
+  top: 56px;
+  height: calc(100vh - 56px);
+}
+
+/* Remove any leftover mobile menu CSS rules from before */
+@media (min-width: 768px) {
+  .mobile-navbar {
+    display: none !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .desktop-navbar {
+    display: none !important;
+  }
+  
+  .header {
+    padding: 0 !important;
+    min-height: 64px !important;
+  }
+  
+  .header.scrolled {
+    width: 100% !important;
+    top: 0 !important;
+    left: 0 !important;
+    transform: none !important;
+    border-radius: 0 !important;
   }
 }
