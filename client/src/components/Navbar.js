@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import '../App.css';
 import { useAuth } from '../contexts/AuthContext';
 
-// Optimized NavLink component with proper dropdown handling
+// Optimized NavLink component with proper dropdown handling - used only for desktop
 const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
@@ -69,10 +69,281 @@ const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) 
   );
 });
 
+// Create a new MobileNavbar component
+const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showProfileMenu, renderProfileDropdown }) => {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedDropdowns, setExpandedDropdowns] = useState({});
+  
+  const location = useLocation();
+
+  // Close mobile menu when route changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Toggle mobile menu
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(prev => !prev);
+  };
+
+  // Toggle specific dropdown section
+  const toggleDropdown = (index) => {
+    setExpandedDropdowns(prev => ({
+      ...prev,
+      [index]: !prev[index]
+    }));
+  };
+
+  // Body overflow control when menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  return (
+    <div className="mobile-navbar md:hidden">
+      <div className="mobile-header-container shadow-sm">
+        {/* Mobile Top Bar */}
+        <div className="mobile-header-top flex justify-between items-center py-2 px-4">
+          {/* Logo */}
+          <div className="mobile-logo">
+            <Link to="/" aria-label="MU-UniConnect Home">
+              <img 
+                src="/img/uniconnectTB.png" 
+                alt="UniConnect Logo" 
+                className="mobile-logo-image" 
+                width="168"
+                height="42"
+              />
+            </Link>
+          </div>
+
+          {/* Controls */}
+          <div className="mobile-controls flex items-center gap-3">
+            {/* Auth Button */}
+            <div className="mobile-auth-section">
+              <button 
+                className="auth-icon-btn mobile-auth-btn"
+                onClick={handleAuthClick}
+                title={currentUser ? "Account menu" : "Login"}
+                aria-label={currentUser ? "Account menu" : "Login"}
+              >
+                {currentUser ? (
+                  <span className="flex items-center justify-center w-full h-full overflow-hidden">
+                    {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
+                      <img
+                        className="h-7 w-7 rounded-full object-cover border-2 border-white"
+                        src={currentUser.profileImage} 
+                        alt={`${currentUser.name}'s profile`}
+                      />
+                    ) : (
+                      <i className="fas fa-user text-white"></i>
+                    )}
+                  </span>
+                ) : (
+                  <i className="fas fa-user text-white"></i>
+                )}
+              </button>
+              
+              {/* Mobile profile dropdown */}
+              {showProfileMenu && currentUser && renderProfileDropdown()}
+            </div>
+            
+            {/* Mobile Menu Button */}
+            <button 
+              className="mobile-menu-button"
+              onClick={toggleMobileMenu}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+            >
+              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'}`} aria-hidden="true"></i>
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="mobile-menu-overlay" onClick={toggleMobileMenu} aria-hidden="true" />
+        )}
+        
+        <div 
+          id="mobile-menu"
+          className={`mobile-menu ${mobileMenuOpen ? 'show' : ''}`}
+        >
+          <nav className="mobile-nav-links">
+            {navLinks.map((link, index) => (
+              <div key={`mobile-${index}`} className="mobile-nav-item">
+                {link.hasDropdown ? (
+                  <>
+                    <button 
+                      className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
+                      onClick={() => toggleDropdown(index)}
+                      aria-expanded={expandedDropdowns[index]}
+                    >
+                      <span>{link.label}</span>
+                      <i className={`fas fa-chevron-down transition-transform ${expandedDropdowns[index] ? 'rotate-180' : ''}`}></i>
+                    </button>
+                    
+                    <div 
+                      className={`mobile-dropdown-content ${expandedDropdowns[index] ? 'expanded' : ''}`}
+                    >
+                      {React.Children.toArray(link.dropdownContent.props.children).map((section, sIdx) => {
+                        if (!section || !section.props || !section.props.children) return null;
+                        
+                        const sectionTitle = React.Children.toArray(section.props.children).find(
+                          child => child.type === 'h3' || (child.props && child.props.className === 'dropdown-title')
+                        );
+                        
+                        const sectionLinks = React.Children.toArray(section.props.children).filter(
+                          child => child.type === Link || (child.props && child.props.to)
+                        );
+                        
+                        return (
+                          <div key={sIdx} className="mobile-dropdown-section">
+                            {sectionTitle && (
+                              <h4 className="mobile-dropdown-title">
+                                {sectionTitle.props.children}
+                              </h4>
+                            )}
+                            
+                            <div className="mobile-dropdown-links">
+                              {sectionLinks.map((item, lIdx) => {
+                                if (!item || !item.props) return null;
+                                
+                                // Extract icon and text content from the dropdown item
+                                const icon = React.Children.toArray(item.props.children).find(
+                                  child => child.type === 'i' || (child.props && child.props.className && child.props.className.includes('fa-'))
+                                );
+                                
+                                const content = React.Children.toArray(item.props.children).find(
+                                  child => child.type === 'div' || (child.props && child.props.children)
+                                );
+                                
+                                const title = content ? React.Children.toArray(content.props.children).find(
+                                  child => child.type === 'span' && (!child.props.className || !child.props.className.includes('dropdown-description'))
+                                ) : null;
+                                
+                                const description = content ? React.Children.toArray(content.props.children).find(
+                                  child => child.props && child.props.className && child.props.className.includes('dropdown-description')
+                                ) : null;
+                                
+                                return (
+                                  <Link
+                                    key={lIdx}
+                                    to={item.props.to}
+                                    className="mobile-dropdown-link"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                  >
+                                    {icon && <span className="mobile-dropdown-icon">{icon}</span>}
+                                    <span className="mobile-dropdown-text">
+                                      <span className="mobile-dropdown-title-text">{title ? title.props.children : 'Link'}</span>
+                                      {description && (
+                                        <span className="mobile-dropdown-desc-text">{description.props.children}</span>
+                                      )}
+                                    </span>
+                                  </Link>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <Link 
+                    to={link.to}
+                    className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <span>{link.label}</span>
+                  </Link>
+                )}
+              </div>
+            ))}
+          </nav>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Create a new DesktopNavbar component
+const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showProfileMenu, renderProfileDropdown }) => {
+  return (
+    <div className="desktop-navbar hidden md:flex justify-between items-center w-full max-w-7xl mx-auto">
+      {/* Desktop Logo */}
+      <div className="desktop-logo">
+        <Link to="/" aria-label="MU-UniConnect Home">
+          <img 
+            src="/img/uniconnectTB.png" 
+            alt="UniConnect Logo" 
+            className="desktop-logo-image" 
+            width="280"
+            height="70"
+          />
+        </Link>
+      </div>
+      
+      {/* Desktop Navigation Links */}
+      <nav className="desktop-nav-links" aria-label="Main navigation">
+        {navLinks.map((link, index) => (
+          <NavLink 
+            key={`desktop-${index}`}
+            to={link.to} 
+            isActive={isActive(link.to)}
+            hasDropdown={link.hasDropdown}
+            dropdownContent={link.dropdownContent}
+          >
+            {link.label}
+          </NavLink>
+        ))}
+      </nav>
+
+      {/* Desktop Auth Button */}
+      <div className="desktop-auth-section">
+        <button 
+          className="auth-icon-btn relative" 
+          onClick={handleAuthClick}
+          title={currentUser ? "Account menu" : "Login"}
+          aria-label={currentUser ? "Account menu" : "Login"}
+        >
+          {currentUser ? (
+            <span className="w-full h-full flex items-center justify-center overflow-hidden">
+              {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
+                <img
+                  className="h-8 w-8 rounded-full object-cover border-2 border-white"
+                  src={currentUser.profileImage} 
+                  alt={`${currentUser.name}'s profile`}
+                />
+              ) : (
+                <i className="fas fa-user text-white"></i>
+              )}
+            </span>
+          ) : (
+            <i className="fas fa-user text-white"></i>
+          )}
+        </button>
+        
+        {/* Desktop profile dropdown */}
+        {showProfileMenu && currentUser && renderProfileDropdown()}
+      </div>
+    </div>
+  );
+};
+
+// Main Navbar component that includes both mobile and desktop versions
 function Navbar() {
-  // State variables
+  // Shared state variables
   const [scrolled, setScrolled] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
   const location = useLocation();
@@ -88,11 +359,6 @@ function Navbar() {
       setScrolled(shouldBeScrolled);
     }
   }, [scrolled]);
-
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setMenuOpen(false);
-  }, [location.pathname]);
 
   // Handle clicking outside profile menu
   useEffect(() => {
@@ -134,24 +400,6 @@ function Navbar() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, [handleScroll]);
-
-  // Overflow handling for body when mobile menu is open
-  useEffect(() => {
-    if (menuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [menuOpen]);
-
-  // Toggle mobile menu
-  const toggleMenu = () => {
-    setMenuOpen(prevState => !prevState);
-  };
 
   // Check if current path matches link
   const isActive = useCallback((path) => {
@@ -412,241 +660,26 @@ function Navbar() {
     }
   ];
 
+  // Render the navbar with both desktop and mobile components
   return (
     <header className={`header ${scrolled ? 'scrolled' : ''}`} role="banner">
-      {/* DESKTOP NAVBAR */}
-      <div className="desktop-navbar hidden md:flex justify-between items-center w-full max-w-7xl mx-auto">
-        {/* Desktop Logo */}
-        <div className="desktop-logo">
-          <Link to="/" aria-label="MU-UniConnect Home">
-            <img 
-              src="/img/uniconnectTB.png" 
-              alt="UniConnect Logo" 
-              className="desktop-logo-image" 
-              width="280"
-              height="70"
-            />
-          </Link>
-        </div>
-        
-        {/* Desktop Navigation Links */}
-        <nav className="desktop-nav-links" aria-label="Main navigation">
-          {navLinks.map((link, index) => (
-            <NavLink 
-              key={`desktop-${index}`}
-              to={link.to} 
-              isActive={isActive(link.to)}
-              hasDropdown={link.hasDropdown}
-              dropdownContent={link.dropdownContent}
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        {/* Desktop Auth Button */}
-        <div className="desktop-auth-section">
-          <button 
-            className="auth-icon-btn relative" 
-            onClick={handleAuthClick}
-            title={currentUser ? "Account menu" : "Login"}
-            aria-label={currentUser ? "Account menu" : "Login"}
-          >
-            {currentUser ? (
-              <span className="w-full h-full flex items-center justify-center overflow-hidden">
-                {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
-                  <img
-                    className="h-8 w-8 rounded-full object-cover border-2 border-white"
-                    src={currentUser.profileImage} 
-                    alt={`${currentUser.name}'s profile`}
-                  />
-                ) : (
-                  <i className="fas fa-user text-white"></i>
-                )}
-              </span>
-            ) : (
-              <i className="fas fa-user text-white"></i>
-            )}
-          </button>
-          
-          {/* Desktop profile dropdown */}
-          {showProfileMenu && currentUser && renderProfileDropdown()}
-        </div>
-      </div>
-
-      {/* MOBILE NAVBAR */}
-      <div className="mobile-navbar md:hidden w-full">
-        <div className={`mobile-header-container ${menuOpen ? 'menu-open' : ''}`}>
-          {/* Top bar with logo and controls */}
-          <div className="mobile-header-top">
-            {/* Mobile Logo */}
-            <div className="mobile-logo">
-              <Link to="/" aria-label="MU-UniConnect Home">
-                <img 
-                  src="/img/uniconnectTB.png" 
-                  alt="UniConnect Logo" 
-                  className="mobile-logo-image" 
-                  width="168"
-                  height="42"
-                />
-              </Link>
-            </div>
-            
-            {/* Right side controls */}
-            <div className="mobile-controls">
-              {/* Auth button on mobile */}
-              <div className="mobile-auth-section">
-                <button 
-                  className="auth-icon-btn mobile-auth-btn"
-                  onClick={handleAuthClick}
-                  title={currentUser ? "Account menu" : "Login"}
-                  aria-label={currentUser ? "Account menu" : "Login"}
-                >
-                  {currentUser ? (
-                    <span className="flex items-center justify-center w-full h-full overflow-hidden">
-                      {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
-                        <img
-                          className="h-7 w-7 rounded-full object-cover border-2 border-white"
-                          src={currentUser.profileImage} 
-                          alt={`${currentUser.name}'s profile`}
-                        />
-                      ) : (
-                        <i className="fas fa-user text-white"></i>
-                      )}
-                    </span>
-                  ) : (
-                    <i className="fas fa-user text-white"></i>
-                  )}
-                </button>
-                
-                {/* Mobile profile dropdown */}
-                {showProfileMenu && currentUser && renderProfileDropdown()}
-              </div>
-              
-              {/* Mobile menu button */}
-              <button 
-                className="mobile-menu-button"
-                onClick={toggleMenu}
-                aria-expanded={menuOpen}
-                aria-controls="mobile-navigation"
-                aria-label={menuOpen ? "Close menu" : "Open menu"}
-              >
-                <i className={`fas ${menuOpen ? 'fa-times' : 'fa-bars'}`} aria-hidden="true"></i>
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile menu content */}
-          <div 
-            className={`mobile-menu ${menuOpen ? 'show' : ''}`} 
-            id="mobile-navigation"
-          >
-            {/* Mobile Navigation Links */}
-            <nav className="mobile-nav-links" aria-label="Mobile navigation">
-              {navLinks.map((link, index) => (
-                <div key={`mobile-${index}`} className="mobile-nav-item">
-                  {link.hasDropdown ? (
-                    <div className="mobile-dropdown">
-                      <div 
-                        className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
-                        onClick={() => {
-                          // Toggle expanded state for this specific item
-                          const item = document.getElementById(`mobile-dropdown-${index}`);
-                          if (item) {
-                            item.classList.toggle('expanded');
-                          }
-                        }}
-                      >
-                        <span>{link.label}</span>
-                        <i className="fas fa-chevron-down ml-2"></i>
-                      </div>
-                      
-                      <div id={`mobile-dropdown-${index}`} className="mobile-dropdown-content">
-                        {/* Safe rendering of mobile dropdown content */}
-                        <div className="px-4 py-2 space-y-2">
-                          {React.Children.toArray(link.dropdownContent.props.children).map((section, sIdx) => {
-                            // Safety check for section
-                            if (!section || !section.props || !section.props.children) {
-                              return null;
-                            }
-                            
-                            // Get the section title safely
-                            const sectionTitle = React.Children.toArray(section.props.children)[0];
-                            const sectionTitleText = sectionTitle && sectionTitle.props && sectionTitle.props.children 
-                              ? sectionTitle.props.children 
-                              : `Section ${sIdx+1}`;
-                            
-                            // Get the links safely
-                            const links = React.Children.toArray(section.props.children).slice(1);
-                            
-                            return (
-                              <div key={sIdx} className="mb-4">
-                                <h4 className="font-semibold text-sm text-gray-600 mb-2">
-                                  {sectionTitleText}
-                                </h4>
-                                <div className="space-y-2">
-                                  {links.map((item, iIdx) => {
-                                    // Safety check for item
-                                    if (!item || !item.props) {
-                                      return null;
-                                    }
-                                    
-                                    return (
-                                      <Link
-                                        key={iIdx}
-                                        to={item.props.to || '/'}
-                                        className="block py-2 px-3 text-gray-700 hover:bg-gray-100 rounded-md text-sm"
-                                        onClick={() => setMenuOpen(false)}
-                                      >
-                                        <div className="flex items-center">
-                                          {item.props.children && item.props.children[0] && (
-                                            <i className={item.props.children[0].props?.className || "fas fa-link"}></i>
-                                          )}
-                                          <span className="ml-3">
-                                            {item.props.children && item.props.children[1] && 
-                                             item.props.children[1].props && 
-                                             item.props.children[1].props.children && 
-                                             item.props.children[1].props.children[0] && 
-                                             item.props.children[1].props.children[0].props
-                                              ? item.props.children[1].props.children[0].props.children
-                                              : `Link ${iIdx+1}`
-                                            }
-                                          </span>
-                                        </div>
-                                      </Link>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <Link 
-                      to={link.to}
-                      className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <span>{link.label}</span>
-                    </Link>
-                  )}
-                </div>
-              ))}
-            </nav>
-          </div>
-        </div>
-      </div>
+      <DesktopNavbar 
+        navLinks={navLinks}
+        currentUser={currentUser}
+        isActive={isActive}
+        handleAuthClick={handleAuthClick}
+        showProfileMenu={showProfileMenu}
+        renderProfileDropdown={renderProfileDropdown}
+      />
       
-      {/* Mobile menu backdrop */}
-      {menuOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" 
-          onClick={toggleMenu}
-          aria-hidden="true"
-        />
-      )}
+      <MobileNavbar 
+        navLinks={navLinks}
+        currentUser={currentUser}
+        isActive={isActive}
+        handleAuthClick={handleAuthClick}
+        showProfileMenu={showProfileMenu}
+        renderProfileDropdown={renderProfileDropdown}
+      />
     </header>
   );
 }

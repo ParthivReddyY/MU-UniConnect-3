@@ -1155,49 +1155,49 @@ body.hide-navbar .navbar {
 /* UPDATED MOBILE NAVBAR STYLES */
 .mobile-navbar {
   width: 100%;
+  position: relative;
+  z-index: 50;
 }
 
 .mobile-header-container {
   width: 100%;
+  background-color: var(--white);
 }
 
 .mobile-header-top {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   width: 100%;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
 }
 
 .mobile-logo {
   display: flex;
   align-items: center;
-  margin-left: -8px; /* Move logo slightly to the left in static state */
-  position: relative; /* Add this for better positioning control */
-  overflow: visible; /* Allow logo to extend outside container */
+  margin-left: -8px;
+  position: relative;
+  overflow: visible;
   height: 42px;
 }
 
 .mobile-logo-image {
-  height: 42px; /* Size for non-scrolled state */
+  height: 42px;
   width: auto;
-  transition: height 0.3s ease, margin-left 0.3s ease;
-  position: relative; /* Add this for better control */
-  margin-top: -4px; /* Negative top margin to prevent navbar expansion */
-  margin-bottom: -4px; /* Negative bottom margin to prevent navbar expansion */
+  transition: height 0.3s ease;
+  margin-top: -4px;
+  margin-bottom: -4px;
 }
 
 .header.scrolled .mobile-logo-image {
-  height: 30px; /* Size for scrolled state */
-  margin-left: 0; /* Reset left margin when scrolled */
-  margin-top: 0; /* Reset margin when scrolled */
-  margin-bottom: 0; /* Reset margin when scrolled */
+  height: 35px;
 }
 
 .mobile-controls {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .mobile-auth-section {
@@ -1207,24 +1207,44 @@ body.hide-navbar .navbar {
 .mobile-auth-btn {
   width: 2.5rem;
   height: 2.5rem;
+  background: var(--gradient-red);
+  box-shadow: 0 2px 8px rgba(211, 47, 47, 0.25);
 }
 
-/* New mobile menu styles */
+.mobile-menu-button {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dark-gray);
+  border: 1px solid rgba(224, 224, 224, 0.8);
+  background-color: var(--white);
+  transition: background-color 0.2s ease;
+}
+
+.mobile-menu-button:hover,
+.mobile-menu-button:focus {
+  background-color: rgba(224, 224, 224, 0.3);
+}
+
+/* Updated mobile menu with smooth animations */
 .mobile-menu {
   display: none;
   width: 100%;
   background: white;
-  border-top: 1px solid rgba(224, 224, 224, 0.5);
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
   max-height: 0;
   overflow: hidden;
-  transition: max-height 0.3s ease-in-out;
+  transition: max-height 0.3s ease;
 }
 
 .mobile-menu.show {
   display: block;
-  max-height: 90vh;
+  max-height: calc(100vh - 60px);
   overflow-y: auto;
-  animation: slideDown 0.3s ease forwards;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .mobile-nav-links {
@@ -1241,99 +1261,338 @@ body.hide-navbar .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
+  padding: 1rem 1.25rem;
   font-size: 1rem;
   color: var(--dark-gray);
   text-decoration: none;
   cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link:focus {
+  background-color: rgba(240, 240, 240, 0.6);
 }
 
 .mobile-nav-link.active {
   color: var(--primary-red);
   background-color: var(--red-light);
+  font-weight: 500;
+}
+
+/* Improved dropdown content for mobile */
+.mobile-dropdown-content {
+  display: none;
+  background-color: #f9f9f9;
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height 0.3s ease;
+}
+
+.mobile-dropdown-content.expanded {
+  display: block;
+  max-height: 2000px; /* Large enough to accommodate content */
+  animation: slideDown 0.3s ease forwards;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Position profile dropdown correctly on mobile */
+.mobile-auth-section .profile-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 260px;
+  z-index: 1000;
+  margin-top: 8px;
+}
+
+/* Make sure dropdown doesn't overflow the screen */
+@media (max-width: 320px) {
+  .mobile-auth-section .profile-dropdown {
+    width: calc(100vw - 40px);
+    right: -10px;
+  }
+}
+
+/* KEEP EXISTING DESKTOP NAVBAR STYLES */
+
+/* IMPROVED MOBILE NAVBAR STYLES */
+.mobile-navbar {
+  width: 100%;
+  position: relative;
+  z-index: 50;
+}
+
+.mobile-header-container {
+  width: 100%;
+  background-color: var(--white);
+}
+
+.mobile-header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
+  height: 64px;
+}
+
+.mobile-logo {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  overflow: visible;
+}
+
+.mobile-logo-image {
+  height: 44px;
+  width: auto;
+  transition: height 0.2s ease;
+  object-fit: contain;
+}
+
+.header.scrolled .mobile-header-top {
+  height: 56px;
+}
+
+.header.scrolled .mobile-logo-image {
+  height: 38px;
+}
+
+.mobile-controls {
+  display: flex;
+  align-items: center;
+}
+
+.mobile-auth-section {
+  position: relative;
+}
+
+.mobile-auth-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--gradient-red);
+  box-shadow: 0 2px 6px rgba(211, 47, 47, 0.25);
+  border: none;
+  color: white;
+  transition: transform 0.2s ease;
+}
+
+.mobile-auth-btn:active {
+  transform: scale(0.95);
+}
+
+.mobile-menu-button {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dark-gray);
+  border: 1px solid rgba(224, 224, 224, 0.8);
+  background-color: var(--white);
+  font-size: 18px;
+  transition: background-color 0.2s ease;
+}
+
+.mobile-menu-button:hover,
+.mobile-menu-button:focus {
+  background-color: rgba(224, 224, 224, 0.3);
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  top: 64px;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 45;
+}
+
+.header.scrolled .mobile-menu-overlay {
+  top: 56px;
+}
+
+.mobile-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background-color: white;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, box-shadow 0.3s ease;
+  z-index: 46;
+  box-shadow: none;
+}
+
+.mobile-menu.show {
+  display: block;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.header.scrolled .mobile-menu.show {
+  max-height: calc(100vh - 56px);
+}
+
+.mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.mobile-nav-item {
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
+}
+
+.mobile-nav-link {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--dark-gray);
+  text-decoration: none;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  text-align: left;
+}
+
+.mobile-nav-link:active {
+  background-color: rgba(224, 224, 224, 0.5);
+}
+
+.mobile-nav-link.active {
+  color: var(--primary-red);
+  font-weight: 600;
 }
 
 .mobile-dropdown-content {
   display: none;
-  background-color: #f9f9f9;
+  overflow: hidden;
+  background-color: #f8f9fa;
   border-top: 1px solid rgba(224, 224, 224, 0.5);
 }
 
 .mobile-dropdown-content.expanded {
   display: block;
-  animation: slideDown 0.3s ease forwards;
+  animation: slideDown 0.2s ease-out;
 }
 
-/* UPDATED DESKTOP NAVBAR STYLES */
-.desktop-navbar {
-  width: 100%;
+.mobile-dropdown-section {
+  padding: 12px 16px;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.5);
+}
+
+.mobile-dropdown-section:last-child {
+  border-bottom: none;
+}
+
+.mobile-dropdown-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--dark-gray);
+  margin-bottom: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid rgba(224, 224, 224, 0.8);
+}
+
+.mobile-dropdown-links {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 1.5rem; /* Compact navbar */
-  min-height: 64px;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.desktop-logo {
+.mobile-dropdown-link {
   display: flex;
   align-items: center;
-  margin-bottom: -8px; /* Center larger logo */
-  margin-left: -15px; /* Move logo left in static state */
-  position: relative;
-  overflow: visible;
-  height: 64px; /* Set fixed height to prevent layout shifts */
+  padding: 10px 12px;
+  margin: 2px 0;
+  border-radius: 8px;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
 }
 
-.desktop-logo-image {
-  height: 88px; /* Logo size */
-  width: auto;
-  transition: height 0.3s ease, margin-left 0.3s ease;
-  position: relative;
-  margin-top: -14px; /* Prevent navbar expansion */
-  margin-bottom: -14px; /* Prevent navbar expansion */
+.mobile-dropdown-link:active {
+  background-color: rgba(224, 224, 224, 0.5);
 }
 
-.header.scrolled .desktop-logo-image {
-  height: 70px; /* Increased from 57px for a larger scrolled logo */
-  margin-left: 0; /* Reset left margin when scrolled */
-  margin-top: -10px; /* Adjusted to compensate for larger logo */
-  margin-bottom: -10px; /* Adjusted to compensate for larger logo */
-}
-
-.desktop-nav-links {
+.mobile-dropdown-icon {
   display: flex;
-  gap: 4rem; /* Increased from 4rem to create even more space between navigation items */
   align-items: center;
-  padding-top: 4px; /* Added small padding to vertically center links in taller navbar */
+  justify-content: center;
+  width: 28px;
+  font-size: 16px;
+  margin-right: 12px;
+  color: var(--primary-red);
 }
 
-/* Improved dropdown appearance and behavior */
-.dropdown-connector {
+.mobile-dropdown-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobile-dropdown-title-text {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--dark-gray);
+}
+
+.mobile-dropdown-desc-text {
+  font-size: 12px;
+  color: var(--medium-gray);
+  margin-top: 2px;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Position profile dropdown correctly on mobile */
+.mobile-auth-section .profile-dropdown {
   position: absolute;
-  height: 12px;
-  width: 100%;
-  left: 0;
   top: 100%;
-  z-index: 101;
-  background-color: transparent;
+  right: 0;
+  width: 260px;
+  z-index: 1000;
+  margin-top: 8px;
 }
 
-.nav-dropdown {
-  position: absolute;
-  top: calc(100% + 12px);
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 520px;
-  max-width: 90vw;
-  background: rgba(255, 255, 255, 0.98);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-  border-radius: 12px;
-  padding: 1.25rem;
-  z-index: 100;
-  margin-top: 0;
-  opacity: 0;
-  animation: fadeInDropdown 0.3s forwards;
-  border: 1px solid rgba(230, 230, 230, 0.8);
+/* Make sure dropdown doesn't overflow the screen */
+@media (max-width: 320px) {
+  .mobile-auth-section .profile-dropdown {
+    width: calc(100vw - 32px);
+    right: -16px;
+  }
 }
