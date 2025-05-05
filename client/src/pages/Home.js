@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../App.css';
 import '../styles/Home.css';
-import { useAuth } from '../contexts/AuthContext'; // Import AuthContext
-import { getFeaturedNews } from '../services/newsService'; // Import news service
+import { useAuth } from '../contexts/AuthContext'; 
+import { getFeaturedNews } from '../services/newsService'; 
 import api from '../utils/axiosConfig';
+import CampusHighlightForm from '../components/CampusHighlightForm';
 
 function Home() {
   // Create refs for the slider elements
@@ -21,6 +22,10 @@ function Home() {
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsError, setNewsError] = useState(null);
   
+  // State for gallery modal
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  
   // Statistics state
   const [stats, setStats] = useState({
     facultyCount: '0',
@@ -30,6 +35,90 @@ function Home() {
     schoolsCount: '0',
     isLoading: true
   });
+
+  // State for campus highlights
+  const [campusHighlights, setCampusHighlights] = useState([]);
+  const [highlightsLoading, setHighlightsLoading] = useState(true);
+  const [highlightsError, setHighlightsError] = useState(null);
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  const [editingHighlight, setEditingHighlight] = useState(null);
+
+  // Fallback gallery images in case API fails
+  const fallbackGalleryImages = [
+    {
+      id: 1,
+      title: 'Modern Infrastructure',
+      description: 'State-of-the-art academic buildings with cutting-edge facilities',
+      image: 'https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1746&q=80',
+      link: '/college?tab=facilities',
+      icon: 'fas fa-building'
+    },
+    {
+      id: 2,
+      title: 'Digital Library',
+      description: 'Extensive collection of digital and print resources for research and learning',
+      image: 'https://images.unsplash.com/photo-1568667256549-094345857637?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80',
+      link: '/college?tab=library',
+      icon: 'fas fa-book'
+    },
+    {
+      id: 3,
+      title: 'Sports Facilities',
+      description: 'Olympic-sized swimming pool, indoor stadium, and outdoor sports fields',
+      image: 'https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1693&q=80',
+      link: '/college?tab=sports',
+      icon: 'fas fa-futbol'
+    },
+    {
+      id: 4,
+      title: 'Research Labs',
+      description: 'Advanced research laboratories equipped with the latest technology',
+      image: 'https://images.unsplash.com/photo-1581093458791-9f5bf5abf940?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80',
+      link: '/college?tab=research',
+      icon: 'fas fa-flask'
+    },
+    {
+      id: 5,
+      title: 'Cultural Events',
+      description: 'Vibrant campus life with regular cultural programs and celebrations',
+      image: 'https://images.unsplash.com/photo-1530023367847-a683933f4172?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
+      link: '/clubs-events?category=cultural',
+      icon: 'fas fa-music'
+    },
+    {
+      id: 6,
+      title: 'Student Housing',
+      description: 'Modern, comfortable residential facilities for students',
+      image: 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1738&q=80',
+      link: '/college?tab=housing',
+      icon: 'fas fa-home'
+    },
+  ];
+  
+  // Function to open image in modal
+  const openImageModal = (image) => {
+    setSelectedImage(image);
+    setShowModal(true);
+    document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+  };
+  
+  // Function to close modal
+  const closeModal = () => {
+    setShowModal(false);
+    document.body.style.overflow = 'unset'; // Re-enable scrolling
+  };
+  
+  // Add event listener for Escape key to close modal
+  useEffect(() => {
+    const handleEsc = (event) => {
+      if (event.keyCode === 27) closeModal();
+    };
+    window.addEventListener('keydown', handleEsc);
+    
+    return () => {
+      window.removeEventListener('keydown', handleEsc);
+    };
+  }, []);
   
   useEffect(() => {
     console.log("Home component mounted");
@@ -309,6 +398,32 @@ function Home() {
     
     fetchStats();
   }, []);
+
+  // Fetch Campus Highlights from API
+  const fetchCampusHighlights = async () => {
+    setHighlightsLoading(true);
+    try {
+      const response = await api.get('/api/campus-highlights');
+      if (response.data && response.data.highlights) {
+        setCampusHighlights(response.data.highlights);
+        console.log('Fetched campus highlights:', response.data.highlights);
+      } else {
+        console.log('No highlights found in API response, using fallback data');
+        setCampusHighlights(fallbackGalleryImages);
+      }
+    } catch (error) {
+      console.error('Error fetching campus highlights:', error);
+      setHighlightsError(error);
+      // Use fallback data on error
+      setCampusHighlights(fallbackGalleryImages);
+    } finally {
+      setHighlightsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCampusHighlights();
+  }, []); // Empty dependency array means this runs once on component mount
 
   return (
     <div className="home-page container-fluid">
@@ -732,7 +847,7 @@ function Home() {
               <Link to="/college" className="inline-block px-6 py-3 bg-transparent text-primary-red border-2 border-primary-red font-semibold rounded-lg hover:bg-red-light transition-colors">Learn More About MU</Link>
             </div>
             <div className="flex-1 min-w-0 lg:min-w-[300px] h-[300px] md:h-[360px] w-full rounded-xl overflow-hidden shadow-xl">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='400' viewBox='0 0 600 400'%3E%3Crect width='600' height='400' fill='%23f0f0f0'/%3E%3Cpath d='M300,100 L150,300 L450,300 Z' fill='%23d0d0d0'/%3E%3Crect x='250' y='300' width='100' height='75' fill='%23d0d0d0'/%3E%3Ctext x='300' y='200' font-size='36' text-anchor='middle' fill='%23666'%3ECampus%3C/text%3E%3C/svg%3E" alt="Mahindra University Campus" className="w-full h-full object-cover" />
+              <img src="https://res.cloudinary.com/dmny4ymqp/image/upload/v1746258098/MU_Building_2_12_zhpzto.webp" alt="Mahindra University Campus" className="w-full h-full object-cover" />
             </div>
           </div>
         </div>
@@ -741,50 +856,160 @@ function Home() {
       {/* Campus Gallery */}
       <section className="py-16 md:py-20 bg-dark-gray text-white">
         <div className="content-container px-4 md:px-6">
-          <h2 className="section-title text-3xl md:text-4xl font-bold text-center text-white mb-12 md:mb-14">Campus Life Highlights</h2>
-          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 mb-10">
-            <div className="relative h-48 rounded-lg overflow-hidden cursor-pointer group">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3ECampus%3C/text%3E%3C/svg%3E" alt="Campus Building" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="gallery-overlay absolute bottom-0 left-0 right-0 p-5 text-white opacity-90 group-hover:opacity-100 transition-opacity">
-                <h3 className="font-medium">Modern Infrastructure</h3>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 md:mb-10">
+            <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0">
+              <span className="relative">
+                Campus Life Highlights
+                <span className="absolute -bottom-3 left-1/2 md:left-0 transform -translate-x-1/2 md:translate-x-0 h-1 w-24 bg-primary-red rounded-full"></span>
+              </span>
+            </h2>
+            
+            {/* Admin buttons - only visible to admin users */}
+            {currentUser && currentUser.role === 'admin' && (
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setEditingHighlight(null);
+                    setShowHighlightModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-red hover:bg-secondary-red transition-colors rounded-lg text-white"
+                >
+                  <i className="fas fa-plus"></i>
+                  Add Highlight
+                </button>
               </div>
-            </div>
-            <div className="relative h-48 rounded-lg overflow-hidden cursor-pointer group">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='100%25' height='100%25' fill='%23e6e6e6'/%3E%3Crect x='75' y='50' width='150' height='100' fill='%23cccccc'/%3E%3Cpolygon points='150,25 75,125 225,125' fill='%23bbbbbb'/%3E%3Ctext x='150' y='170' font-size='16' text-anchor='middle' font-family='Arial' fill='%23555555'%3EDigital Library%3C/text%3E%3C/svg%3E" alt="Library" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="gallery-overlay absolute bottom-0 left-0 right-0 p-5 text-white opacity-90 group-hover:opacity-100 transition-opacity">
-                <h3 className="font-medium">Digital Library</h3>
-              </div>
-            </div>
-            <div className="relative h-48 rounded-lg overflow-hidden cursor-pointer group">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='100%25' height='100%25' fill='%23e6e6e6'/%3E%3Crect x='75' y='50' width='150' height='100' fill='%23cccccc'/%3E%3Cpolygon points='150,25 75,125 225,125' fill='%23bbbbbb'/%3E%3Ctext x='150' y='170' font-size='16' text-anchor='middle' font-family='Arial' fill='%23555555'%3ESports Facilities%3C/text%3E%3C/svg%3E" alt="Sports Complex" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="gallery-overlay absolute bottom-0 left-0 right-0 p-5 text-white opacity-90 group-hover:opacity-100 transition-opacity">
-                <h3 className="font-medium">Sports Facilities</h3>
-              </div>
-            </div>
-            <div className="relative h-48 rounded-lg overflow-hidden cursor-pointer group">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='100%25' height='100%25' fill='%23e6e6e6'/%3E%3Crect x='75' y='50' width='150' height='100' fill='%23cccccc'/%3E%3Cpolygon points='150,25 75,125 225,125' fill='%23bbbbbb'/%3E%3Ctext x='150' y='170' font-size='16' text-anchor='middle' font-family='Arial' fill='%23555555'%3EResearch Labs%3C/text%3E%3C/svg%3E" alt="Lab" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="gallery-overlay absolute bottom-0 left-0 right-0 p-5 text-white opacity-90 group-hover:opacity-100 transition-opacity">
-                <h3 className="font-medium">Research Labs</h3>
-              </div>
-            </div>
-            <div className="relative h-48 rounded-lg overflow-hidden cursor-pointer group">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='100%25' height='100%25' fill='%23e6e6e6'/%3E%3Crect x='75' y='50' width='150' height='100' fill='%23cccccc'/%3E%3Cpolygon points='150,25 75,125 225,125' fill='%23bbbbbb'/%3E%3Ctext x='150' y='170' font-size='16' text-anchor='middle' font-family='Arial' fill='%23555555'%3ECultural Events%3C/text%3E%3C/svg%3E" alt="Cultural Event" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="gallery-overlay absolute bottom-0 left-0 right-0 p-5 text-white opacity-90 group-hover:opacity-100 transition-opacity">
-                <h3 className="font-medium">Cultural Events</h3>
-              </div>
-            </div>
-            <div className="relative h-48 rounded-lg overflow-hidden cursor-pointer group">
-              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='100%25' height='100%25' fill='%23e6e6e6'/%3E%3Crect x='75' y='50' width='150' height='100' fill='%23cccccc'/%3E%3Cpolygon points='150,25 75,125 225,125' fill='%23bbbbbb'/%3E%3Ctext x='150' y='170' font-size='16' text-anchor='middle' font-family='Arial' fill='%23555555'%3EStudent Housing%3C/text%3E%3C/svg%3E" alt="Hostel" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
-              <div className="gallery-overlay absolute bottom-0 left-0 right-0 p-5 text-white opacity-90 group-hover:opacity-100 transition-opacity">
-                <h3 className="font-medium">Student Housing</h3>
-              </div>
-            </div>
+            )}
           </div>
-          <div className="text-center">
-            <button type="button" className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors">View Full Gallery</button>
+          
+          <p className="text-center text-light-gray max-w-3xl mx-auto mb-10 leading-relaxed">
+            Explore the diverse aspects of campus life at Mahindra University, from cutting-edge facilities to vibrant cultural experiences.
+          </p>
+          
+          {highlightsLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            </div>
+          ) : highlightsError ? (
+            <div className="text-center text-light-gray py-10">
+              <p className="mb-4">Unable to load campus highlights.</p>
+              <button 
+                className="px-4 py-2 bg-primary-red text-white rounded-lg"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {campusHighlights.map((item) => (
+                <div key={item._id || item.id} className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src={item.image} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3E${encodeURIComponent(item.title)}%3C/text%3E%3C/svg%3E`;
+                    }}
+                  />
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                  
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    <i className={`${item.icon} text-white`}></i>
+                  </div>
+
+                  {/* Edit button for admins */}
+                  {currentUser && currentUser.role === 'admin' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingHighlight(item);
+                        setShowHighlightModal(true);
+                      }}
+                      className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white flex items-center justify-center transform transition-transform duration-300 hover:scale-110 z-20"
+                      title="Edit highlight"
+                    >
+                      <i className="fas fa-edit text-primary-red"></i>
+                    </button>
+                  )}
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
+                    <h3 className="font-semibold text-xl text-white mb-1">{item.title}</h3>
+                    <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{item.description}</p>
+                    
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          setSelectedImage({
+                            src: item.image,
+                            title: item.title,
+                            description: item.description
+                          });
+                          setShowModal(true);
+                        }}
+                        className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
+                      >
+                        <i className="fas fa-search text-xs"></i> View
+                      </button>
+                      <Link 
+                        to={item.link || "/college?tab=gallery"} 
+                        className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
+                      >
+                        <i className="fas fa-info-circle text-xs"></i> Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Rest of Campus Gallery section */}
+          <div className="text-center flex flex-col items-center mt-12">
+            <Link 
+              to="/college?tab=gallery" 
+              className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors inline-flex items-center gap-2"
+            >
+              Browse Complete Gallery <i className="fas fa-arrow-right"></i>
+            </Link>
+            <p className="text-light-gray text-sm mt-4 max-w-lg mx-auto">
+              Explore our extensive collection of campus photos, event highlights, and more in our complete gallery section.
+            </p>
           </div>
         </div>
       </section>
+
+      {/* Add/Edit Campus Highlight Modal */}
+      {showHighlightModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {editingHighlight ? 'Edit Campus Highlight' : 'Add Campus Highlight'}
+                </h2>
+                <button 
+                  onClick={() => setShowHighlightModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+              
+              <CampusHighlightForm 
+                highlight={editingHighlight} 
+                onClose={() => setShowHighlightModal(false)}
+                onSuccess={() => {
+                  setShowHighlightModal(false);
+                  // Refresh the highlights list
+                  fetchCampusHighlights();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Call to Action Section - Only show for non-logged in users */}
       {!currentUser && (

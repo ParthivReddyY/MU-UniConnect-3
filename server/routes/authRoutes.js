@@ -40,8 +40,8 @@ router.post('/change-password', authenticateUser, changePassword);
 // Protected routes
 router.get('/me', authenticateUser, getCurrentUser);
 
-// Get user statistics by role - this endpoint can be used to get student count
-router.get('/stats', getUserStats);
+// Public routes - no authentication needed
+router.get('/stats', getUserStats); // This route is public so Home page can access student count
 
 // Public user creation route for clubs
 router.post('/create-user', createUser);

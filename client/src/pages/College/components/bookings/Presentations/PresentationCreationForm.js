@@ -8,28 +8,21 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
   const { currentUser } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formErrors, setFormErrors] = useState({});
+  const departmentDropdownRef = useRef(null);
+  
+  // Form state with default values
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    targetAudience: {
-      year: [],
-      school: [],
-      department: []
-    },
+    targetAudience: { year: [], school: [], department: [] },
     participationType: 'individual',
     teamSizeMin: 1,
     teamSizeMax: 1,
     venue: '',
     hostName: currentUser?.name || '', 
     hostDepartment: currentUser?.department || '', 
-    registrationPeriod: {
-      start: '',
-      end: ''
-    },
-    presentationPeriod: {
-      start: '',
-      end: ''
-    },
+    registrationPeriod: { start: '', end: '' },
+    presentationPeriod: { start: '', end: '' },
     slotConfig: {
       duration: 15,
       buffer: 5,
@@ -47,7 +40,13 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     ]
   });
 
-  // School and academic data - structured for consistent reuse
+  // Department search functionality state
+  const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
+  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
+  const [showSlotPreview, setShowSlotPreview] = useState(false);
+  const [generatedSlots, setGeneratedSlots] = useState([]);
+  
+  // School options
   const schoolOptions = [
     { value: 'École Centrale School of Engineering(ECSE)', label: 'École Centrale School of Engineering' },
     { value: 'School Of Law(SOL)', label: 'School of Law' },
@@ -58,24 +57,187 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     { value: 'School of Hospitality Management(SOHM)', label: 'School of Hospitality Management' }
   ];
 
-  // Department search functionality
-  const [departmentSearchQuery, setDepartmentSearchQuery] = useState('');
-  const [showDepartmentDropdown, setShowDepartmentDropdown] = useState(false);
-  const departmentDropdownRef = useRef(null);
-  
-  // Slot preview state
-  const [generatedSlots, setGeneratedSlots] = useState([]);
-  const [showSlotPreview, setShowSlotPreview] = useState(false);
-
   const yearOptions = [
-    { value: '1', label: '1st Year' },
-    { value: '2', label: '2nd Year' },
-    { value: '3', label: '3rd Year' },
-    { value: '4', label: '4th Year' },
-    { value: '5', label: '5th Year' }
+    { value: 1, label: '1st Year' },
+    { value: 2, label: '2nd Year' },
+    { value: 3, label: '3rd Year' },
+    { value: 4, label: '4th Year' },
+    { value: 5, label: '5th Year' }
   ];
 
-  // Convert academicStructure to the format expected by the form
+  // Initialize form with data if provided
+  useEffect(() => {
+    // Handle initialization from props
+    if (initialData) {
+      setFormData(prevData => ({ ...prevData, ...initialData }));
+    } else if (defaultTargetAudience) {
+      setFormData(prev => ({
+        ...prev,
+        targetAudience: {
+          year: [...defaultTargetAudience.year],
+          school: [...defaultTargetAudience.school],
+          department: [...defaultTargetAudience.department]
+        }
+      }));
+    }
+    
+    // Always ensure host info is set from currentUser if available
+    if (currentUser) {
+      setFormData(prev => ({
+        ...prev,
+        hostName: prev.hostName || currentUser.name || '',
+        hostDepartment: prev.hostDepartment || currentUser.department || ''
+      }));
+    }
+  }, [initialData, defaultTargetAudience, currentUser]);
+
+  // Handle clicks outside the department dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target)) {
+        setShowDepartmentDropdown(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Unified form field change handler
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field if it exists
+    if (formErrors[name]) {
+      setFormErrors(prev => ({ ...prev, [name]: undefined }));
+    }
+  };
+
+  // Handle nested object changes (e.g., registrationPeriod.start)
+  const handleNestedChange = (parent, field, value) => {
+    setFormData(prev => {
+      const updated = { ...prev };
+      
+      if (!updated[parent]) {
+        updated[parent] = {};
+      }
+      
+      updated[parent] = {
+        ...updated[parent],
+        [field]: value
+      };
+      
+      return updated;
+    });
+    
+    // Clear error for this field
+    const errorKey = `${parent}.${field}`;
+    if (formErrors[errorKey]) {
+      setFormErrors(prev => ({ ...prev, [errorKey]: undefined }));
+    }
+  };
+
+  // Handle checkbox changes for arrays (e.g., targetAudience.year)
+  const handleCheckboxChange = (parent, field, value, checked) => {
+    setFormData(prev => {
+      let updatedValues = [...prev[parent][field]];
+      
+      // Convert year values to numbers if the field is 'year'
+      const processedValue = field === 'year' ? Number(value) : value;
+      
+      if (checked) {
+        updatedValues.push(processedValue);
+      } else {
+        updatedValues = updatedValues.filter(item => {
+          // For year comparisons, ensure they're both numbers
+          if (field === 'year') {
+            return Number(item) !== Number(processedValue);
+          }
+          return item !== processedValue;
+        });
+      }
+      
+      return {
+        ...prev,
+        [parent]: {
+          ...prev[parent],
+          [field]: updatedValues
+        }
+      };
+    });
+    
+    // Clear error
+    const errorKey = `${parent}.${field}`;
+    if (formErrors[errorKey]) {
+      setFormErrors(prev => ({ ...prev, [errorKey]: undefined }));
+    }
+  };
+
+  // Grading criteria management
+  const handleCriteriaChange = (index, field, value) => {
+    setFormData(prev => {
+      const updatedCriteria = [...prev.gradingCriteria];
+      
+      // If changing weight, ensure it's a valid number between 0-100
+      if (field === 'weight') {
+        let numValue = parseInt(value, 10);
+        // Ensure it's a number and within valid range
+        numValue = !isNaN(numValue) ? Math.min(Math.max(numValue, 0), 100) : 0;
+        updatedCriteria[index][field] = numValue;
+      } else {
+        updatedCriteria[index][field] = value;
+      }
+      
+      return {
+        ...prev,
+        gradingCriteria: updatedCriteria
+      };
+    });
+  };
+
+  // Add a new grading criterion with auto weight calculation
+  const addGradingCriterion = () => {
+    setFormData(prev => {
+      const existingCriteria = [...prev.gradingCriteria];
+      const currentTotal = existingCriteria.reduce((sum, c) => sum + (parseInt(c.weight, 10) || 0), 0);
+      
+      // Calculate weight for new criterion to reach 100%
+      let newWeight = 0;
+      if (existingCriteria.length === 0) {
+        newWeight = 100; // First criterion gets 100%
+      } else if (currentTotal < 100) {
+        newWeight = 100 - currentTotal; // Add remaining percentage
+      } else {
+        // Redistribute weights
+        const reduction = Math.ceil(10 / Math.max(1, existingCriteria.length));
+        existingCriteria.forEach((c, i) => {
+          existingCriteria[i].weight = Math.max(5, (parseInt(c.weight, 10) || 0) - reduction);
+        });
+        
+        const newTotal = existingCriteria.reduce((sum, c) => sum + (parseInt(c.weight, 10) || 0), 0);
+        newWeight = 100 - newTotal;
+      }
+      
+      return {
+        ...prev,
+        gradingCriteria: [
+          ...existingCriteria,
+          { name: '', weight: newWeight }
+        ]
+      };
+    });
+  };
+
+  // Remove a grading criterion
+  const removeGradingCriterion = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      gradingCriteria: prev.gradingCriteria.filter((_, i) => i !== index)
+    }));
+  };
+
+  // Department management helpers
   const formatDepartments = (school) => {
     if (!school || !academicStructure[school]) return [];
     
@@ -100,168 +262,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     return acc;
   }, {});
 
-  // Handle clicks outside the department dropdown
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (departmentDropdownRef.current && !departmentDropdownRef.current.contains(event.target)) {
-        setShowDepartmentDropdown(false);
-      }
-    };
-    
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, []);
-
-  // Initialize form with data if provided
-  useEffect(() => {
-    if (initialData) {
-      console.log("Initializing form with data:", initialData);
-      setFormData(prevData => ({
-        ...prevData,
-        ...initialData,
-      }));
-    } else if (defaultTargetAudience) {
-      // Use default target audience settings if no initial data
-      setFormData(prev => ({
-        ...prev,
-        targetAudience: {
-          year: [...defaultTargetAudience.year],
-          school: [...defaultTargetAudience.school],
-          department: [...defaultTargetAudience.department]
-        }
-      }));
-    }
-    
-    if (currentUser) {
-      setFormData(prev => ({
-        ...prev,
-        hostName: prev.hostName || currentUser.name || '',
-        hostDepartment: prev.hostDepartment || currentUser.department || ''
-      }));
-    }
-  }, [initialData, defaultTargetAudience, currentUser]);
-
-  // Field change handlers
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    
-    // Clear error for this field if it exists
-    if (formErrors[name]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [name]: undefined
-      }));
-    }
-  };
-
-  const handleNestedChange = (parent, field, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [parent]: {
-        ...prev[parent],
-        [field]: value
-      }
-    }));
-    
-    // Clear error for this field if it exists
-    const errorKey = `${parent}.${field}`;
-    if (formErrors[errorKey]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [errorKey]: undefined
-      }));
-    }
-  };
-
-  const handleCheckboxChange = (parent, field, value, checked) => {
-    setFormData(prev => {
-      let updatedValues = [...prev[parent][field]];
-      
-      if (checked) {
-        updatedValues.push(value);
-      } else {
-        updatedValues = updatedValues.filter(item => item !== value);
-      }
-      
-      return {
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [field]: updatedValues
-        }
-      };
-    });
-    
-    // Clear error for this field if it exists
-    const errorKey = `${parent}.${field}`;
-    if (formErrors[errorKey]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [errorKey]: undefined
-      }));
-    }
-  };
-
-  // Grading criteria management
-  const handleCriteriaChange = (index, field, value) => {
-    setFormData(prev => {
-      const updatedCriteria = [...prev.gradingCriteria];
-      updatedCriteria[index] = {
-        ...updatedCriteria[index],
-        [field]: field === 'weight' ? parseInt(value, 10) || 0 : value
-      };
-      return {
-        ...prev,
-        gradingCriteria: updatedCriteria
-      };
-    });
-  };
-
-  const addGradingCriterion = () => {
-    setFormData(prev => ({
-      ...prev,
-      gradingCriteria: [...prev.gradingCriteria, { name: '', weight: 0 }]
-    }));
-  };
-
-  const removeGradingCriterion = (index) => {
-    setFormData(prev => ({
-      ...prev,
-      gradingCriteria: prev.gradingCriteria.filter((_, i) => i !== index)
-    }));
-  };
-
-  // Slot generation and preview
-  const generateSlots = () => {
-    const { duration, buffer, startTime, endTime } = formData.slotConfig;
-    const totalDuration = duration + buffer;
-    const slots = [];
-    
-    const startTimeMinutes = parseInt(startTime.split(':')[0], 10) * 60 + parseInt(startTime.split(':')[1], 10);
-    const endTimeMinutes = parseInt(endTime.split(':')[0], 10) * 60 + parseInt(endTime.split(':')[1], 10);
-    
-    for (let time = startTimeMinutes; time + duration <= endTimeMinutes; time += totalDuration) {
-      const hours = Math.floor(time / 60);
-      const minutes = time % 60;
-      slots.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
-    }
-    
-    setGeneratedSlots(slots);
-    setShowSlotPreview(true);
-    return slots;
-  };
-
-  const handlePreviewSlots = () => {
-    generateSlots();
-  };
-
-  // Department selection helpers
   const getAvailableDepartments = () => {
     if (formData.targetAudience.school.length === 0) {
       return [];
@@ -302,7 +302,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
       }));
     }
     
-    // Close dropdown after selection
     setShowDepartmentDropdown(false);
   };
 
@@ -316,6 +315,26 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     }));
   };
 
+  // Slot generation preview
+  const generateSlots = () => {
+    const { duration, buffer, startTime, endTime } = formData.slotConfig;
+    const totalDuration = duration + buffer;
+    const slots = [];
+    
+    const startTimeMinutes = parseInt(startTime.split(':')[0], 10) * 60 + parseInt(startTime.split(':')[1], 10);
+    const endTimeMinutes = parseInt(endTime.split(':')[0], 10) * 60 + parseInt(endTime.split(':')[1], 10);
+    
+    for (let time = startTimeMinutes; time + duration <= endTimeMinutes; time += totalDuration) {
+      const hours = Math.floor(time / 60);
+      const minutes = time % 60;
+      slots.push(`${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+    }
+    
+    setGeneratedSlots(slots);
+    setShowSlotPreview(true);
+    return slots;
+  };
+
   // Form validation
   const validateForm = () => {
     const errors = {};
@@ -324,7 +343,6 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     const requiredFields = [
       { field: 'title', message: "Title is required" },
       { field: 'venue', message: "Venue is required" },
-      { field: 'description', message: "Description is required" },
       { field: 'registrationPeriod.start', message: "Registration start date is required" },
       { field: 'registrationPeriod.end', message: "Registration end date is required" },
       { field: 'presentationPeriod.start', message: "Presentation start date is required" },
@@ -333,17 +351,8 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
     
     requiredFields.forEach(({ field, message }) => {
       const fieldParts = field.split('.');
-      let value;
-      
-      if (fieldParts.length === 1) {
-        value = formData[field];
-      } else {
-        value = formData[fieldParts[0]][fieldParts[1]];
-      }
-      
-      if (!value) {
-        errors[field] = message;
-      }
+      let value = fieldParts.length === 1 ? formData[field] : formData[fieldParts[0]][fieldParts[1]];
+      if (!value) errors[field] = message;
     });
     
     // Date order validation
@@ -359,14 +368,21 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
       }
     }
     
-    // Team size validation
+    // Team size validation for team presentations
     if (formData.participationType === 'team') {
-      if (formData.teamSizeMin <= 0) {
+      const minTeamSize = parseInt(formData.teamSizeMin, 10);
+      const maxTeamSize = parseInt(formData.teamSizeMax, 10);
+      
+      if (isNaN(minTeamSize) || minTeamSize < 1) {
         errors.teamSizeMin = "Minimum team size must be at least 1";
       }
       
-      if (formData.teamSizeMax < formData.teamSizeMin) {
-        errors.teamSizeMax = "Maximum team size cannot be less than minimum team size";
+      if (isNaN(maxTeamSize) || maxTeamSize < 1) {
+        errors.teamSizeMax = "Maximum team size must be at least 1";
+      }
+      
+      if (minTeamSize > maxTeamSize) {
+        errors.teamSizeMax = "Maximum team size cannot be less than minimum";
       }
     }
     
@@ -379,20 +395,24 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
       errors["targetAudience.school"] = "Please select at least one school";
     }
     
-    // Validate grading criteria
+    // Grading criteria validation
     if (formData.customGradingCriteria) {
-      const totalWeight = formData.gradingCriteria.reduce((sum, criterion) => sum + criterion.weight, 0);
+      // Calculate total weight
+      const totalWeight = formData.gradingCriteria.reduce(
+        (sum, criterion) => sum + (parseInt(criterion.weight, 10) || 0), 0
+      );
+      
       if (totalWeight !== 100) {
         errors.gradingCriteria = `Total grading criteria weight must equal 100% (currently ${totalWeight}%)`;
       }
       
-      const emptyCriterion = formData.gradingCriteria.find(c => !c.name.trim());
-      if (emptyCriterion) {
+      // Check for empty criterion names
+      if (formData.gradingCriteria.some(c => !c.name.trim())) {
         errors.gradingCriteriaNames = "All grading criteria must have names";
       }
     }
     
-    // Validate slot configuration
+    // Slot configuration validation
     if (!formData.slotConfig.startTime || !formData.slotConfig.endTime) {
       errors.slotConfig = "Please specify slot start and end times";
     } else {
@@ -405,21 +425,18 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
       }
     }
     
-    // Set form errors for UI display
     setFormErrors(errors);
-    
-    // Return true if no errors
     return Object.keys(errors).length === 0;
   };
 
-  // Form submission
+  // Form submission handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate form fields
+    // Validate form
     const isValid = validateForm();
     if (!isValid) {
-      // Scroll to the first error
+      // Scroll to first error
       const firstErrorField = document.querySelector('.border-red-500');
       if (firstErrorField) {
         firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -435,68 +452,85 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
       const formatDateForBackend = (dateString) => {
         if (!dateString) return null;
         
-        // If it's just a date (YYYY-MM-DD), append time
-        if (dateString.length === 10) {
-          return new Date(`${dateString}T00:00:00`).toISOString();
+        // Log the input date string
+        console.log(`Formatting date: ${dateString}`);
+        
+        // Create a proper date object
+        const date = new Date(dateString);
+        
+        // Check if the date is valid
+        if (isNaN(date.getTime())) {
+          console.error(`Invalid date: ${dateString}`);
+          return null;
         }
         
-        // If it already has time component
-        return new Date(dateString).toISOString();
+        // Return as ISO string
+        const isoString = date.toISOString();
+        console.log(`Formatted to ISO: ${isoString}`);
+        return isoString;
       };
       
-      // Create data to submit with properly formatted dates
-      const dataToSubmit = {
+      // Log the original registration period data
+      console.log('Original registration period data:', {
+        start: formData.registrationPeriod.start,
+        end: formData.registrationPeriod.end
+      });
+      
+      // Convert year values to numbers
+      const processedTargetAudience = {
+        year: formData.targetAudience.year.map(y => Number(y)),
+        school: formData.targetAudience.school,
+        department: formData.targetAudience.department
+      };
+      
+      // Prepare data with formatted dates and validated fields
+      const formattedData = {
         title: formData.title,
-        description: formData.description,
+        description: formData.description || '',
         venue: formData.venue,
-        hostName: formData.hostName || currentUser?.name,
-        hostDepartment: formData.hostDepartment || currentUser?.department,
-        participationType: formData.participationType,
-        teamSizeMin: parseInt(formData.teamSizeMin, 10),
-        teamSizeMax: parseInt(formData.teamSizeMax, 10),
-        targetAudience: formData.targetAudience,
-        customGradingCriteria: formData.customGradingCriteria,
-        gradingCriteria: formData.gradingCriteria,
-        slotConfig: {
-          duration: parseInt(formData.slotConfig.duration, 10),
-          buffer: parseInt(formData.slotConfig.buffer, 10),
-          startTime: formData.slotConfig.startTime,
-          endTime: formData.slotConfig.endTime
-        },
-        // Format dates properly
         registrationStart: formatDateForBackend(formData.registrationPeriod.start),
         registrationEnd: formatDateForBackend(formData.registrationPeriod.end),
         presentationStart: formatDateForBackend(formData.presentationPeriod.start),
-        presentationEnd: formatDateForBackend(formData.presentationPeriod.end)
+        presentationEnd: formatDateForBackend(formData.presentationPeriod.end),
+        participationType: formData.participationType,
+        teamSizeMin: parseInt(formData.teamSizeMin, 10) || 1,
+        teamSizeMax: parseInt(formData.teamSizeMax, 10) || 1,
+        slotConfig: {
+          startTime: formData.slotConfig.startTime,
+          endTime: formData.slotConfig.endTime,
+          duration: parseInt(formData.slotConfig.duration, 10),
+          buffer: parseInt(formData.slotConfig.buffer, 10)
+        },
+        targetAudience: processedTargetAudience,
+        customGradingCriteria: formData.customGradingCriteria,
+        gradingCriteria: formData.customGradingCriteria ? 
+          formData.gradingCriteria.map(criterion => ({
+            name: criterion.name.trim(),
+            weight: parseInt(criterion.weight, 10)
+          })) : undefined
       };
       
-      console.log("Submitting presentation data:", dataToSubmit);
+      // Log formatted data for debugging
+      console.log('Formatted data being sent to server:', {
+        registrationStart: formattedData.registrationStart,
+        registrationEnd: formattedData.registrationEnd
+      });
       
+      // Submit data
       let response;
-      
-      if (initialData?._id) {
-        console.log("Updating presentation:", initialData._id, dataToSubmit);
-        response = await api.put(`/api/presentations/${initialData._id}`, dataToSubmit);
+      if (isEditMode) {
+        response = await api.put(`/api/presentations/${formData._id}`, formattedData);
       } else {
-        console.log("Creating new presentation:", dataToSubmit);
-        response = await api.post('/api/presentations', dataToSubmit);
+        response = await api.post('/api/presentations/create', formattedData);
       }
       
-      // Check if the response is successful
-      if (response.status === 200 || response.status === 201) {
-        const successMessage = initialData ? 'Presentation updated successfully!' : 'Presentation created successfully!';
-        toast.success(successMessage);
-        
-        // Extract the presentation data depending on the response format
-        const presentation = response.data.presentation || response.data;
-        onPresentationCreated(presentation);
-      } else {
-        const errorMessage = response.data?.message || `Failed to ${initialData ? 'update' : 'create'} presentation event`;
-        toast.error(errorMessage);
+      if (response.data) {
+        toast.success(isEditMode ? 'Presentation updated successfully!' : 'Presentation created successfully!');
+        onPresentationCreated(response.data.presentation || response.data);
       }
     } catch (error) {
       console.error("Form submission error:", error);
-      toast.error(error.response?.data?.message || `Failed to ${initialData ? 'update' : 'create'} presentation event`);
+      toast.error(error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'create'} presentation`);
     } finally {
       setIsLoading(false);
     }
@@ -740,7 +774,7 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                   )}
                   <button 
                     type="button"
-                    onClick={handlePreviewSlots}
+                    onClick={generateSlots}
                     className="mt-3 inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
                   >
                     <i className="fas fa-eye mr-2"></i>
@@ -853,20 +887,23 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                         key={option.value}
                         className={`
                           relative flex items-center p-3 border rounded-md cursor-pointer
-                          ${formData.targetAudience.year.includes(option.value) 
+                          ${formData.targetAudience.year.includes(option.value) || 
+                            formData.targetAudience.year.includes(Number(option.value)) || 
+                            formData.targetAudience.year.includes(String(option.value)) 
                             ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' 
                             : 'border-gray-300 hover:bg-gray-50'}
                         `}
-                        onClick={() => handleCheckboxChange('targetAudience', 'year', option.value, !formData.targetAudience.year.includes(option.value))}
+                        onClick={() => handleCheckboxChange('targetAudience', 'year', option.value, 
+                          !formData.targetAudience.year.some(y => Number(y) === Number(option.value)))}
                       >
                         <input 
                           type="checkbox"
                           className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                          checked={formData.targetAudience.year.includes(option.value)}
+                          checked={formData.targetAudience.year.some(y => Number(y) === Number(option.value))}
                           onChange={(e) => handleCheckboxChange('targetAudience', 'year', option.value, e.target.checked)}
                         />
                         <span className="ml-2 text-sm">{option.label}</span>
-                        {formData.targetAudience.year.includes(option.value) && (
+                        {formData.targetAudience.year.some(y => Number(y) === Number(option.value)) && (
                           <span className="absolute top-1 right-1 text-blue-500">
                             <i className="fas fa-check-circle text-xs"></i>
                           </span>
@@ -1047,7 +1084,18 @@ const PresentationCreationForm = ({ onPresentationCreated, onCancel, initialData
                           className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
                           disabled={!formData.customGradingCriteria}
                         />
-                        <span className="ml-3 w-10 text-center text-gray-700">{criterion.weight}%</span>
+                        <div className="ml-3 flex items-center">
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={criterion.weight}
+                            onChange={(e) => handleCriteriaChange(index, 'weight', e.target.value)}
+                            className="w-12 px-1 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={!formData.customGradingCriteria}
+                          />
+                          <span className="ml-1 text-gray-700">%</span>
+                        </div>
                       </div>
                     </div>
                     {formData.gradingCriteria.length > 1 && formData.customGradingCriteria && (

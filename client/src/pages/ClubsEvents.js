@@ -679,7 +679,7 @@ const ClubsEvents = () => {
                           <img
                             src={event.image || `https://source.unsplash.com/random/400x225?sig=univpast${index}`}
                             alt={`${event.title}`}
-                            className="object-cover w-full h-full filter grayscale"
+                            className="object-cover w-full h-full"
                             loading="lazy"
                           />
                         </div>
@@ -2828,7 +2828,6 @@ const ClubDetail = ({ club, onClose, onDelete, canDelete, onUpdate }) => {
                         {/* Event Image - Increased width */}
                         <div className="w-full md:w-2/5 lg:w-1/3 flex-shrink-0">
                           <div className="aspect-video rounded-lg overflow-hidden shadow-md bg-gray-200">
-                            {/* Placeholder/Actual Image */}
                             <img
                               src={event.image || `https://source.unsplash.com/random/400x225?sig=${club._id}past${idx}`}
                               alt={`${event.title}`}

@@ -203,17 +203,7 @@ const PresentationDetail = () => {
     }
   };
 
-  // Open comprehensive slot view
-  const openSlotDetailView = (slot) => {
-    setSelectedSlot(slot);
-    document.body.classList.add('overflow-hidden'); // Prevent scrolling
-  };
-
-  // Close comprehensive slot view
-  const closeSlotDetailView = () => {
-    setSelectedSlot(null);
-    document.body.classList.remove('overflow-hidden'); // Restore scrolling
-  };
+  // Note: Direct navigation to slot details is now used instead of modal views
 
   // Calculate average score for a team member based on their grades
   const calculateMemberScore = useCallback((member, individualGrades) => {
@@ -261,22 +251,50 @@ const PresentationDetail = () => {
   const prepareEditData = useCallback(() => {
     if (!presentation) return null;
     
-    // Fix date format issues - ensure consistent datetime formats for the server
-    // For registration period, use ISO string format but truncate to minute precision
-    const registrationStart = presentation?.registrationPeriod?.start ? 
-      new Date(presentation.registrationPeriod.start).toISOString().substring(0, 16) : '';
+    console.log('Original presentation data:', {
+      regStart: presentation.registrationPeriod?.start,
+      regEnd: presentation.registrationPeriod?.end,
+      presStart: presentation.presentationPeriod?.start,
+      presEnd: presentation.presentationPeriod?.end
+    });
     
-    const registrationEnd = presentation?.registrationPeriod?.end ? 
-      new Date(presentation.registrationPeriod.end).toISOString().substring(0, 16) : '';
+    // Fix date format issues - ensure datetime formats are preserved correctly
+    // For registration period, correctly format for datetime-local input
+    const formatDateTimeForInput = (dateString) => {
+      if (!dateString) return '';
+      // Create a new Date object to ensure proper parsing
+      const date = new Date(dateString);
+      
+      // Format as YYYY-MM-DDThh:mm (required by datetime-local input)
+      // Ensure padding with leading zeros where needed
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
     
-    // For presentation period, use date-only format (YYYY-MM-DD)
-    const presentationStart = presentation?.presentationPeriod?.start ? 
-      new Date(presentation.presentationPeriod.start).toISOString().split('T')[0] : '';
+    // Format date only (for presentation period)
+    const formatDateForInput = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    };
     
-    const presentationEnd = presentation?.presentationPeriod?.end ? 
-      new Date(presentation.presentationPeriod.end).toISOString().split('T')[0] : '';
+    // Apply the formatting for registration and presentation periods
+    const registrationStart = formatDateTimeForInput(presentation.registrationPeriod?.start);
+    const registrationEnd = formatDateTimeForInput(presentation.registrationPeriod?.end);
+    const presentationStart = formatDateForInput(presentation.presentationPeriod?.start);
+    const presentationEnd = formatDateForInput(presentation.presentationPeriod?.end);
     
-    console.log('Preparing presentation data for edit:', {
+    console.log('Formatted dates for edit form:', {
       registrationStart,
       registrationEnd,
       presentationStart,
@@ -408,9 +426,50 @@ const PresentationDetail = () => {
     }
   }, [presentation, formatDate, calculateGradingStatistics, prepareExportData]);
 
+  // Add this helper function to calculate time left
+  const getTimeLeft = (targetDate) => {
+    if (!targetDate) return { text: 'N/A', className: 'text-gray-500' };
+    
+    const now = new Date();
+    const target = new Date(targetDate);
+    const diff = target - now;
+    
+    // If date is in the past
+    if (diff < 0) return { text: 'Closed', className: 'text-red-600' };
+    
+    // Calculate remaining time
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    
+    let text = '';
+    
+    if (days > 0) {
+      text = `${days}d ${hours}h left`;
+    } else if (hours > 0) {
+      text = `${hours}h ${minutes}m left`;
+    } else {
+      text = `${minutes}m left`;
+    }
+    
+    // Change color based on urgency
+    let className = 'text-green-600';
+    if (days === 0 && hours < 12) {
+      className = 'text-orange-600';
+    }
+    if (days === 0 && hours < 3) {
+      className = 'text-red-600 font-semibold';
+    }
+    
+    return { text, className };
+  };
+
   // Render presentation information section
   const renderPresentationInfo = () => {
     if (!presentation) return null;
+    
+    // Calculate time left for registration
+    const regTimeLeft = getTimeLeft(presentation.registrationPeriod?.end);
     
     return (
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -452,9 +511,15 @@ const PresentationDetail = () => {
           <div className="space-y-2">
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Registration:</span>
-              <span className="font-medium text-gray-800">
-                {formatDate(presentation.registrationPeriod?.start)} - {formatDate(presentation.registrationPeriod?.end)}
-              </span>
+              <div>
+                <span className="font-medium text-gray-800">
+                  {formatDate(presentation.registrationPeriod?.start)} - {formatDate(presentation.registrationPeriod?.end)}
+                </span>
+                {/* Registration time left indicator */}
+                <span className={`block text-sm mt-1 ${regTimeLeft.className}`}>
+                  <i className="fas fa-clock mr-1"></i> {regTimeLeft.text}
+                </span>
+              </div>
             </div>
             <div className="flex items-start">
               <span className="text-gray-600 w-24 flex-shrink-0">Presentation:</span>
@@ -675,7 +740,7 @@ const PresentationDetail = () => {
     );
   };
 
-  // Render slots section
+  // Modify the renderSlots function to provide direct access to grading
   const renderSlots = () => {
     if (!presentation?.slots || presentation.slots.length === 0) {
       return (
@@ -752,28 +817,41 @@ const PresentationDetail = () => {
                 </div>
               </div>
               
-              <div className="mt-3 pt-3 border-t border-gray-200">
+              <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
                 <button
-                  onClick={() => openSlotDetailView(slot)}
+                  onClick={() => navigate(`/college/bookings/presentation/${id}/slot/${slot._id || slot.id}`)}
                   className="w-full py-1.5 px-3 text-center rounded-md text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
                 >
-                  View Details
+                  <i className="fas fa-info-circle mr-1"></i> View Details
                 </button>
-              </div>
-              
-              {slot.status === 'booked' && (
-                <div className="mt-2">
+                
+                {(slot.status === 'in-progress' || slot.status === 'completed') && (
                   <button
                     onClick={() => {
                       setSelectedSlot(slot);
-                      setShowStartConfirmation(true);
+                      setShowGrading(true);
+                    }}
+                    className={`w-full py-1.5 px-3 text-center rounded-md text-sm font-medium
+                      ${slot.status === 'completed' ? 'text-green-700 bg-green-50 hover:bg-green-100' : 'text-orange-700 bg-orange-50 hover:bg-orange-100'}
+                      transition-colors`}
+                  >
+                    <i className={`${slot.status === 'completed' ? 'fas fa-edit' : 'fas fa-clipboard-check'} mr-1`}></i>
+                    {slot.status === 'completed' ? 'Edit Grades' : 'Grade Now'}
+                  </button>
+                )}
+                
+                {slot.status === 'booked' && (
+                  <button
+                    onClick={() => {
+                      setSelectedSlot(slot);
+                      handleStartPresentation();
                     }}
                     className="w-full py-1.5 px-3 text-center rounded-md text-sm font-medium text-green-700 bg-green-50 hover:bg-green-100 transition-colors"
                   >
-                    Start Presentation
+                    <i className="fas fa-play mr-1"></i> Start Presentation
                   </button>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
         ))}
@@ -828,267 +906,90 @@ const PresentationDetail = () => {
     );
   }
 
+  // Update the return statement to replace the comprehensive modal with a direct navigation approach
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-start mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">{presentation.title}</h1>
-        <button 
-          onClick={handleEdit}
-          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-        >
-          <i className="fas fa-edit mr-2"></i>
-          Edit
-        </button>
-      </div>
-
-      {renderStatistics()}
-      {renderPresentationInfo()}
-
-      {/* Slots Management Section */}
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Slot Management</h3>
-        {renderSlots()}
-      </div>
-
-      {/* Comprehensive Slot Detail Modal */}
-      {selectedSlot && (
-        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-indigo-700 px-6 py-4 flex justify-between items-center">
-              <h3 className="text-xl font-semibold text-white flex items-center">
-                <i className="fas fa-calendar-day mr-2"></i>
-                Presentation Slot Details
-              </h3>
-              <button
-                onClick={closeSlotDetailView}
-                className="text-white hover:text-gray-200 transition-colors"
+    <div className="bg-gray-50 min-h-screen pb-8">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white py-8 mb-6 shadow-md">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <button 
+                onClick={() => navigate('/college/bookings/manage-presentations')}
+                className="mb-4 md:mb-0 bg-white/20 text-white px-4 py-2 rounded-md hover:bg-white/30 inline-flex items-center"
               >
-                <i className="fas fa-times text-xl"></i>
+                <i className="fas fa-arrow-left mr-2"></i>
+                Back to Presentations
               </button>
             </div>
-            
-            <div className="p-6">
-              {/* Slot Header */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between pb-4 border-b border-gray-200 mb-6">
-                <div>
-                  <div className="flex items-center mb-2">
-                    <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                      <i className="fas fa-clock text-blue-600"></i>
-                    </div>
-                    <h4 className="ml-3 text-xl font-bold text-gray-800">
-                      {formatTime(selectedSlot.time)}
-                    </h4>
-                  </div>
-                  <p className="text-gray-600">
-                    {new Date(selectedSlot.time).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
+            <div>
+              <h1 className="text-2xl md:text-3xl font-bold">{presentation.title}</h1>
+              <p className="text-blue-100 mt-1">Manage your presentation event</p>
+            </div>
+            <div className="mt-4 md:mt-0 flex space-x-3">
+              <button 
+                onClick={handleEdit}
+                className="px-4 py-2 bg-white/20 text-white rounded-md hover:bg-white/30 flex items-center"
+              >
+                <i className="fas fa-edit mr-2"></i>
+                Edit
+              </button>
+              <CSVLink
+                data={prepareExportData()}
+                filename={`${presentation.title}_Grades.csv`}
+                className="px-4 py-2 bg-white/20 text-white rounded-md hover:bg-white/30 flex items-center"
+              >
+                <i className="fas fa-download mr-2"></i>
+                Export CSV
+              </CSVLink>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="container mx-auto px-4">
+        {renderStatistics()}
+        {renderPresentationInfo()}
+
+        {/* Slots Management Section */}
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+          <h3 className="text-lg font-semibold text-gray-700 mb-4 flex items-center">
+            <i className="fas fa-calendar-alt mr-2 text-blue-600"></i>
+            Slot Management
+          </h3>
+          {renderSlots()}
+        </div>
+        
+        {/* Start Presentation Confirmation Modal */}
+        {showStartConfirmation && selectedSlot && (
+          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <i className="fas fa-play text-blue-600 text-xl"></i>
                 </div>
-                
-                <div className="mt-4 md:mt-0">
-                  <div className="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
-                    <span className={`h-2 w-2 rounded-full mr-2 ${
-                      selectedSlot.status === 'completed' ? 'bg-green-500' :
-                      selectedSlot.status === 'in-progress' ? 'bg-orange-500' :
-                      selectedSlot.status === 'booked' ? 'bg-blue-500' : 'bg-gray-500'
-                    }`}></span>
-                    {selectedSlot.status === 'booked' ? 'Booked' :
-                     selectedSlot.status === 'in-progress' ? 'In Progress' :
-                     selectedSlot.status === 'completed' ? 'Completed' : 'Available'}
-                  </div>
-                </div>
-              </div>
-              
-              {/* Slot Content */}
-              {selectedSlot.booked ? (
-                <div className="space-y-6">
-                  {/* Presentation Info */}
-                  <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Presentation Information</h4>
-                    <div className="bg-gray-50 rounded-md p-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-sm text-gray-500">Topic</p>
-                          <p className="font-medium text-gray-800">{selectedSlot.topic || 'Not specified'}</p>
-                        </div>
-                        {selectedSlot.teamName && (
-                          <div>
-                            <p className="text-sm text-gray-500">Team Name</p>
-                            <p className="font-medium text-gray-800">{selectedSlot.teamName}</p>
-                          </div>
-                        )}
-                        <div>
-                          <p className="text-sm text-gray-500">Booking Time</p>
-                          <p className="font-medium text-gray-800">
-                            {selectedSlot.bookedAt ? new Date(selectedSlot.bookedAt).toLocaleString() : 'Unknown'}
-                          </p>
-                        </div>
-                        {selectedSlot.status === 'completed' && (
-                          <div>
-                            <p className="text-sm text-gray-500">Total Score</p>
-                            <p className="font-medium text-green-600">
-                              {selectedSlot.totalScore || 0}/100
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Team Members */}
-                  {selectedSlot.teamMembers && selectedSlot.teamMembers.length > 0 && (
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">
-                        {selectedSlot.teamMembers.length > 1 ? 'Team Members' : 'Presenter'}
-                      </h4>
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <ul className="divide-y divide-gray-200">
-                          {selectedSlot.teamMembers.map((member, idx) => (
-                            <li key={idx} className="py-3 first:pt-0 last:pb-0">
-                              <div className="flex items-center">
-                                <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center mr-3">
-                                  <span className="text-indigo-600 font-medium">{member.name?.charAt(0).toUpperCase() || 'U'}</span>
-                                </div>
-                                <div>
-                                  <p className="font-medium text-gray-800">{member.name}</p>
-                                  <p className="text-gray-500 text-sm">{member.email}</p>
-                                </div>
-                                
-                                {/* Show individual score if completed and has individual grades */}
-                                {selectedSlot.status === 'completed' && selectedSlot.individualGrades && selectedSlot.individualGrades[member.email] && (
-                                  <div className="ml-auto">
-                                    <div className="bg-green-100 text-green-800 rounded-full px-3 py-1 text-xs font-medium">
-                                      Score: {calculateMemberScore(member, selectedSlot.individualGrades)}/100
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Grades Section (if completed) */}
-                  {selectedSlot.status === 'completed' && selectedSlot.grades && (
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">Grade Breakdown</h4>
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <div className="space-y-3">
-                          {Object.entries(selectedSlot.grades).map(([criterion, score]) => (
-                            <div key={criterion} className="flex justify-between">
-                              <span className="text-gray-700">{criterion}</span>
-                              <span className="font-medium">{score}/100</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Feedback Section (if completed) */}
-                  {selectedSlot.status === 'completed' && selectedSlot.feedback && (
-                    <div>
-                      <h4 className="font-medium text-gray-700 mb-2">Feedback</h4>
-                      <div className="bg-gray-50 rounded-md p-4">
-                        <p className="text-gray-700 whitespace-pre-wrap">{selectedSlot.feedback}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Action Buttons */}
-                  <div className="flex justify-end space-x-3 pt-4">
-                    <button
-                      onClick={closeSlotDetailView}
-                      className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                    >
-                      Close
-                    </button>
-                    
-                    {selectedSlot.status === 'booked' && (
-                      <button
-                        onClick={() => {
-                          closeSlotDetailView();
-                          handleStartPresentation();
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 flex items-center"
-                      >
-                        <i className="fas fa-play-circle mr-2"></i>
-                        Start Presentation
-                      </button>
-                    )}
-                    
-                    {selectedSlot.status === 'in-progress' && (
-                      <button
-                        onClick={() => {
-                          closeSlotDetailView();
-                          setShowGrading(true);
-                        }}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                      >
-                        <i className="fas fa-clipboard-check mr-2"></i>
-                        Go to Grading
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center py-8">
-                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                    <i className="fas fa-calendar-times text-gray-400 text-xl"></i>
-                  </div>
-                  <h5 className="text-lg font-medium text-gray-800 mb-2">Slot Not Booked</h5>
-                  <p className="text-gray-500 text-center max-w-md mb-6">
-                    This time slot is still available for booking. Students can book this slot through the presentation booking interface.
-                  </p>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Start Presentation</h3>
+                <p className="text-gray-500 mb-6">
+                  Are you sure you want to start this presentation? This will mark the slot as in-progress and allow grading.
+                </p>
+                <div className="flex space-x-3 justify-center">
                   <button
-                    onClick={closeSlotDetailView}
-                    className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                    onClick={() => setShowStartConfirmation(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   >
-                    Close
+                    Cancel
+                  </button>
+                  <button
+                    onClick={confirmStartPresentation}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    Start Now
                   </button>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {/* Start Presentation Confirmation Modal */}
-      {showStartConfirmation && selectedSlot && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <i className="fas fa-play text-blue-600 text-xl"></i>
-              </div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Start Presentation</h3>
-              <p className="text-gray-500 mb-6">
-                Are you sure you want to start this presentation? This will mark the slot as in-progress and allow grading.
-              </p>
-              <div className="flex space-x-3 justify-center">
-                <button
-                  onClick={() => setShowStartConfirmation(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmStartPresentation}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                >
-                  Start Now
-                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 };

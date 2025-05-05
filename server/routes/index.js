@@ -7,6 +7,7 @@ const feedbackRoutes = require('./feedbackRoutes');
 const clubRoutes = require('./clubRoutes');
 const eventRoutes = require('./eventRoutes');
 const newsRoutes = require('./newsRoutes');
+const sitemapRoutes = require('./sitemapRoutes');
 
 // Register feedback routes - mount at /feedback not /api/feedback
 // This will result in /api/feedback when mounted in server.js
@@ -20,6 +21,9 @@ router.use('/events', eventRoutes);
 
 // Register news routes
 router.use('/news', newsRoutes);
+
+// Register sitemap routes - will be accessible at /api/sitemap.xml
+router.use('/', sitemapRoutes);
 
 // Make sure auth routes are properly mounted
 const authRoutes = require('./authRoutes');
