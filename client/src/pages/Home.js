@@ -2,9 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import '../App.css';
 import '../styles/Home.css';
-import { useAuth } from '../contexts/AuthContext'; // Import AuthContext
-import { getFeaturedNews } from '../services/newsService'; // Import news service
+import { useAuth } from '../contexts/AuthContext'; 
+import { getFeaturedNews } from '../services/newsService'; 
 import api from '../utils/axiosConfig';
+import CampusHighlightForm from '../components/CampusHighlightForm';
 
 function Home() {
   // Create refs for the slider elements
@@ -35,8 +36,15 @@ function Home() {
     isLoading: true
   });
 
-  // Campus Gallery Images with actual links
-  const galleryImages = [
+  // State for campus highlights
+  const [campusHighlights, setCampusHighlights] = useState([]);
+  const [highlightsLoading, setHighlightsLoading] = useState(true);
+  const [highlightsError, setHighlightsError] = useState(null);
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  const [editingHighlight, setEditingHighlight] = useState(null);
+
+  // Fallback gallery images in case API fails
+  const fallbackGalleryImages = [
     {
       id: 1,
       title: 'Modern Infrastructure',
@@ -390,6 +398,32 @@ function Home() {
     
     fetchStats();
   }, []);
+
+  // Fetch Campus Highlights from API
+  const fetchCampusHighlights = async () => {
+    setHighlightsLoading(true);
+    try {
+      const response = await api.get('/api/campus-highlights');
+      if (response.data && response.data.highlights) {
+        setCampusHighlights(response.data.highlights);
+        console.log('Fetched campus highlights:', response.data.highlights);
+      } else {
+        console.log('No highlights found in API response, using fallback data');
+        setCampusHighlights(fallbackGalleryImages);
+      }
+    } catch (error) {
+      console.error('Error fetching campus highlights:', error);
+      setHighlightsError(error);
+      // Use fallback data on error
+      setCampusHighlights(fallbackGalleryImages);
+    } finally {
+      setHighlightsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCampusHighlights();
+  }, []); // Empty dependency array means this runs once on component mount
 
   return (
     <div className="home-page container-fluid">
@@ -802,253 +836,117 @@ function Home() {
       {/* Campus Gallery */}
       <section className="py-16 md:py-20 bg-dark-gray text-white">
         <div className="content-container px-4 md:px-6">
-          <h2 className="section-title text-3xl md:text-4xl font-bold text-center text-white mb-8 md:mb-10">
-            <span className="relative">
-              Campus Life Highlights
-              <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 h-1 w-24 bg-primary-red rounded-full"></span>
-            </span>
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 md:mb-10">
+            <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0">
+              <span className="relative">
+                Campus Life Highlights
+                <span className="absolute -bottom-3 left-1/2 md:left-0 transform -translate-x-1/2 md:translate-x-0 h-1 w-24 bg-primary-red rounded-full"></span>
+              </span>
+            </h2>
+            
+            {/* Admin buttons - only visible to admin users */}
+            {currentUser && currentUser.role === 'admin' && (
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => {
+                    setEditingHighlight(null);
+                    setShowHighlightModal(true);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-red hover:bg-secondary-red transition-colors rounded-lg text-white"
+                >
+                  <i className="fas fa-plus"></i>
+                  Add Highlight
+                </button>
+              </div>
+            )}
+          </div>
           
           <p className="text-center text-light-gray max-w-3xl mx-auto mb-10 leading-relaxed">
             Explore the diverse aspects of campus life at Mahindra University, from cutting-edge facilities to vibrant cultural experiences.
           </p>
           
-          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-5 md:gap-6 mb-10">
-            <div className="relative h-64 md:h-72 rounded-xl overflow-hidden cursor-pointer group shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1562774053-701939374585?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1746&q=80"
-                alt="Modern Infrastructure" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3EModern Infrastructure%3C/text%3E%3C/svg%3E`;
-                }}
-              />
-              
-              {/* Overlay with gradient */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-              
-              {/* Icon in top right */}
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                <i className="fas fa-building text-white"></i>
-              </div>
-              
-              {/* Content overlay at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
-                <h3 className="font-semibold text-xl text-white mb-1">Modern Infrastructure</h3>
-                <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">State-of-the-art academic buildings with cutting-edge facilities</p>
-                
-                {/* Action buttons */}
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => window.open('/college?tab=facilities&view=gallery', '_self')}
-                    className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-search text-xs"></i> View
-                  </button>
-                  <Link 
-                    to="/college?tab=facilities" 
-                    className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-info-circle text-xs"></i> Details
-                  </Link>
-                </div>
-              </div>
+          {highlightsLoading ? (
+            <div className="flex justify-center items-center py-16">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
             </div>
+          ) : highlightsError ? (
+            <div className="text-center text-light-gray py-10">
+              <p className="mb-4">Unable to load campus highlights.</p>
+              <button 
+                className="px-4 py-2 bg-primary-red text-white rounded-lg"
+                onClick={() => window.location.reload()}
+              >
+                Retry
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {campusHighlights.map((item) => (
+                <div key={item._id || item.id} className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src={item.image} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3E${encodeURIComponent(item.title)}%3C/text%3E%3C/svg%3E`;
+                    }}
+                  />
+                  
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                  
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    <i className={`${item.icon} text-white`}></i>
+                  </div>
 
-            <div className="relative h-64 md:h-72 rounded-xl overflow-hidden cursor-pointer group shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1568667256549-094345857637?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80"
-                alt="Digital Library" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3EDigital Library%3C/text%3E%3C/svg%3E`;
-                }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-              
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                <i className="fas fa-book text-white"></i>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
-                <h3 className="font-semibold text-xl text-white mb-1">Digital Library</h3>
-                <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Extensive collection of digital and print resources for research and learning</p>
-                
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => window.open('/college?tab=library&view=gallery', '_self')}
-                    className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-search text-xs"></i> View
-                  </button>
-                  <Link 
-                    to="/college?tab=library" 
-                    className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-info-circle text-xs"></i> Details
-                  </Link>
+                  {/* Edit button for admins */}
+                  {currentUser && currentUser.role === 'admin' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingHighlight(item);
+                        setShowHighlightModal(true);
+                      }}
+                      className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white flex items-center justify-center transform transition-transform duration-300 hover:scale-110 z-20"
+                      title="Edit highlight"
+                    >
+                      <i className="fas fa-edit text-primary-red"></i>
+                    </button>
+                  )}
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
+                    <h3 className="font-semibold text-xl text-white mb-1">{item.title}</h3>
+                    <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{item.description}</p>
+                    
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => {
+                          setSelectedImage({
+                            src: item.image,
+                            title: item.title,
+                            description: item.description
+                          });
+                          setShowModal(true);
+                        }}
+                        className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
+                      >
+                        <i className="fas fa-search text-xs"></i> View
+                      </button>
+                      <Link 
+                        to={item.link || "/college?tab=gallery"} 
+                        className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
+                      >
+                        <i className="fas fa-info-circle text-xs"></i> Details
+                      </Link>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ))}
             </div>
-
-            <div className="relative h-64 md:h-72 rounded-xl overflow-hidden cursor-pointer group shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1574629810360-7efbbe195018?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1693&q=80"
-                alt="Sports Facilities" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3ESports Facilities%3C/text%3E%3C/svg%3E`;
-                }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-              
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                <i className="fas fa-futbol text-white"></i>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
-                <h3 className="font-semibold text-xl text-white mb-1">Sports Facilities</h3>
-                <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Olympic-sized swimming pool, indoor stadium, and outdoor sports fields</p>
-                
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => window.open('/college?tab=sports&view=gallery', '_self')}
-                    className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-search text-xs"></i> View
-                  </button>
-                  <Link 
-                    to="/college?tab=sports" 
-                    className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-info-circle text-xs"></i> Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative h-64 md:h-72 rounded-xl overflow-hidden cursor-pointer group shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1581093458791-9f5bf5abf940?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1740&q=80"
-                alt="Research Labs" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3EResearch Labs%3C/text%3E%3C/svg%3E`;
-                }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-              
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                <i className="fas fa-flask text-white"></i>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
-                <h3 className="font-semibold text-xl text-white mb-1">Research Labs</h3>
-                <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Advanced research laboratories equipped with the latest technology</p>
-                
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => window.open('/college?tab=research&view=gallery', '_self')}
-                    className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-search text-xs"></i> View
-                  </button>
-                  <Link 
-                    to="/college?tab=research" 
-                    className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-info-circle text-xs"></i> Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative h-64 md:h-72 rounded-xl overflow-hidden cursor-pointer group shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1530023367847-a683933f4172?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80"
-                alt="Cultural Events" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3ECultural Events%3C/text%3E%3C/svg%3E`;
-                }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-              
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                <i className="fas fa-music text-white"></i>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
-                <h3 className="font-semibold text-xl text-white mb-1">Cultural Events</h3>
-                <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Vibrant campus life with regular cultural programs and celebrations</p>
-                
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => window.open('/clubs-events?category=cultural&view=gallery', '_self')}
-                    className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-search text-xs"></i> View
-                  </button>
-                  <Link 
-                    to="/clubs-events?category=cultural" 
-                    className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-info-circle text-xs"></i> Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-
-            <div className="relative h-64 md:h-72 rounded-xl overflow-hidden cursor-pointer group shadow-lg transform transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
-              <img 
-                src="https://images.unsplash.com/photo-1555854877-bab0e564b8d5?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1738&q=80"
-                alt="Student Housing" 
-                className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3EStudent Housing%3C/text%3E%3C/svg%3E`;
-                }}
-              />
-              
-              <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
-              
-              <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                <i className="fas fa-home text-white"></i>
-              </div>
-              
-              <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
-                <h3 className="font-semibold text-xl text-white mb-1">Student Housing</h3>
-                <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Modern, comfortable residential facilities for students</p>
-                
-                <div className="flex gap-3">
-                  <button 
-                    onClick={() => window.open('/college?tab=housing&view=gallery', '_self')}
-                    className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-search text-xs"></i> View
-                  </button>
-                  <Link 
-                    to="/college?tab=housing" 
-                    className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                  >
-                    <i className="fas fa-info-circle text-xs"></i> Details
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
           
-          {/* Call to action */}
-          <div className="text-center flex flex-col items-center">
+          {/* Rest of Campus Gallery section */}
+          <div className="text-center flex flex-col items-center mt-12">
             <Link 
               to="/college?tab=gallery" 
               className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors inline-flex items-center gap-2"
@@ -1061,6 +959,37 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* Add/Edit Campus Highlight Modal */}
+      {showHighlightModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {editingHighlight ? 'Edit Campus Highlight' : 'Add Campus Highlight'}
+                </h2>
+                <button 
+                  onClick={() => setShowHighlightModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+              
+              <CampusHighlightForm 
+                highlight={editingHighlight} 
+                onClose={() => setShowHighlightModal(false)}
+                onSuccess={() => {
+                  setShowHighlightModal(false);
+                  // Refresh the highlights list
+                  fetchCampusHighlights();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Call to Action Section - Only show for non-logged in users */}
       {!currentUser && (

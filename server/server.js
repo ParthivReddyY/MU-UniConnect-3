@@ -17,9 +17,11 @@ const feedbackRoutes = require('./routes/feedbackRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
 const sitemapRoutes = require('./routes/sitemapRoutes');
+const campusHighlightRoutes = require('./routes/campusHighlightRoutes');
 
 // Import controllers for initialization
 const newsController = require('./controllers/newsController');
+const campusHighlightController = require('./controllers/campusHighlightController');
 
 // Import other routes as needed
 
@@ -37,6 +39,7 @@ const connectDB = async () => {
     
     // Initialize collections with sample data
     await newsController.initializeNews();
+    await campusHighlightController.initializeHighlights();
   } catch (error) {
     console.error(`Error connecting to MongoDB: ${error.message}`);
     process.exit(1);
@@ -136,6 +139,7 @@ app.use('/api/presentations', presentationRoutes); // Add this line
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/upload', uploadRoutes);  // Add this line
 app.use('/api/proxy', proxyRoutes);
+app.use('/api/campus-highlights', campusHighlightRoutes);
 
 // Remove duplicate feedback route registration
 
