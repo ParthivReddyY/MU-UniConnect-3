@@ -1,309 +1,380 @@
-import React, { useState, useEffect, useCallback, memo, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import '../App.css';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Link, useNavigate, useLocation, NavLink as RouterNavLink } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-// NavLink component for desktop navigation only
-const NavLink = memo(({ to, isActive, children, hasDropdown, dropdownContent }) => {
+// NavLink component with dropdown support
+const NavLink = ({ to, children, isActive, hasDropdown, dropdownContent }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef(null);
-  
-  const handleMouseEnter = () => {
-    if (hasDropdown && window.innerWidth >= 768) {
-      setShowDropdown(true);
-    }
-  };
-  
-  const handleMouseLeave = () => {
-    if (hasDropdown) {
-      setShowDropdown(false);
-    }
-  };
-  
-  // Close dropdown when clicking outside
+  const linkRef = useRef(null);
+
+  // Handle clicking outside to close dropdown
   useEffect(() => {
     if (!showDropdown) return;
     
     const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+      if (
+        dropdownRef.current && 
+        !dropdownRef.current.contains(event.target) &&
+        !linkRef.current.contains(event.target)
+      ) {
         setShowDropdown(false);
       }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
-  
+
+  // Close dropdown on escape key
+  useEffect(() => {
+    const handleEscape = (e) => {
+      if (e.key === 'Escape' && showDropdown) {
+        setShowDropdown(false);
+      }
+    };
+    
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [showDropdown]);
+
   return (
-    <div 
-      ref={dropdownRef}
-      className={`nav-item ${hasDropdown ? 'has-dropdown' : ''}`}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <Link 
-        to={to} 
+    <div className="nav-item" onMouseLeave={() => setShowDropdown(false)}>
+      <RouterNavLink 
+        to={to}
+        ref={linkRef}
         className={`${isActive ? 'active' : ''}`}
-        aria-current={isActive ? 'page' : undefined}
+        onMouseEnter={() => hasDropdown && setShowDropdown(true)}
+        onClick={() => !hasDropdown && setShowDropdown(false)}
+        aria-expanded={hasDropdown && showDropdown ? 'true' : 'false'}
+        aria-haspopup={hasDropdown ? 'true' : undefined}
       >
         {children}
-        {hasDropdown && (
-          <i 
-            className="fas fa-chevron-down text-xs ml-1.5 transition-transform duration-300" 
-            style={{ transform: showDropdown ? 'rotate(180deg)' : 'rotate(0)' }}
-          />
-        )}
-      </Link>
+      </RouterNavLink>
       
       {hasDropdown && showDropdown && (
         <>
-          <div className="dropdown-connector" />
-          <div className="nav-dropdown">
+          <div className="dropdown-connector" aria-hidden="true"></div>
+          <div className="nav-dropdown" ref={dropdownRef} role="menu">
             {dropdownContent}
           </div>
         </>
       )}
     </div>
   );
-});
+};
 
-// Completely separate MobileNavbar component
-const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showProfileMenu, renderProfileDropdown }) => {
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedDropdowns, setExpandedDropdowns] = useState({});
+// MobileNavLink component
+const MobileNavLink = ({ to, label, hasDropdown, dropdownContent, isActive, onClick }) => {
+  const [showDropdown, setShowDropdown] = useState(false);
   
-  const location = useLocation();
-  const menuRef = useRef(null);
+  const toggleDropdown = (e) => {
+    e.preventDefault();
+    setShowDropdown(prev => !prev);
+  };
+  
+  const handleLinkClick = () => {
+    // Close dropdown and run the onClick handler
+    setShowDropdown(false);
+    if (onClick) onClick();
+  };
+  
+  return (
+    <div className="mobile-nav-item">
+      <div className="mobile-nav-link-wrapper">
+        {hasDropdown ? (
+          <button 
+            className={`mobile-nav-link ${isActive ? 'active' : ''}`}
+            onClick={toggleDropdown}
+            aria-expanded={showDropdown ? 'true' : 'false'}
+          >
+            <span>{label}</span>
+            <i className={`fas fa-chevron-${showDropdown ? 'up' : 'down'}`} aria-hidden="true"></i>
+          </button>
+        ) : (
+          <RouterNavLink 
+            to={to} 
+            className={({ isActive }) => `mobile-nav-link ${isActive ? 'active' : ''}`}
+            onClick={handleLinkClick}
+          >
+            {label}
+          </RouterNavLink>
+        )}
+      </div>
+      
+      {hasDropdown && (
+        <div className={`mobile-dropdown-content ${showDropdown ? 'expanded' : ''}`}>
+          {dropdownContent}
+        </div>
+      )}
+    </div>
+  );
+};
 
-  // Close mobile menu when route changes
+// Mobile-specific component
+const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => {
+  const [showMenu, setShowMenu] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileDropdownRef = useRef(null);
+  const profileButtonRef = useRef(null);
+  
+  // Toggle mobile menu visibility
+  const toggleMenu = () => {
+    setShowMenu(prev => !prev);
+    // Close profile dropdown when toggling menu
+    if (showProfileDropdown) setShowProfileDropdown(false);
+  };
+  
+  // Toggle profile dropdown
+  const toggleProfileDropdown = (e) => {
+    e.stopPropagation();
+    setShowProfileDropdown(prev => !prev);
+  };
+  
+  // Close menu when clicking a link
+  const handleNavLinkClick = () => {
+    setShowMenu(false);
+    setShowProfileDropdown(false);
+  };
+  
+  // Handle clicking outside to close profile dropdown
   useEffect(() => {
-    setMobileMenuOpen(false);
-    setExpandedDropdowns({});
-  }, [location.pathname]);
-
-  // Handle clicks outside the menu to close it
-  useEffect(() => {
-    if (!mobileMenuOpen) return;
+    if (!showProfileDropdown) return;
     
     const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target) && 
-          !event.target.closest('.mobile-menu-button')) {
-        setMobileMenuOpen(false);
+      if (
+        profileDropdownRef.current && 
+        !profileDropdownRef.current.contains(event.target) &&
+        profileButtonRef.current &&
+        !profileButtonRef.current.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
       }
     };
     
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [mobileMenuOpen]);
-
-  // Body overflow control when menu is open
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileDropdown]);
+  
+  // Transform dropdown content for mobile view
+  const transformDropdownContent = (content) => {
+    // Check if content is a React element
+    if (!content || typeof content.type !== 'function') {
+      return content;
     }
     
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileMenuOpen]);
-
-  // Toggle mobile menu
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(prev => !prev);
+    // Clone the element to transform its children
+    return React.cloneElement(content, {}, 
+      React.Children.map(content.props.children, section => {
+        if (!section || section.type !== 'div' || !section.props.className.includes('dropdown-section')) {
+          return section;
+        }
+        
+        return (
+          <div className="mobile-dropdown-section">
+            <h3 className="mobile-dropdown-title">
+              {section.props.children.find(child => 
+                child.type === 'h3' && child.props.className.includes('dropdown-title')
+              )?.props.children}
+            </h3>
+            <div className="mobile-dropdown-links">
+              {React.Children.map(section.props.children, child => {
+                if (child.type === Link) {
+                  return (
+                    <Link 
+                      to={child.props.to} 
+                      className="mobile-dropdown-link" 
+                      onClick={handleNavLinkClick}
+                    >
+                      <span className="mobile-dropdown-icon">
+                        {child.props.children.find(c => c.type === 'i')}
+                      </span>
+                      <div className="mobile-dropdown-text">
+                        <span className="mobile-dropdown-title-text">
+                          {child.props.children.find(c => c.type === 'div')?.props.children[0]?.props.children}
+                        </span>
+                        <span className="mobile-dropdown-desc-text">
+                          {child.props.children.find(c => c.type === 'div')?.props.children[1]?.props.children}
+                        </span>
+                      </div>
+                    </Link>
+                  );
+                }
+                return child;
+              })}
+            </div>
+          </div>
+        );
+      })
+    );
   };
-
-  // Toggle specific dropdown section
-  const toggleDropdown = (index) => {
-    setExpandedDropdowns(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
-
+  
   return (
-    <div className="mobile-navbar block md:hidden">
+    <div className="mobile-navbar md:hidden">
       <div className="mobile-header-container">
-        {/* Mobile Top Bar */}
         <div className="mobile-header-top">
-          {/* Logo */}
           <div className="mobile-logo">
             <Link to="/" aria-label="MU-UniConnect Home">
               <img 
                 src="/img/uniconnectTB.png" 
                 alt="UniConnect Logo" 
                 className="mobile-logo-image" 
-                width="168"
-                height="42"
+                width="180"
+                height="45"
               />
             </Link>
           </div>
-
-          {/* Controls */}
+          
           <div className="mobile-controls">
-            {/* Auth Button */}
-            <div className="mobile-auth-section">
-              <button 
-                className="auth-icon-btn mobile-auth-btn"
-                onClick={handleAuthClick}
-                title={currentUser ? "Account menu" : "Login"}
-                aria-label={currentUser ? "Account menu" : "Login"}
-              >
-                {currentUser ? (
-                  <span className="flex items-center justify-center w-full h-full overflow-hidden">
-                    {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
-                      <img
-                        className="h-7 w-7 rounded-full object-cover border-2 border-white"
+            {currentUser ? (
+              <div className="mobile-auth-section relative">
+                <button 
+                  ref={profileButtonRef}
+                  className="flex items-center focus:outline-none" 
+                  onClick={toggleProfileDropdown}
+                  aria-label="Profile"
+                  aria-haspopup="true"
+                  aria-expanded={showProfileDropdown ? 'true' : 'false'}
+                >
+                  <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+                    {currentUser.profileImage ? (
+                      <img 
                         src={currentUser.profileImage} 
-                        alt={`${currentUser.name}'s profile`}
+                        alt={currentUser.name} 
+                        className="w-full h-full object-cover"
                       />
                     ) : (
-                      <i className="fas fa-user text-white"></i>
+                      <span className="text-primary-red font-semibold text-base">
+                        {currentUser.name?.charAt(0).toUpperCase() || 'U'}
+                      </span>
                     )}
-                  </span>
-                ) : (
-                  <i className="fas fa-user text-white"></i>
+                  </div>
+                </button>
+                
+                {showProfileDropdown && (
+                  <div 
+                    ref={profileDropdownRef}
+                    className="mobile-profile-dropdown"
+                    role="menu"
+                  >
+                    <Link 
+                      to="/profile" 
+                      className="profile-dropdown-item"
+                      onClick={() => setShowProfileDropdown(false)}
+                      role="menuitem"
+                    >
+                      <i className="fas fa-user-circle"></i> 
+                      <span>View Profile</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/dashboard" 
+                      className="profile-dropdown-item"
+                      onClick={() => setShowProfileDropdown(false)}
+                      role="menuitem"
+                    >
+                      <i className="fas fa-tachometer-alt"></i> 
+                      <span>Dashboard</span>
+                    </Link>
+                    
+                    <Link 
+                      to="/change-password" 
+                      className="profile-dropdown-item"
+                      onClick={() => setShowProfileDropdown(false)}
+                      role="menuitem"
+                    >
+                      <i className="fas fa-key"></i> 
+                      <span>Change Password</span>
+                    </Link>
+                    
+                    <button
+                      onClick={() => {
+                        setShowProfileDropdown(false);
+                        window.location.href = '/api/auth/logout';
+                      }}
+                      className="profile-dropdown-item profile-dropdown-item-logout"
+                      role="menuitem"
+                    >
+                      <i className="fas fa-sign-out-alt"></i> 
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
                 )}
-              </button>
-              
-              {/* Mobile profile dropdown */}
-              {showProfileMenu && currentUser && renderProfileDropdown()}
-            </div>
-            
-            {/* Hamburger Menu Button - Improved visibility and touch target */}
+              </div>
+            ) : (
+              <div className="mobile-auth-section">
+                <button 
+                  onClick={handleAuthClick}
+                  className="mobile-auth-btn"
+                  aria-label="Sign in"
+                >
+                  <i className="fas fa-user"></i>
+                </button>
+              </div>
+            )}
             <button 
-              className="mobile-menu-button flex items-center justify-center"
-              onClick={toggleMobileMenu}
-              aria-expanded={mobileMenuOpen}
-              aria-controls="mobile-menu"
-              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              className="mobile-menu-button"
+              onClick={toggleMenu}
+              aria-expanded={showMenu ? 'true' : 'false'}
+              aria-label="Toggle navigation menu"
             >
-              <span className="sr-only">{mobileMenuOpen ? "Close menu" : "Open menu"}</span>
-              <i className={`fas ${mobileMenuOpen ? 'fa-times' : 'fa-bars'} text-xl`} aria-hidden="true"></i>
+              <i className={`fas fa-${showMenu ? 'times' : 'bars'}`} aria-hidden="true"></i>
             </button>
           </div>
         </div>
-
-        {/* Mobile Menu Overlay */}
-        {mobileMenuOpen && (
-          <div className="mobile-menu-overlay fixed inset-0 bg-black/50 z-40" onClick={toggleMobileMenu} aria-hidden="true" />
-        )}
-        
-        {/* Mobile Menu Panel */}
-        <div 
-          id="mobile-menu"
-          ref={menuRef}
-          className={`mobile-menu ${mobileMenuOpen ? 'show' : ''} fixed z-50`}
-          aria-hidden={!mobileMenuOpen}
-        >
-          <nav className="mobile-nav-links" aria-label="Mobile navigation">
-            {navLinks.map((link, index) => (
-              <div key={`mobile-${index}`} className="mobile-nav-item">
-                {link.hasDropdown ? (
-                  <>
-                    <button 
-                      className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
-                      onClick={() => toggleDropdown(index)}
-                      aria-expanded={expandedDropdowns[index]}
-                    >
-                      <span>{link.label}</span>
-                      <i className={`fas fa-chevron-down transition-transform ${expandedDropdowns[index] ? 'rotate-180' : ''}`}></i>
-                    </button>
-                    
-                    <div 
-                      className={`mobile-dropdown-content ${expandedDropdowns[index] ? 'expanded' : ''}`}
-                    >
-                      {React.Children.toArray(link.dropdownContent.props.children).map((section, sIdx) => {
-                        if (!section || !section.props || !section.props.children) return null;
-                        
-                        const sectionTitle = React.Children.toArray(section.props.children).find(
-                          child => child.type === 'h3' || (child.props && child.props.className === 'dropdown-title')
-                        );
-                        
-                        const sectionLinks = React.Children.toArray(section.props.children).filter(
-                          child => child.type === Link || (child.props && child.props.to)
-                        );
-                        
-                        return (
-                          <div key={sIdx} className="mobile-dropdown-section">
-                            {sectionTitle && (
-                              <h4 className="mobile-dropdown-title">
-                                {sectionTitle.props.children}
-                              </h4>
-                            )}
-                            
-                            <div className="mobile-dropdown-links">
-                              {sectionLinks.map((item, lIdx) => {
-                                if (!item || !item.props) return null;
-                                
-                                // Extract icon and text content from the dropdown item
-                                const icon = React.Children.toArray(item.props.children).find(
-                                  child => child.type === 'i' || (child.props && child.props.className && child.props.className.includes('fa-'))
-                                );
-                                
-                                const content = React.Children.toArray(item.props.children).find(
-                                  child => child.type === 'div' || (child.props && child.props.children)
-                                );
-                                
-                                const title = content ? React.Children.toArray(content.props.children).find(
-                                  child => child.type === 'span' && (!child.props.className || !child.props.className.includes('dropdown-description'))
-                                ) : null;
-                                
-                                const description = content ? React.Children.toArray(content.props.children).find(
-                                  child => child.props && child.props.className && child.props.className.includes('dropdown-description')
-                                ) : null;
-                                
-                                return (
-                                  <Link
-                                    key={lIdx}
-                                    to={item.props.to}
-                                    className="mobile-dropdown-link"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                  >
-                                    {icon && <span className="mobile-dropdown-icon">{icon}</span>}
-                                    <span className="mobile-dropdown-text">
-                                      <span className="mobile-dropdown-title-text">{title ? title.props.children : 'Link'}</span>
-                                      {description && (
-                                        <span className="mobile-dropdown-desc-text">{description.props.children}</span>
-                                      )}
-                                    </span>
-                                  </Link>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                ) : (
-                  <Link 
-                    to={link.to}
-                    className={`mobile-nav-link ${isActive(link.to) ? 'active' : ''}`}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <span>{link.label}</span>
-                  </Link>
-                )}
-              </div>
-            ))}
-          </nav>
-        </div>
       </div>
+      
+      {showMenu && (
+        <>
+          <div className="mobile-menu-overlay" onClick={toggleMenu} aria-hidden="true"></div>
+          <div className={`mobile-menu ${showMenu ? 'show' : ''}`} role="navigation">
+            <nav className="mobile-nav-links" aria-label="Mobile navigation">
+              {navLinks.map((link, index) => (
+                <MobileNavLink 
+                  key={`mobile-${index}`}
+                  to={link.to} 
+                  label={link.label}
+                  isActive={isActive(link.to)}
+                  hasDropdown={link.hasDropdown}
+                  dropdownContent={link.hasDropdown ? transformDropdownContent(link.dropdownContent) : null}
+                  onClick={handleNavLinkClick}
+                />
+              ))}
+              
+              {/* Remove the profile section from the hamburger menu since we now have a dropdown */}
+            </nav>
+          </div>
+        </>
+      )}
     </div>
   );
 };
 
-// Desktop-only navbar component
-const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showProfileMenu, renderProfileDropdown }) => {
+// Desktop-specific component with shared state handling
+const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => {
+  const desktopNavRef = useRef(null);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const profileDropdownRef = useRef(null);
+
+  // Handle clicking outside to close profile dropdown
+  useEffect(() => {
+    if (!showProfileDropdown) return;
+    
+    const handleClickOutside = (event) => {
+      if (
+        profileDropdownRef.current && 
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setShowProfileDropdown(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showProfileDropdown]);
+  
   return (
-    <div className="desktop-navbar hidden md:flex">
-      {/* Desktop Logo */}
+    <div className="desktop-navbar hidden md:flex" ref={desktopNavRef}>
       <div className="desktop-logo">
         <Link to="/" aria-label="MU-UniConnect Home">
           <img 
@@ -316,8 +387,7 @@ const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showP
         </Link>
       </div>
       
-      {/* Desktop Navigation Links */}
-      <nav className="desktop-nav-links" aria-label="Main navigation">
+      <nav className="desktop-nav-links mx-auto" aria-label="Main navigation">
         {navLinks.map((link, index) => (
           <NavLink 
             key={`desktop-${index}`}
@@ -331,47 +401,104 @@ const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, showP
         ))}
       </nav>
 
-      {/* Desktop Auth Button */}
-      <div className="desktop-auth-section">
-        <button 
-          className="auth-icon-btn relative" 
-          onClick={handleAuthClick}
-          title={currentUser ? "Account menu" : "Login"}
-          aria-label={currentUser ? "Account menu" : "Login"}
-        >
-          {currentUser ? (
-            <span className="w-full h-full flex items-center justify-center overflow-hidden">
-              {currentUser.profileImage && currentUser.profileImage !== 'default-profile.png' ? (
-                <img
-                  className="h-8 w-8 rounded-full object-cover border-2 border-white"
+      {/* Profile dropdown for authenticated users */}
+      {currentUser ? (
+        <div className="desktop-auth-section relative">
+          <button 
+            className="flex items-center space-x-2 focus:outline-none rounded-full hover:ring-2 hover:ring-red-100 transition-all duration-200 p-1"
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+            aria-haspopup="true"
+            aria-expanded={showProfileDropdown ? 'true' : 'false'}
+          >
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow duration-200">
+              {currentUser.profileImage ? (
+                <img 
                   src={currentUser.profileImage} 
-                  alt={`${currentUser.name}'s profile`}
+                  alt={currentUser.name} 
+                  className="w-full h-full object-cover"
                 />
               ) : (
-                <i className="fas fa-user text-white"></i>
+                <span className="text-primary-red font-semibold text-lg">
+                  {currentUser.name?.charAt(0).toUpperCase() || 'U'}
+                </span>
               )}
-            </span>
-          ) : (
-            <i className="fas fa-user text-white"></i>
+            </div>
+          </button>
+          
+          {showProfileDropdown && (
+            <div 
+              ref={profileDropdownRef}
+              className="profile-dropdown"
+              role="menu"
+            >
+              <div className="flex flex-col">
+                <Link 
+                  to="/profile" 
+                  className="profile-dropdown-item"
+                  onClick={() => setShowProfileDropdown(false)}
+                  role="menuitem"
+                >
+                  <i className="fas fa-user-circle text-primary-red"></i> 
+                  <span>View Profile</span>
+                </Link>
+                
+                <Link 
+                  to="/dashboard" 
+                  className="profile-dropdown-item"
+                  onClick={() => setShowProfileDropdown(false)}
+                  role="menuitem"
+                >
+                  <i className="fas fa-tachometer-alt text-primary-red"></i> 
+                  <span>Dashboard</span>
+                </Link>
+                
+                <Link 
+                  to="/change-password" 
+                  className="profile-dropdown-item"
+                  onClick={() => setShowProfileDropdown(false)}
+                  role="menuitem"
+                >
+                  <i className="fas fa-key text-primary-red"></i> 
+                  <span>Change Password</span>
+                </Link>
+                
+                <button
+                  onClick={() => {
+                    setShowProfileDropdown(false);
+                    window.location.href = '/api/auth/logout';
+                  }}
+                  className="profile-dropdown-item profile-dropdown-item-logout"
+                  role="menuitem"
+                >
+                  <i className="fas fa-sign-out-alt"></i> 
+                  <span>Sign Out</span>
+                </button>
+              </div>
+            </div>
           )}
-        </button>
-        
-        {/* Desktop profile dropdown */}
-        {showProfileMenu && currentUser && renderProfileDropdown()}
-      </div>
+        </div>
+      ) : (
+        <div className="desktop-auth-section">
+          <button
+            onClick={handleAuthClick}
+            className="auth-icon-btn"
+            aria-label="Sign in"
+          >
+            <i className="fas fa-user"></i>
+          </button>
+        </div>
+      )}
     </div>
   );
 };
 
-// Main Navbar component
+// Main Navbar component with consolidated event handling and shared state
 function Navbar() {
   // Shared state variables
   const [scrolled, setScrolled] = useState(false);
-  const [showProfileMenu, setShowProfileMenu] = useState(false);
-  const profileMenuRef = useRef(null);
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser, logout } = useAuth();
+  const { currentUser } = useAuth();
 
   // Optimized scroll handler with throttling
   const handleScroll = useCallback(() => {
@@ -382,26 +509,6 @@ function Navbar() {
       setScrolled(shouldBeScrolled);
     }
   }, [scrolled]);
-
-  // Handle clicking outside profile menu
-  useEffect(() => {
-    if (!showProfileMenu) return;
-    
-    const handleClickOutside = (event) => {
-      if (
-        profileMenuRef.current && 
-        !profileMenuRef.current.contains(event.target) &&
-        !event.target.closest('.auth-icon-btn')
-      ) {
-        setShowProfileMenu(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showProfileMenu]);
 
   // Set up scroll listener
   useEffect(() => {
@@ -430,83 +537,23 @@ function Navbar() {
     return location.pathname.startsWith(path);
   }, [location.pathname]);
 
-  // Handle auth button click
+  // Handle auth button click - direct to profile or login
   const handleAuthClick = () => {
     if (currentUser) {
-      setShowProfileMenu(prev => !prev);
+      navigate('/profile');
     } else {
       navigate('/login');
     }
   };
 
-  // Handle logout
-  const handleLogout = () => {
-    logout();
-    setShowProfileMenu(false);
-    navigate('/');
-  };
-
-  // Get role-specific badge class
-  const getRoleBadgeClass = (role) => {
-    if (role === 'admin') return 'admin';
-    if (role === 'faculty') return 'faculty';
-    return '';
-  };
-  
-  // Profile dropdown content
-  const renderProfileDropdown = () => (
-    <div className="profile-dropdown" ref={profileMenuRef}>
-      <div className="profile-dropdown-header">
-        <p className="name truncate">{currentUser.name}</p>
-        <p className="email truncate">{currentUser.email}</p>
-        <div className={`role-badge ${getRoleBadgeClass(currentUser.role)}`}>
-          {currentUser.role}
-        </div>
-      </div>
-      
-      <Link 
-        to="/dashboard" 
-        className="block text-sm menu-item-dashboard"
-        onClick={() => setShowProfileMenu(false)}
-      >
-        <i className="fas fa-tachometer-alt"></i> Dashboard
-      </Link>
-      
-      <Link 
-        to="/profile" 
-        className="block text-sm menu-item-profile"
-        onClick={() => setShowProfileMenu(false)}
-      >
-        <i className="fas fa-user-circle"></i> My Profile
-      </Link>
-      
-      {currentUser.role === 'admin' && (
-        <Link 
-          to="/admin/dashboard" 
-          className="block text-sm menu-item-admin"
-          onClick={() => setShowProfileMenu(false)}
-        >
-          <i className="fas fa-shield-alt"></i> Admin Panel
-        </Link>
-      )}
-      
-      <button
-        className="w-full text-left block text-sm sign-out-btn"
-        onClick={handleLogout}
-      >
-        <i className="fas fa-sign-out-alt"></i> Sign out
-      </button>
-    </div>
-  );
-
   // Navigation links data
   const navLinks = [
-    { 
+    {
       to: "/", 
       label: "Home",
       hasDropdown: false
     },
-    { 
+    {
       to: "/clubs-events", 
       label: "Clubs & Events",
       hasDropdown: true,
@@ -563,7 +610,7 @@ function Navbar() {
         </div>
       )
     },
-    { 
+    {
       to: "/faculty", 
       label: "Faculty",
       hasDropdown: true,
@@ -615,7 +662,7 @@ function Navbar() {
         </div>
       )
     },
-    { 
+    {
       to: "/college", 
       label: "College",
       hasDropdown: true,
@@ -689,17 +736,12 @@ function Navbar() {
         currentUser={currentUser}
         isActive={isActive}
         handleAuthClick={handleAuthClick}
-        showProfileMenu={showProfileMenu}
-        renderProfileDropdown={renderProfileDropdown}
       />
-      
       <MobileNavbar 
         navLinks={navLinks}
         currentUser={currentUser}
         isActive={isActive}
         handleAuthClick={handleAuthClick}
-        showProfileMenu={showProfileMenu}
-        renderProfileDropdown={renderProfileDropdown}
       />
     </header>
   );
