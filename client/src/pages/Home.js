@@ -43,8 +43,8 @@ function Home() {
   const [showHighlightModal, setShowHighlightModal] = useState(false);
   const [editingHighlight, setEditingHighlight] = useState(null);
 
-  // Fallback gallery images in case API fails
-  const fallbackGalleryImages = [
+  // Fallback gallery images in case API fails - wrapped in useMemo to prevent recreation on every render
+  const fallbackGalleryImages = React.useMemo(() => [
     {
       id: 1,
       title: 'Modern Infrastructure',
@@ -93,7 +93,7 @@ function Home() {
       link: '/college?tab=housing',
       icon: 'fas fa-home'
     },
-  ];
+  ], []);
   
   // Function to open image in modal
   const openImageModal = (image) => {
@@ -400,7 +400,7 @@ function Home() {
   }, []);
 
   // Fetch Campus Highlights from API
-  const fetchCampusHighlights = async () => {
+  const fetchCampusHighlights = React.useCallback(async () => {
     setHighlightsLoading(true);
     try {
       const response = await api.get('/api/campus-highlights');
@@ -419,11 +419,11 @@ function Home() {
     } finally {
       setHighlightsLoading(false);
     }
-  };
+  }, [fallbackGalleryImages]); // Include fallbackGalleryImages in dependencies since it's used inside
 
   useEffect(() => {
     fetchCampusHighlights();
-  }, []); // Empty dependency array means this runs once on component mount
+  }, [fetchCampusHighlights]); // Include fetchCampusHighlights in the dependency array
 
   return (
     <div className="home-page container-fluid">
@@ -940,14 +940,11 @@ function Home() {
                     
                     <div className="flex gap-3">
                       <button 
-                        onClick={() => {
-                          setSelectedImage({
-                            src: item.image,
-                            title: item.title,
-                            description: item.description
-                          });
-                          setShowModal(true);
-                        }}
+                        onClick={() => openImageModal({
+                          src: item.image,
+                          title: item.title,
+                          description: item.description
+                        })}
                         className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
                       >
                         <i className="fas fa-search text-xs"></i> View
@@ -980,6 +977,32 @@ function Home() {
         </div>
       </section>
 
+      {/* Image View Modal */}
+      {showModal && selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className="relative max-w-4xl max-h-[90vh] w-full">
+            <button 
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-white hover:text-gray-300 z-10"
+              aria-label="Close modal"
+            >
+              <i className="fas fa-times text-2xl"></i>
+            </button>
+            <div className="flex flex-col items-center">
+              <img 
+                src={selectedImage.src} 
+                alt={selectedImage.title || "Campus highlight"} 
+                className="max-h-[70vh] max-w-full object-contain"
+              />
+              <div className="text-white text-center mt-4">
+                <h3 className="text-xl font-semibold">{selectedImage.title}</h3>
+                <p className="text-gray-300 mt-2">{selectedImage.description}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Add/Edit Campus Highlight Modal */}
       {showHighlightModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
@@ -1037,7 +1060,13 @@ function Home() {
         <div className="content-container px-4 md:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mb-2">
             <div>
-              <img src="/logo.png" alt="MU-UniConnect Logo" className="max-w-[150px] mb-4" />
+              <img 
+                src="/img/uniconnectTB.png" 
+                alt="MU-UniConnect Logo" 
+                className="max-w-[150px] mb-4"
+                width="150"
+                height="38" 
+              />
               <p className="text-light-gray text-sm">Connecting campus. Building community.</p>
             </div>
             
