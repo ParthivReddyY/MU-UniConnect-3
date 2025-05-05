@@ -312,13 +312,33 @@ function Home() {
 
   return (
     <div className="home-page container-fluid">
-      {/* Hero Section - Full Width */}
-      <section className="hero full-width relative min-h-[500px] flex items-center justify-center overflow-hidden bg-gradient-to-r from-primary-teal to-blue-600 text-white py-32 md:py-36">
-        <div className="absolute inset-0 bg-black bg-opacity-20 z-0"></div>
-        <div className="relative z-10 max-w-4xl mx-auto px-4 text-center">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-4 tracking-tight drop-shadow-md">MU-UniConnect</h1>
-          <p className="text-xl md:text-2xl font-medium mb-6 drop-shadow">Connecting Campus Life at Mahindra University</p>
-          <p className="text-base md:text-lg max-w-2xl mx-auto mb-10 leading-relaxed">One platform to access faculty information, club activities, events, and university resources</p>
+      {/* Hero Section with Video Background - Full Width */}
+      <section className="hero full-width relative min-h-[100vh] h-auto flex flex-col items-center justify-center overflow-hidden text-white">
+        {/* Video Background */}
+        <div className="absolute inset-0 z-0 w-full h-full overflow-hidden">
+          <video 
+            className="absolute min-w-full min-h-full"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            style={{ 
+              objectFit: 'cover', 
+              width: '100%',
+              height: '100%',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)'
+            }}
+          >
+            <source src="https://res.cloudinary.com/dmny4ymqp/video/upload/v1746422364/My_Movie_3_qusqvn.mp4" type="video/mp4" />
+            {/* Fallback for browsers that don't support video */}
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        
+        <div className="absolute bottom-12 left-0 right-0 z-10 w-full">
           <div className="flex flex-wrap justify-center gap-4">
             <a href="#features" className="bg-primary-red text-white font-semibold px-6 py-3 rounded-lg transform transition hover:scale-105 hover:bg-secondary-red hover:shadow-lg">Explore Features</a>
             <Link to="/clubs-events" className="bg-white text-primary-red font-semibold px-6 py-3 rounded-lg transform transition hover:scale-105 hover:bg-opacity-90 hover:shadow-lg">Upcoming Events</Link>
