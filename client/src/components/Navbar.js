@@ -338,15 +338,6 @@ function Navbar() {
                         <span className="dropdown-description">Schedule meetings</span>
                       </div>
                     </Link>
-                    {currentUser && currentUser.role === 'admin' && (
-                      <Link to="/faculty/research" className="dropdown-item">
-                        <i className="fas fa-microscope text-blue-600"></i>
-                        <div>
-                          <span>Research Projects</span>
-                          <span className="dropdown-description">Ongoing research work</span>
-                        </div>
-                      </Link>
-                    )}
                   </div>
                 </div>
               }

@@ -312,13 +312,6 @@ const Dashboard = () => {
             path="/course-materials"
             color="info"
           />
-          <MenuCard 
-            title="Research Projects"
-            icon="fa-flask"
-            description="Manage your research projects and collaborations"
-            path="/research-projects"
-            color="secondary"
-          />
         </>
       );
     }
