@@ -1,9 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 
 const Overview = () => {
   const [activeProgram, setActiveProgram] = useState('engineering');
   const [activeFacility, setActiveFacility] = useState(0);
+  const [activeLeader, setActiveLeader] = useState(0); // Add state for carousel
+  const [activePartnersPage, setActivePartnersPage] = useState(0);
+  const carouselTimerRef = useRef(null);
+  const partnersCarouselRef = useRef(null);
 
   const universityStats = [
     { label: "Founded", value: "2014", icon: "fas fa-calendar-day" },
@@ -17,36 +21,165 @@ const Overview = () => {
       name: "Mahindra Ecole School of Engineering",
       icon: "fas fa-cogs",
       color: "#e74c3c",
-      programs: ["B.Tech. (Multiple Specializations)", "M.Tech.", "Ph.D."],
+      programs: {
+        btech: [
+          "AI (Artificial Intelligence)",
+          "Biotechnology",
+          "Computational Biology",
+          "CSE (Computer Science and Engineering)",
+          "Civil Engineering",
+          "CM (Computation and Mathematics)",
+          "ECM (Electronics and Computer Engineering)",
+          "Mechanical Engineering (ME)",
+          "Mechatronics (MT)",
+          "Nanotechnology",
+          "ECE (Electronics and Communication Engineering)",
+          "Aerospace Engineering",
+          "Electronic and Computer Engineering",
+          "VLSI Design and Technology",
+          "5 Year MTECH-Computer Science and Engineering",
+          "5 Year Integrated MTECH-Biotechnology"
+        ],
+        mtech: [
+          "Autonomous Electric Vehicles (A-EV's)",
+          "Computer-Aided Structural Engineering",
+          "AI and Data Science",
+          "Systems Engineering",
+          "VLSI Design and Embedded Systems",
+          "Smart Grid and Energy Storage Technologies",
+          "Robotics",
+          "Transportation Engineering",
+          "Computational Mechanics",
+          "Biomedical Data Science"
+        ],
+        phd: [
+          "Physics",
+          "Civil Engineering",
+          "Electrical and Computer Engineering",
+          "Mathematics",
+          "Mechanical and Aerospace Engineering",
+          "Humanities and Social Sciences",
+          "Life Sciences"
+        ]
+      },
       description: "Our engineering programs combine theoretical knowledge with practical experience, preparing students for careers in various engineering disciplines."
     },
     management: {
       name: "School of Management",
       icon: "fas fa-chart-line",
       color: "#3498db",
-      programs: ["BBA", "MBA", "Ph.D."],
+      programs: {
+        bba: [
+          "Applied Economics and Finance",
+          "Digital Technologies",
+          "Computational Business Analytics"
+        ],
+        mba: ["Master of Business Administration"],
+        phd: [
+          "Ph.D. in Economics",
+          "Ph.D. in Finance",
+          "Ph.D. in Decision Sciences",
+          "Ph.D. in Marketing",
+          "Ph.D. in Management (Strategy, Entrepreneurship, Organizational Behaviour, HRM)",
+          "Ph.D. in Information Science and Technology"
+        ]
+      },
       description: "The School of Management offers programs designed to develop future business leaders with innovative thinking and strategic management skills."
-    },
-    humanities: {
-      name: "Humanities and Social Sciences",
-      icon: "fas fa-book",
-      color: "#27ae60",
-      programs: ["Undergraduate Programs", "Postgraduate Programs"],
-      description: "Our humanities programs foster critical thinking, cultural understanding, and effective communication skills across various disciplines."
     },
     law: {
       name: "School of Law",
       icon: "fas fa-gavel",
       color: "#8e44ad",
-      programs: ["Undergraduate Programs", "Postgraduate Programs"],
+      programs: {
+        undergraduate: [
+          "BA.LL.B.",
+          "B.B.A.LL.B.",
+          "3-Years LL.B. (Hons) with specializations in Corporate Law, Business Laws, Criminal Law, and more",
+          "B.Tech.-LL.B. (Hons): Integrated Dual-Degree Program"
+        ],
+        phd: [
+          "Ph.D. in Constitutional Law and Administrative Law",
+          "Ph.D. in Corporate Law and Business Law",
+          "Ph.D. in International Law",
+          "Ph.D. in Technology Law",
+          "Ph.D. in Air and Space Law",
+          "Ph.D. in Maritime and Defence Law"
+        ]
+      },
       description: "The School of Law prepares students with comprehensive legal knowledge and ethical practices for careers in law and justice."
     },
     education: {
-      name: "School of Education",
+      name: "Indira Mahindra School of Education",
       icon: "fas fa-graduation-cap",
       color: "#f39c12",
-      programs: ["Undergraduate Programs", "Postgraduate Programs"],
+      programs: {
+        masters: ["Master of Arts (M.A.) in Education"],
+        phd: [
+          "Ph.D. in School Education",
+          "Ph.D. in Higher Education",
+          "Ph.D. in Sociology of Education",
+          "Ph.D. in Educational Leadership and Management",
+          "Ph.D. in Psychology of Education",
+          "Ph.D. in Educational Innovations",
+          "Ph.D. in History Of Education",
+          "Ph.D. in Economics Of Education",
+          "Ph.D. in Teacher Education",
+          "Ph.D. in Educational Policy Studies",
+          "Ph.D. in Political Contexts Of Education",
+          "Ph.D. in Curriculum and Pedagogical Studies",
+          "Ph.D. in Technology and Education"
+        ]
+      },
       description: "Our education programs develop skilled teachers and educational leaders who can make a difference in students' lives."
+    },
+    media: {
+      name: "School of Digital Media and Communication",
+      icon: "fas fa-camera-retro",
+      color: "#2ecc71",
+      programs: {
+        undergraduate: [
+          "B.Tech (Computation and Media)",
+          "Bachelor of Journalism and Mass Communication"
+        ],
+        masters: ["MA in Journalism and Mass Communication"],
+        phd: [
+          "Ph.D. in Journalism Studies",
+          "Ph.D. in Media Studies",
+          "Ph.D. in Mass Communication",
+          "Ph.D. in Film and Television Studies",
+          "Ph.D. in Strategic Communication",
+          "Ph.D. in Media and Communication Management",
+          "Ph.D. in History, Technology and Systems Of Media and Communication",
+          "Ph.D. in Ethics, Policies and Laws of Mediated Communication",
+          "Ph.D. in Human and Machine-Interface Communication"
+        ]
+      },
+      description: "The School of Digital Media and Communication offers cutting-edge programs at the intersection of technology, media, and communication."
+    },
+    design: {
+      name: "School of Design Innovation",
+      icon: "fas fa-pencil-ruler",
+      color: "#e67e22",
+      programs: {
+        undergraduate: ["B.Des in Design Innovation"],
+        masters: ["M.Des in Design Innovation"],
+        phd: [
+          "Ph.D. in Design Thinking",
+          "Ph.D. in Online and Scalable Design Education",
+          "Ph.D. in Design For Sustainability",
+          "Ph.D. in Design For Empathy in HCI"
+        ]
+      },
+      description: "The School of Design Innovation nurtures creative problem-solvers with a focus on user-centered and sustainable design principles."
+    },
+    hospitality: {
+      name: "School of Hospitality Management",
+      icon: "fas fa-concierge-bell",
+      color: "#9b59b6",
+      programs: {
+        undergraduate: ["4-Yr B.Sc. (Hons.) Culinary and Hospitality Management"]
+      },
+      description: "Our Hospitality Management program combines culinary arts with hospitality business skills for careers in the global hospitality industry."
     }
   };
 
@@ -69,22 +202,88 @@ const Overview = () => {
 
   const globalPartners = [
     {
-      name: "University of Example 1",
-      location: "United States",
-      logo: "https://via.placeholder.com/100/3498db/ffffff?text=UE1",
-      partnership: "Student Exchange, Research Collaboration"
+      name: "Cornell University – SC Johnson College of Business",
+      location: "Ithaca, New York, USA",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450441/sc_rwj9ii.jpg",
+      courses: ["MBA", "Master of Professional Studies in Management"],
+      website: "business.cornell.edu"
     },
     {
-      name: "University of Example 2", 
-      location: "United Kingdom",
-      logo: "https://via.placeholder.com/100/2ecc71/ffffff?text=UE2",
-      partnership: "Joint Degree Programs, Faculty Exchange"
+      name: "Virginia Tech",
+      location: "Blacksburg, Virginia, USA",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450441/VT_gn3g1l.jpg",
+      courses: ["Bachelor of Science in Computer Engineering", "MBA"],
+      website: "vt.edu"
     },
     {
-      name: "University of Example 3",
-      location: "Australia",
-      logo: "https://via.placeholder.com/100/e74c3c/ffffff?text=UE3",
-      partnership: "Research Projects, Cultural Programs"
+      name: "CentraleSupélec",
+      location: "Gif-sur-Yvette, Île-de-France, France",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450441/cs_pmco9g.jpg",
+      courses: ["Master in Engineering", "MSc in Artificial Intelligence"],
+      website: "centralesupelec.fr"
+    },
+    {
+      name: "Frankfurt University of Applied Sciences",
+      location: "Frankfurt am Main, Germany",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746451456/aps_sc_alzxqx.svg",
+      courses: ["Bachelor in International Business Administration", "MSc in Information Technology"],
+      website: "frankfurt-university.de"
+    },
+    {
+      name: "Babson College",
+      location: "Wellesley, Massachusetts, USA",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450441/babson_dyslgm.jpg",
+      courses: ["Bachelor of Science in Business Administration", "MBA"],
+      website: "babson.edu"
+    },
+    {
+      name: "University of Florida",
+      location: "Gainesville, Florida, USA",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450445/Uni_of_Florida_lfebda.jpg",
+      courses: ["Bachelor of Science in Mechanical Engineering", "MBA"],
+      website: "ufl.edu"
+    },
+    {
+      name: "University of Agder",
+      location: "Kristiansand and Grimstad, Norway",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450442/uni_of_agder-9-600x160_oalisr.png",
+      courses: ["MSc in Information and Communication Technology", "MSc in Business Administration"],
+      website: "uia.no"
+    },
+    {
+      name: "La Trobe University",
+      location: "Melbourne (Bundoora), Victoria, Australia",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450443/latrobe-600x172_m570hz.png",
+      courses: ["Bachelor of Nursing", "Master of Business Analytics"],
+      website: "latrobe.edu.au"
+    },
+    {
+      name: "The University of Melbourne",
+      location: "Melbourne, Victoria, Australia",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450444/melbourne-600x600_iofeap.png",
+      courses: ["Doctor of Medicine (MD)", "Master of Engineering"],
+      website: "unimelb.edu.au"
+    },
+    {
+      name: "Frankfurt School of Finance & Management",
+      location: "Frankfurt am Main, Germany",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450442/frank_pigthy.jpg",
+      courses: ["Bachelor in Business Administration", "Master in Finance"],
+      website: "frankfurt-school.de"
+    },
+    {
+      name: "Southern Illinois University",
+      location: "Carbondale, Illinois, USA",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450445/SIU_no6mgl.png",
+      courses: ["Bachelor of Science in Aviation Management", "Master of Computer Science"],
+      website: "siu.edu"
+    },
+    {
+      name: "Oklahoma State University",
+      location: "Stillwater, Oklahoma, USA",
+      logo: "https://res.cloudinary.com/dmny4ymqp/image/upload/v1746450443/OSU_m68wb4.png",
+      courses: ["Bachelor of Science in Aerospace Engineering", "MBA"],
+      website: "okstate.edu"
     }
   ];
 
@@ -142,6 +341,91 @@ const Overview = () => {
         stiffness: 100
       }
     }
+  };
+
+  // Function to navigate to next leader in carousel
+  const nextLeader = () => {
+    setActiveLeader((prev) => (prev + 1) % leadership.length);
+  };
+
+  // Function to navigate to previous leader in carousel
+  const prevLeader = () => {
+    setActiveLeader((prev) => (prev === 0 ? leadership.length - 1 : prev - 1));
+  };
+
+  // Auto-rotate the carousel every 6 seconds
+  useEffect(() => {
+    // Start the timer
+    carouselTimerRef.current = setInterval(() => {
+      nextLeader();
+    }, 6000); // 6 seconds
+    
+    // Cleanup the timer on component unmount
+    return () => {
+      if (carouselTimerRef.current) {
+        clearInterval(carouselTimerRef.current);
+      }
+    };
+  }, []); // Empty dependency array ensures this only runs once on mount
+  
+  // Reset the timer whenever the user manually changes the slide
+  const handleManualNavigation = (action) => {
+    // Clear the existing timer
+    if (carouselTimerRef.current) {
+      clearInterval(carouselTimerRef.current);
+    }
+    
+    // Perform the navigation action
+    action();
+    
+    // Restart the timer
+    carouselTimerRef.current = setInterval(() => {
+      nextLeader();
+    }, 6000);
+  };
+
+  // Calculate the number of pages for the partners carousel (3 partners per page)
+  const totalPartnerPages = Math.ceil(globalPartners.length / 3);
+  
+  // Function to navigate to next page in the partners carousel
+  const nextPartnersPage = () => {
+    setActivePartnersPage((prev) => (prev + 1) % totalPartnerPages);
+  };
+
+  // Function to navigate to previous page in the partners carousel
+  const prevPartnersPage = () => {
+    setActivePartnersPage((prev) => (prev === 0 ? totalPartnerPages - 1 : prev - 1));
+  };
+  
+  // Auto-rotate the partners carousel every 8 seconds
+  useEffect(() => {
+    // Start the timer
+    partnersCarouselRef.current = setInterval(() => {
+      nextPartnersPage();
+    }, 8000); // 8 seconds
+    
+    // Cleanup the timer on component unmount
+    return () => {
+      if (partnersCarouselRef.current) {
+        clearInterval(partnersCarouselRef.current);
+      }
+    };
+  }, []); // Empty dependency array ensures this only runs once on mount
+  
+  // Reset the partners carousel timer whenever the user manually changes the slide
+  const handlePartnersNavigation = (action) => {
+    // Clear the existing timer
+    if (partnersCarouselRef.current) {
+      clearInterval(partnersCarouselRef.current);
+    }
+    
+    // Perform the navigation action
+    action();
+    
+    // Restart the timer
+    partnersCarouselRef.current = setInterval(() => {
+      nextPartnersPage();
+    }, 8000);
   };
 
   return (
@@ -315,54 +599,52 @@ const Overview = () => {
                 <i className={academicPrograms[activeProgram].icon}></i>
               </div>
               <h3 className="text-2xl font-bold mb-3">{academicPrograms[activeProgram].name}</h3>
-              <p className="text-white/90 mb-6">
+              <p className="text-white/90">
                 {academicPrograms[activeProgram].description}
               </p>
-              <button className="bg-white text-primary-red px-4 py-2 rounded-lg font-medium inline-flex items-center gap-2 self-start hover:bg-opacity-90 transition-colors">
-                <i className="fas fa-info-circle"></i>
-                Learn More
-              </button>
             </div>
-            <div className="md:w-2/3 p-6 md:p-8">
+            <div className="md:w-2/3 p-6 md:p-8 overflow-y-auto max-h-[600px]">
               <h4 className="text-xl font-semibold mb-4">Available Programs</h4>
-              <ul className="space-y-4">
-                {academicPrograms[activeProgram].programs.map((program, idx) => (
-                  <li key={idx} className="flex items-start bg-gray-50 p-4 rounded-lg">
-                    <div className="bg-primary-teal/10 text-primary-teal p-2 rounded-full mr-4">
-                      <i className="fas fa-graduation-cap"></i>
+              <div className="space-y-6">
+                {Object.keys(academicPrograms[activeProgram].programs).map((level, idx) => (
+                  <div key={idx} className="bg-gray-50 p-4 rounded-lg">
+                    <div className="flex items-center mb-3">
+                      <div className="bg-primary-teal/10 text-primary-teal p-2 rounded-full mr-4">
+                        {level === 'btech' && <i className="fas fa-laptop-code"></i>}
+                        {level === 'mtech' && <i className="fas fa-microchip"></i>}
+                        {level === 'phd' && <i className="fas fa-atom"></i>}
+                        {level === 'bba' && <i className="fas fa-chart-bar"></i>}
+                        {level === 'mba' && <i className="fas fa-briefcase"></i>}
+                        {level === 'undergraduate' && <i className="fas fa-user-graduate"></i>}
+                        {level === 'masters' && <i className="fas fa-scroll"></i>}
+                      </div>
+                      <h5 className="font-medium capitalize text-lg">
+                        {level === 'phd' ? 'Ph.D. Programs' : 
+                         level === 'btech' ? 'B.Tech. Programs' :
+                         level === 'mtech' ? 'M.Tech. Programs' :
+                         level === 'bba' ? 'BBA Programs' :
+                         level === 'mba' ? 'MBA Programs' :
+                         level === 'undergraduate' ? 'Undergraduate Programs' :
+                         level === 'masters' ? 'Master\'s Programs' : level}
+                      </h5>
                     </div>
-                    <div>
-                      <h5 className="font-medium">{program}</h5>
-                      <p className="text-sm text-medium-gray mt-1">
-                        Comprehensive curriculum with focus on theoretical knowledge and practical applications.
-                      </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-12">
+                      {academicPrograms[activeProgram].programs[level].map((program, i) => (
+                        <div key={i} className="flex items-start">
+                          <i className="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                          <span className="text-medium-gray">{program}</span>
+                        </div>
+                      ))}
                     </div>
-                  </li>
+                  </div>
                 ))}
-              </ul>
-              <div className="mt-6 pt-4 border-t border-gray-100">
-                <h4 className="text-lg font-medium mb-2">Entry Requirements</h4>
-                <ul className="text-medium-gray">
-                  <li className="flex items-center gap-2 mb-1">
-                    <i className="fas fa-check-circle text-green-500"></i>
-                    Strong academic record
-                  </li>
-                  <li className="flex items-center gap-2 mb-1">
-                    <i className="fas fa-check-circle text-green-500"></i>
-                    Entrance examination
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <i className="fas fa-check-circle text-green-500"></i>
-                    Interview process
-                  </li>
-                </ul>
               </div>
             </div>
           </div>
         </motion.div>
       </motion.section>
       
-      {/* Leadership Section with Side by Side Leaders */}
+      {/* Leadership Section with Carousel */}
       <motion.section variants={itemVariants} className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <div className="bg-gradient-to-r from-primary-red to-primary-teal p-8 text-white">
           <h2 className="text-2xl md:text-3xl font-bold mb-2">University Leadership</h2>
@@ -371,26 +653,36 @@ const Overview = () => {
           </p>
         </div>
         
-        {/* Display leaders side-by-side instead of with tabs */}
-        <div className="p-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {leadership.map((leader, index) => (
-              <div key={index} className="bg-gray-50 rounded-xl shadow-sm overflow-hidden">
-                <div className="aspect-[4/3] overflow-hidden">
-                  <img 
-                    src={leader.image} 
-                    alt={leader.name} 
-                    className="w-full h-full object-cover"
-                  />
+        {/* Carousel display for leadership */}
+        <div className="p-8 relative">
+          <div className="relative overflow-hidden">
+            <motion.div 
+              key={activeLeader}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              transition={{ type: "spring", stiffness: 100 }}
+              className="bg-gray-50 rounded-xl shadow-sm overflow-hidden"
+            >
+              <div className="md:flex">
+                {/* Fixed size image container */}
+                <div className="md:w-2/5">
+                  <div className="h-64 md:h-80 overflow-hidden bg-gray-200">
+                    <img 
+                      src={leadership[activeLeader].image} 
+                      alt={leadership[activeLeader].name} 
+                      className="w-full h-full object-cover object-top" 
+                    />
+                  </div>
                 </div>
-                <div className="p-6">
-                  <h3 className="text-xl font-bold mb-1">{leader.name}</h3>
-                  <p className="text-primary-red font-medium mb-4">{leader.title}</p>
-                  <p className="text-dark-gray mb-5 leading-relaxed">{leader.description}</p>
+                <div className="p-6 md:w-3/5">
+                  <h3 className="text-2xl font-bold mb-1">{leadership[activeLeader].name}</h3>
+                  <p className="text-primary-red font-medium mb-4">{leadership[activeLeader].title}</p>
+                  <p className="text-dark-gray mb-5 leading-relaxed">{leadership[activeLeader].description}</p>
                   
                   <h4 className="text-lg font-medium mb-3">Key Achievements</h4>
                   <ul className="space-y-2">
-                    {leader.achievements.map((achievement, idx) => (
+                    {leadership[activeLeader].achievements.map((achievement, idx) => (
                       <li key={idx} className="flex items-center">
                         <i className="fas fa-award text-primary-teal mr-3"></i>
                         {achievement}
@@ -399,52 +691,165 @@ const Overview = () => {
                   </ul>
                 </div>
               </div>
+            </motion.div>
+          </div>
+          
+          {/* Carousel navigation buttons */}
+          <button 
+            onClick={() => handleManualNavigation(prevLeader)}
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
+          >
+            <i className="fas fa-chevron-left text-primary-red"></i>
+          </button>
+          <button 
+            onClick={() => handleManualNavigation(nextLeader)}
+            className="absolute right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
+          >
+            <i className="fas fa-chevron-right text-primary-red"></i>
+          </button>
+          
+          {/* Carousel indicators */}
+          <div className="flex justify-center mt-6">
+            {leadership.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => handleManualNavigation(() => setActiveLeader(index))}
+                className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${
+                  index === activeLeader ? 'bg-primary-red scale-125' : 'bg-gray-300'
+                }`}
+                aria-label={`View ${leadership[index].name}`}
+              />
             ))}
+          </div>
+          
+          {/* Leader counter */}
+          <div className="absolute bottom-8 right-8 bg-primary-teal/10 text-primary-teal px-3 py-1 rounded-full text-sm font-medium">
+            {activeLeader + 1} of {leadership.length}
           </div>
         </div>
       </motion.section>
       
-      {/* Global Collaborations - Make this a standalone section now that Research section is removed */}
+      {/* Global Collaborations - Updated to carousel display */}
       <motion.section variants={itemVariants} className="bg-gray-50 rounded-2xl shadow-md p-8">
-        <h2 className="text-2xl font-bold mb-6 flex items-center">
+        <h2 className="text-2xl font-bold mb-3 flex items-center">
           <i className="fas fa-globe-americas text-primary-teal mr-3"></i>
           Global Collaborations
         </h2>
-        <p className="text-dark-gray mb-8">
+        <p className="text-center text-medium-gray mb-8">
           We partner with leading international universities to provide our students with global exposure and opportunities.
         </p>
         
-        <div className="space-y-6">
-          {globalPartners.map((partner, index) => (
+        {/* Partners carousel container */}
+        <div className="relative">
+          {/* Carousel display for partners */}
+          <div className="overflow-hidden">
             <motion.div 
-              key={index}
-              initial={{ opacity: 0, x: -20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              viewport={{ once: true }}
-              className="bg-white p-5 rounded-xl shadow-sm flex items-center gap-4"
+              key={activePartnersPage}
+              initial={{ opacity: 0, x: 100 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -100 }}
+              transition={{ duration: 0.5 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
             >
-              <div className="flex-shrink-0">
-                <img src={partner.logo} alt={partner.name} className="w-16 h-16 rounded-lg object-cover" />
-              </div>
-              <div className="flex-grow">
-                <h4 className="font-semibold text-lg">{partner.name}</h4>
-                <p className="text-sm text-medium-gray mb-1">{partner.location}</p>
-                <p className="text-primary-teal text-sm">{partner.partnership}</p>
-              </div>
-              <div className="flex-shrink-0">
-                <button className="text-primary-red hover:underline">
-                  <i className="fas fa-arrow-right"></i>
-                </button>
-              </div>
+              {globalPartners
+                .slice(activePartnersPage * 3, (activePartnersPage + 1) * 3)
+                .map((partner, index) => (
+                  <div key={index} className="bg-white rounded-xl shadow-md overflow-hidden">
+                    <div className="h-40 overflow-hidden bg-gray-100">
+                      <img 
+                        src={partner.logo} 
+                        alt={partner.name} 
+                        className="w-full h-full object-contain p-2" 
+                      />
+                    </div>
+                    <div className="p-4">
+                      <h4 className="font-bold text-lg mb-1 text-primary-red">{partner.name}</h4>
+                      <div className="flex items-center mb-2 text-sm text-medium-gray">
+                        <i className="fas fa-map-marker-alt mr-2"></i>
+                        {partner.location}
+                      </div>
+                      <h5 className="font-medium text-sm mb-1">Available Courses:</h5>
+                      <ul className="text-sm text-medium-gray">
+                        {partner.courses.map((course, idx) => (
+                          <li key={idx} className="flex items-start mb-1">
+                            <i className="fas fa-graduation-cap mt-1 mr-2 text-primary-teal"></i>
+                            <span>{course}</span>
+                          </li>
+                        ))}
+                      </ul>
+                      <a 
+                        href={`https://${partner.website}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="mt-3 text-primary-teal hover:underline flex items-center text-sm"
+                      >
+                        <i className="fas fa-globe mr-1"></i> {partner.website}
+                      </a>
+                    </div>
+                  </div>
+                ))}
             </motion.div>
-          ))}
+          </div>
+          
+          {/* Carousel navigation buttons */}
+          <button 
+            onClick={() => handlePartnersNavigation(prevPartnersPage)}
+            className="absolute -left-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
+            aria-label="Previous partners"
+          >
+            <i className="fas fa-chevron-left text-primary-red"></i>
+          </button>
+          <button 
+            onClick={() => handlePartnersNavigation(nextPartnersPage)}
+            className="absolute -right-4 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white shadow-md flex items-center justify-center hover:bg-gray-100 transition-colors z-10"
+            aria-label="Next partners"
+          >
+            <i className="fas fa-chevron-right text-primary-red"></i>
+          </button>
+          
+          {/* Carousel indicators */}
+          <div className="flex justify-center mt-6">
+            {[...Array(totalPartnerPages)].map((_, index) => (
+              <button
+                key={index}
+                onClick={() => handlePartnersNavigation(() => setActivePartnersPage(index))}
+                className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${
+                  index === activePartnersPage ? 'bg-primary-teal scale-125' : 'bg-gray-300'
+                }`}
+                aria-label={`Go to partner page ${index + 1}`}
+              />
+            ))}
+          </div>
         </div>
         
-        <button className="w-full mt-6 bg-primary-teal text-white py-3 rounded-lg font-medium hover:bg-opacity-90 transition-colors flex items-center justify-center gap-2">
-          <i className="fas fa-handshake"></i>
-          View All Partnerships
-        </button>
+        {/* View all button - changed to show all collaborations */}
+        <div className="mt-8">
+          <div className="bg-white p-5 rounded-xl shadow-sm">
+            <h4 className="text-lg font-bold mb-4 text-center">All Global Collaborations</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {globalPartners.map((partner, index) => (
+                <a 
+                  key={index} 
+                  href={`https://${partner.website}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center p-2 hover:bg-gray-50 rounded-lg transition-colors group"
+                >
+                  <img 
+                    src={partner.logo} 
+                    alt={partner.name} 
+                    className="w-10 h-10 object-contain mr-3"
+                  />
+                  <div className="flex-grow">
+                    <p className="font-medium text-sm line-clamp-1">{partner.name}</p>
+                    <span className="text-primary-teal text-xs group-hover:underline">{partner.website}</span>
+                  </div>
+                  <i className="fas fa-external-link-alt text-xs text-medium-gray ml-1"></i>
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
       </motion.section>
       
       {/* Campus Facilities Section with Image Cards */}
