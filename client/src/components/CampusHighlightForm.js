@@ -10,12 +10,19 @@ const CampusHighlightForm = ({ highlight, onClose, onSuccess }) => {
     link: '',
     icon: 'fas fa-building',
     active: true,
-    order: 0
+    order: 0,
+    // Add new fields with empty defaults
+    category: '',
+    location: '',
+    contactPerson: '',
+    contactEmail: '',
+    additionalInfo: ''
   });
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [showAdditionalFields, setShowAdditionalFields] = useState(false);
 
   // Common icon options for campus highlights
   const iconOptions = [
@@ -31,6 +38,21 @@ const CampusHighlightForm = ({ highlight, onClose, onSuccess }) => {
     { value: 'fas fa-users', label: 'Community' }
   ];
 
+  // Category options for campus highlights
+  const categoryOptions = [
+    { value: '', label: 'Select a category (optional)' },
+    { value: 'academic', label: 'Academic' },
+    { value: 'infrastructure', label: 'Infrastructure' },
+    { value: 'sports', label: 'Sports & Recreation' },
+    { value: 'cultural', label: 'Cultural' },
+    { value: 'technology', label: 'Technology' },
+    { value: 'student-life', label: 'Student Life' },
+    { value: 'research', label: 'Research' },
+    { value: 'housing', label: 'Housing' },
+    { value: 'dining', label: 'Dining' },
+    { value: 'other', label: 'Other' }
+  ];
+
   // If editing an existing highlight, populate the form
   useEffect(() => {
     if (highlight) {
@@ -41,8 +63,20 @@ const CampusHighlightForm = ({ highlight, onClose, onSuccess }) => {
         link: highlight.link || '',
         icon: highlight.icon || 'fas fa-building',
         active: highlight.active !== undefined ? highlight.active : true,
-        order: highlight.order || 0
+        order: highlight.order || 0,
+        // Include additional fields
+        category: highlight.category || '',
+        location: highlight.location || '',
+        contactPerson: highlight.contactPerson || '',
+        contactEmail: highlight.contactEmail || '',
+        additionalInfo: highlight.additionalInfo || ''
       });
+      
+      // Show additional fields section if any of these fields have data
+      if (highlight.category || highlight.location || highlight.contactPerson || 
+          highlight.contactEmail || highlight.additionalInfo) {
+        setShowAdditionalFields(true);
+      }
     }
   }, [highlight]);
 
@@ -67,7 +101,19 @@ const CampusHighlightForm = ({ highlight, onClose, onSuccess }) => {
       setError('Image URL is required');
       return false;
     }
+    
+    // Validate email format if provided
+    if (formData.contactEmail && !validateEmail(formData.contactEmail)) {
+      setError('Please enter a valid email address');
+      return false;
+    }
+    
     return true;
+  };
+  
+  // Simple email validation function
+  const validateEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
 
   const handleSubmit = async (e) => {
@@ -104,7 +150,12 @@ const CampusHighlightForm = ({ highlight, onClose, onSuccess }) => {
             link: '',
             icon: 'fas fa-building',
             active: true,
-            order: 0
+            order: 0,
+            category: '',
+            location: '',
+            contactPerson: '',
+            contactEmail: '',
+            additionalInfo: ''
           });
           setTimeout(() => {
             onSuccess && onSuccess(response.data.highlight);
@@ -233,6 +284,106 @@ const CampusHighlightForm = ({ highlight, onClose, onSuccess }) => {
           <i className={`${formData.icon} text-xl text-primary-red mr-2`}></i>
           <span className="text-xs text-gray-500">Icon preview</span>
         </div>
+      </div>
+
+      {/* Collapsible Additional Information Section */}
+      <div className="border border-gray-200 rounded-md p-4">
+        <button
+          type="button"
+          className="flex items-center justify-between w-full text-left"
+          onClick={() => setShowAdditionalFields(!showAdditionalFields)}
+        >
+          <div className="flex items-center">
+            <i className="fas fa-info-circle text-primary-red mr-2"></i>
+            <span className="font-medium">Additional Information</span>
+          </div>
+          <i className={`fas ${showAdditionalFields ? 'fa-chevron-up' : 'fa-chevron-down'} text-gray-500`}></i>
+        </button>
+        
+        {showAdditionalFields && (
+          <div className="mt-4 space-y-4">
+            <div>
+              <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
+                Category
+              </label>
+              <select
+                id="category"
+                name="category"
+                value={formData.category}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red"
+              >
+                {categoryOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+                Location
+              </label>
+              <input
+                type="text"
+                id="location"
+                name="location"
+                value={formData.location}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red"
+                placeholder="e.g., Main Building, 2nd Floor"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contactPerson" className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Person
+              </label>
+              <input
+                type="text"
+                id="contactPerson"
+                name="contactPerson"
+                value={formData.contactPerson}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red"
+                placeholder="e.g., Dr. John Doe"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="contactEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                Contact Email
+              </label>
+              <input
+                type="email"
+                id="contactEmail"
+                name="contactEmail"
+                value={formData.contactEmail}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red"
+                placeholder="e.g., contact@example.com"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="additionalInfo" className="block text-sm font-medium text-gray-700 mb-1">
+                Additional Information
+              </label>
+              <textarea
+                id="additionalInfo"
+                name="additionalInfo"
+                value={formData.additionalInfo}
+                onChange={handleChange}
+                rows={4}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-red"
+                placeholder="Enter any additional details about this highlight..."
+                maxLength={500}
+              ></textarea>
+              <p className="text-xs text-gray-500 mt-1">Max 500 characters</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex items-center">

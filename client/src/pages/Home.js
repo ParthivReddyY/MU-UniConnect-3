@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { getFeaturedNews } from '../services/newsService'; 
 import api from '../utils/axiosConfig';
 import CampusHighlightForm from '../components/CampusHighlightForm';
+import CampusHighlightDetail from '../components/CampusHighlightDetail';
 
 function Home() {
   // Create refs for the slider elements
@@ -42,6 +43,8 @@ function Home() {
   const [highlightsError, setHighlightsError] = useState(null);
   const [showHighlightModal, setShowHighlightModal] = useState(false);
   const [editingHighlight, setEditingHighlight] = useState(null);
+  const [selectedHighlight, setSelectedHighlight] = useState(null);
+  const [showHighlightDetail, setShowHighlightDetail] = useState(false);
 
   // Fallback gallery images in case API fails - wrapped in useMemo to prevent recreation on every render
   const fallbackGalleryImages = React.useMemo(() => [
@@ -424,6 +427,18 @@ function Home() {
   useEffect(() => {
     fetchCampusHighlights();
   }, [fetchCampusHighlights]); // Include fetchCampusHighlights in the dependency array
+
+  // Function to open the highlight detail modal
+  const openHighlightDetail = (highlight) => {
+    setSelectedHighlight(highlight);
+    setShowHighlightDetail(true);
+  };
+  
+  // Function to close the highlight detail modal
+  const closeHighlightDetail = () => {
+    setShowHighlightDetail(false);
+    setTimeout(() => setSelectedHighlight(null), 300); // Clear data after animation
+  };
 
   return (
     <div className="home-page container-fluid">
@@ -853,8 +868,8 @@ function Home() {
         </div>
       </section>
 
-      {/* Campus Gallery */}
-      <section className="py-16 md:py-20 bg-dark-gray text-white">
+      {/* Campus Gallery Preview */}
+      <section id="campus-highlights" className="py-16 md:py-20 bg-dark-gray text-white">
         <div className="content-container px-4 md:px-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 md:mb-10">
             <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0">
@@ -863,26 +878,10 @@ function Home() {
                 <span className="absolute -bottom-3 left-1/2 md:left-0 transform -translate-x-1/2 md:translate-x-0 h-1 w-24 bg-primary-red rounded-full"></span>
               </span>
             </h2>
-            
-            {/* Admin buttons - only visible to admin users */}
-            {currentUser && currentUser.role === 'admin' && (
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => {
-                    setEditingHighlight(null);
-                    setShowHighlightModal(true);
-                  }}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-red hover:bg-secondary-red transition-colors rounded-lg text-white"
-                >
-                  <i className="fas fa-plus"></i>
-                  Add Highlight
-                </button>
-              </div>
-            )}
           </div>
           
           <p className="text-center text-light-gray max-w-3xl mx-auto mb-10 leading-relaxed">
-            Explore the diverse aspects of campus life at Mahindra University, from cutting-edge facilities to vibrant cultural experiences.
+            Take a glimpse of campus life at Mahindra University. From modern facilities to vibrant cultural experiences, here's a preview of what our campus offers.
           </p>
           
           {highlightsLoading ? (
@@ -901,7 +900,8 @@ function Home() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
-              {campusHighlights.map((item) => (
+              {/* Show only first 3 highlights on home page */}
+              {campusHighlights.slice(0, 3).map((item) => (
                 <div key={item._id || item.id} className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
                   <img 
                     src={item.image} 
@@ -936,25 +936,15 @@ function Home() {
                   
                   <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
                     <h3 className="font-semibold text-xl text-white mb-1">{item.title}</h3>
-                    <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{item.description}</p>
+                    <p className="text-light-gray text-sm mb-3">{item.description}</p>
                     
                     <div className="flex gap-3">
                       <button 
-                        onClick={() => openImageModal({
-                          src: item.image,
-                          title: item.title,
-                          description: item.description
-                        })}
-                        className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
-                      >
-                        <i className="fas fa-search text-xs"></i> View
-                      </button>
-                      <Link 
-                        to={item.link || "/college?tab=gallery"} 
+                        onClick={() => openHighlightDetail(item)}
                         className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
                       >
                         <i className="fas fa-info-circle text-xs"></i> Details
-                      </Link>
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -962,16 +952,16 @@ function Home() {
             </div>
           )}
           
-          {/* Rest of Campus Gallery section */}
+          {/* Updated CTA section for the complete gallery */}
           <div className="text-center flex flex-col items-center mt-12">
             <Link 
-              to="/college?tab=gallery" 
+              to="/college?tab=overview#campus-highlights" 
               className="px-6 py-3 border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition-colors inline-flex items-center gap-2"
             >
-              Browse Complete Gallery <i className="fas fa-arrow-right"></i>
+              View Complete Campus Gallery <i className="fas fa-arrow-right"></i>
             </Link>
             <p className="text-light-gray text-sm mt-4 max-w-lg mx-auto">
-              Explore our extensive collection of campus photos, event highlights, and more in our complete gallery section.
+              Discover our full gallery with comprehensive campus highlights, facilities, and cultural experiences in the College section.
             </p>
           </div>
         </div>
@@ -1032,6 +1022,14 @@ function Home() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Highlight Detail Modal */}
+      {showHighlightDetail && selectedHighlight && (
+        <CampusHighlightDetail 
+          highlight={selectedHighlight} 
+          onClose={closeHighlightDetail} 
+        />
       )}
 
       {/* Call to Action Section - Only show for non-logged in users */}
