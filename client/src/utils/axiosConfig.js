@@ -9,7 +9,7 @@ const getBaseURL = () => {
       return process.env.REACT_APP_API_URL;
     }
     // Default local development URL
-    return 'http://localhost:5000';
+    return 'http://localhost:9000';
   }
   
   // For production, use relative URL (empty string)
@@ -73,12 +73,10 @@ api.interceptors.response.use(
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           
-          // Optional: redirect to login
-          // window.location.href = '/login';
+          
         }
       }
       
-      // Handle 403 Forbidden errors
       if (error.response.status === 403) {
         console.error('Authorization error - You do not have permission for this action');
       }
@@ -88,18 +86,5 @@ api.interceptors.response.use(
   }
 );
 
-// Simplified connection test with minimal logging
-api.testConnection = async () => {
-  try {
-    await api.get('/health');
-    console.log('Server health: OK');
-    return { success: true };
-  } catch (error) {
-    console.log('Server health: Failed');
-    return { success: false };
-  }
-};
-
-// Export getBaseURL function so it can be used elsewhere
 export { getBaseURL };
 export default api;

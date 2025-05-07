@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import './App.css';
 import './CSS/quill-custom.css'; // Update custom editor styles
 import './CSS/forms.css'; // Add custom form styles
-import testServerConnection from './utils/testConnection';
 // Import react-toastify
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -117,19 +116,16 @@ function App() {
     // Set a short timeout to simulate initialization
     const initializeApp = async () => {
       try {
-        // We can still test the connection but won't display the indicator
-        const result = await testServerConnection();
-        console.log('Server connection status:', result);
-        // You can choose to handle server connectivity in a different way
-        // or remove this completely if not needed
+        // Other initialization code can go here if needed
+        
+        // Add a small delay to prevent flash of loading screen
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 300);
       } catch (error) {
-        console.error('Error checking server connection:', error);
+        console.error('Error during app initialization:', error);
+        setIsLoading(false);
       }
-      
-      // Other initialization code...
-      
-      // Complete loading regardless of server status
-      setIsLoading(false);
     };
     
     initializeApp();

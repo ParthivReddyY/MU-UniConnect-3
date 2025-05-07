@@ -12,10 +12,11 @@ const {
   checkEmail,
   changePassword,
   requestPasswordChangeOTP,
-  updateProfile, // Add this new controller function
-  updateClubHead, // Add this new function for updating club head/club accounts
-  searchUsers, // Add this new function for searching users
-  getUserStats // Add this new function for getting user statistics
+  updateProfile,
+  updateClubHead,
+  searchUsers,
+  getUserStats,
+  verifyPassword // Added the new controller function
 } = require('../controllers/authController');
 const { authenticateUser, isAdmin } = require('../middleware/auth');
 
@@ -36,6 +37,7 @@ router.post('/reset-password', resetPassword);
 // Password change flow (OTP-based, for logged-in users)
 router.post('/request-password-change-otp', authenticateUser, requestPasswordChangeOTP);
 router.post('/change-password', authenticateUser, changePassword);
+router.post('/verify-password', authenticateUser, verifyPassword); // Added the new endpoint
 
 // Protected routes
 router.get('/me', authenticateUser, getCurrentUser);

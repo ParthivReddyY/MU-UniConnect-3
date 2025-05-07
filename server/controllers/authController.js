@@ -594,14 +594,21 @@ const requestPasswordChangeOTP = async (req, res) => {
   }
 };
 
-// Change password with OTP verification
-const changePassword = async (req, res) => {
+// Verify user's current password (for password change flow)
+const verifyPassword = async (req, res) => {
   try {
-    const { otp, newPassword } = req.body;
+    const { password } = req.body;
     const userId = req.user.userId;
     
-    // Get user
-    const user = await User.findById(userId);
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Password is required'
+      });
+    }
+    
+    // Get user with password field
+    const user = await User.findById(userId).select('+password');
     
     if (!user) {
       return res.status(404).json({
@@ -610,24 +617,60 @@ const changePassword = async (req, res) => {
       });
     }
     
-    // Hash the OTP for comparison
-    const hashedOTP = crypto
-      .createHash('sha256')
-      .update(otp)
-      .digest('hex');
+    // Verify password
+    const isMatch = await user.comparePassword(password);
     
-    // Verify OTP
-    if (user.resetPasswordToken !== hashedOTP || user.resetPasswordExpires < Date.now()) {
+    return res.status(200).json({
+      success: isMatch,
+      message: isMatch ? 'Password verified successfully' : 'Incorrect password'
+    });
+  } catch (error) {
+    console.error('Error verifying password:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while verifying password'
+    });
+  }
+};
+
+// Change password with old password verification
+const changePassword = async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const userId = req.user.userId;
+    
+    // Validate that both passwords are provided
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Old password and new password are required'
+      });
+    }
+    
+    // Get user
+    const user = await User.findById(userId).select('+password');
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    // Verify old password
+    const isMatch = await user.comparePassword(oldPassword);
+    
+    if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid or expired verification code'
+        message: 'Current password is incorrect'
       });
     }
     
     // Update password
     user.password = newPassword;
-    user.resetPasswordToken = undefined;
-    user.resetPasswordExpires = undefined;
+    // Record the password change time
+    user.lastPasswordChange = Date.now();
     await user.save();
     
     res.status(200).json({
@@ -642,6 +685,7 @@ const changePassword = async (req, res) => {
     });
   }
 };
+
 // Function to handle user search - replaces the route in users.js
 const searchUsers = async (req, res) => {
   try {
@@ -863,6 +907,7 @@ module.exports = {
   getCurrentUser,
   checkEmail,
   requestPasswordChangeOTP,
+  verifyPassword,
   changePassword,
   searchUsers,
   updateProfile,
