@@ -3,7 +3,7 @@
  */
 const config = {
   // Base URL for the application (used for generating image URLs)
-  baseUrl: process.env.BASE_URL || 'http://localhost:5000',
+  baseUrl: process.env.BASE_URL || 'http://localhost:9000',
   
   // Upload limits and settings
   uploads: {

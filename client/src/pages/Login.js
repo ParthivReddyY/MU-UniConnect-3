@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import api, { getBaseURL } from '../utils/axiosConfig';
+import api from '../utils/axiosConfig';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -40,34 +40,6 @@ const Login = () => {
       navigate(from, { replace: true });
     }
   }, [currentUser, navigate, from]);
-
-  // Modified server connectivity test - quieter approach without warnings
-  useEffect(() => {
-    const testConnection = async () => {
-      try {
-        // Silent server test - only log results without showing warnings
-        const response = await fetch(`${getBaseURL()}/health`, { 
-          method: 'GET',
-          headers: { 'Accept': 'application/json' },
-          mode: 'cors',
-          cache: 'no-cache',
-          timeout: 5000
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Server health check:', data);
-        } else {
-          console.log('Server health check failed with status:', response.status);
-        }
-      } catch (error) {
-        // Only log the error without showing warnings to the user
-        console.log('Server connectivity test error (silent):', error.message);
-      }
-    };
-    
-    testConnection();
-  }, []);
   
   // Validate only email in step 1
   const validateEmail = () => {
