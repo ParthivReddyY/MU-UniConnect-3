@@ -30,6 +30,16 @@ const SignUp = () => {
   const [otpCode, setOtpCode] = useState('');
   const [otpError, setOtpError] = useState('');
   
+  // Password strength state
+  const [passwordStrength, setPasswordStrength] = useState({
+    score: 0,
+    hasMinLength: false,
+    hasLowerCase: false,
+    hasUpperCase: false,
+    hasNumber: false,
+    hasSpecialChar: false
+  });
+  
   const { register, verifyEmail, currentUser } = useAuth();
   const navigate = useNavigate();
   
@@ -109,10 +119,20 @@ const SignUp = () => {
       }
     }
     
+    // Enhanced password validation
     if (!formData.password) {
       newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else {
+      // Check password strength requirements
+      const minScore = 3; // Require at least 3 criteria to be met for a valid password
+      
+      if (passwordStrength.score < minScore) {
+        newErrors.password = 'Password is too weak. Please meet at least 3 requirements.';
+      }
+      
+      if (!passwordStrength.hasMinLength) {
+        newErrors.password = 'Password must be at least 8 characters long';
+      }
     }
     
     if (formData.password !== formData.confirmPassword) {
@@ -130,6 +150,12 @@ const SignUp = () => {
       [name]: value
     });
     
+    // Password strength checker
+    if (name === 'password') {
+      const strength = checkPasswordStrength(value);
+      setPasswordStrength(strength);
+    }
+    
     // Clear field-specific error when user types
     if (errors[name]) {
       setErrors({
@@ -145,12 +171,99 @@ const SignUp = () => {
     }
   };
   
+  // Function to check password strength
+  const checkPasswordStrength = (password) => {
+    // Check different requirements
+    const hasMinLength = password.length >= 8;
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecialChar = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+    
+    // Calculate score based on requirements met
+    let score = 0;
+    if (hasMinLength) score++;
+    if (hasLowerCase) score++;
+    if (hasUpperCase) score++;
+    if (hasNumber) score++;
+    if (hasSpecialChar) score++;
+    
+    return {
+      score,
+      hasMinLength,
+      hasLowerCase,
+      hasUpperCase,
+      hasNumber,
+      hasSpecialChar
+    };
+  };
+  
+  // Helper function to render the password strength indicator
+  const renderPasswordStrengthIndicator = () => {
+    if (!formData.password) return null;
+    
+    // Define indicator styles based on strength score
+    const getStrengthLabel = () => {
+      if (passwordStrength.score === 0) return { text: 'Very Weak', color: 'red-600' };
+      if (passwordStrength.score === 1) return { text: 'Weak', color: 'red-500' };
+      if (passwordStrength.score === 2) return { text: 'Fair', color: 'yellow-500' };
+      if (passwordStrength.score === 3) return { text: 'Good', color: 'green-500' };
+      if (passwordStrength.score === 4) return { text: 'Strong', color: 'green-400' };
+      return { text: 'Very Strong', color: 'green-300' };
+    };
+    
+    const { text, color } = getStrengthLabel();
+    
+    return (
+      <div className="mt-2 mb-4 px-2 w-full">
+        {/* Strength label */}
+        <div className="flex justify-between items-center mb-1">
+          <span className="text-xs text-gray-300">Password Strength:</span>
+          <span className={`text-xs font-medium text-${color}`}>{text}</span>
+        </div>
+        
+        {/* Strength bar */}
+        <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+          <div 
+            className={`h-full bg-${color} transition-all duration-300`} 
+            style={{ width: `${(passwordStrength.score / 5) * 100}%` }}
+          ></div>
+        </div>
+        
+        {/* Requirements checklist */}
+        <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className={`flex items-center text-xs ${passwordStrength.hasMinLength ? 'text-green-400' : 'text-gray-400'}`}>
+            <i className={`fas fa-${passwordStrength.hasMinLength ? 'check-circle' : 'circle'} mr-2`}></i>
+            At least 8 characters
+          </div>
+          <div className={`flex items-center text-xs ${passwordStrength.hasLowerCase ? 'text-green-400' : 'text-gray-400'}`}>
+            <i className={`fas fa-${passwordStrength.hasLowerCase ? 'check-circle' : 'circle'} mr-2`}></i>
+            Lowercase letter (a-z)
+          </div>
+          <div className={`flex items-center text-xs ${passwordStrength.hasUpperCase ? 'text-green-400' : 'text-gray-400'}`}>
+            <i className={`fas fa-${passwordStrength.hasUpperCase ? 'check-circle' : 'circle'} mr-2`}></i>
+            Uppercase letter (A-Z)
+          </div>
+          <div className={`flex items-center text-xs ${passwordStrength.hasNumber ? 'text-green-400' : 'text-gray-400'}`}>
+            <i className={`fas fa-${passwordStrength.hasNumber ? 'check-circle' : 'circle'} mr-2`}></i>
+            Number (0-9)
+          </div>
+          <div className={`flex items-center text-xs ${passwordStrength.hasSpecialChar ? 'text-green-400' : 'text-gray-400'}`}>
+            <i className={`fas fa-${passwordStrength.hasSpecialChar ? 'check-circle' : 'circle'} mr-2`}></i>
+            Special character (!@#$%)
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
     
     setIsSubmitting(true);
+    setSignupError(''); // Clear any previous errors
     
     try {
       const result = await register({
@@ -171,11 +284,12 @@ const SignUp = () => {
         setIsVerifying(true);
         setSignupSuccess('Verification code sent to your email. Please enter it below to complete registration.');
       } else {
+        // Handle specific error message from register function
         setSignupError(result.message || 'Registration failed. Please try again.');
       }
     } catch (err) {
       console.error('Registration error:', err);
-      setSignupError('An unexpected error occurred. Please try again.');
+      setSignupError(err.message || 'An unexpected error occurred. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -482,9 +596,10 @@ const SignUp = () => {
               Account Security
             </h3>
             <div className="flex flex-wrap -mx-2">
-              {renderField("password", "Password", "password", "fa-lock", "Minimum 6 characters")}
+              {renderField("password", "Password", "password", "fa-lock", "Minimum 8 characters")}
               {renderField("confirmPassword", "Confirm Password", "password", "fa-lock", "Confirm your password")}
             </div>
+            {renderPasswordStrengthIndicator()}
           </div>
           
           <div className="mb-6">

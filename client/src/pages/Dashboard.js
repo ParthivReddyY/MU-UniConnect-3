@@ -12,34 +12,6 @@ const Dashboard = () => {
   const [academicInfo, setAcademicInfo] = useState(null);
   const [dataFetched, setDataFetched] = useState(false);
   
-  // Stats for different user types
-  const [stats] = useState({
-    adminStats: {
-      totalUsers: '4,128',
-      activeToday: '324',
-      newThisWeek: '57',
-      pendingRequests: '12'
-    },
-    facultyStats: {
-      officeHours: '18',
-      upcomingMeetings: '3',
-      pendingRequests: '5',
-      publications: '12'
-    },
-    clubHeadStats: {
-      memberCount: '87',
-      upcomingEvents: '2',
-      pendingRequests: '8',
-      totalPosts: '36'
-    },
-    studentStats: {
-      clubsJoined: '3',
-      upcomingEvents: '5',
-      resources: '24',
-      completedTasks: '18'
-    }
-  });
-  
   // Set greeting based on time of day
   useEffect(() => {
     const hour = new Date().getHours();
@@ -112,277 +84,6 @@ const Dashboard = () => {
       </button>
     );
   };
-
-  // Stat card component with consistent design
-  const StatCard = ({ title, value, icon, color = 'primary' }) => {
-    const colorConfig = {
-      primary: { bg: 'bg-indigo-50', text: 'text-indigo-600' },
-      secondary: { bg: 'bg-purple-50', text: 'text-purple-600' },
-      success: { bg: 'bg-green-50', text: 'text-green-600' },
-      danger: { bg: 'bg-red-50', text: 'text-red-600' },
-      warning: { bg: 'bg-amber-50', text: 'text-amber-600' },
-      info: { bg: 'bg-blue-50', text: 'text-blue-600' },
-    };
-    
-    const { bg, text } = colorConfig[color] || colorConfig.primary;
-    
-    return (
-      <div className="bg-white rounded-xl shadow-md border border-gray-100 p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-        <div className="flex justify-between items-start">
-          <div>
-            <h3 className="text-gray-600 text-sm font-medium">{title}</h3>
-            <p className="text-2xl font-bold text-gray-800 mt-1">{value}</p>
-          </div>
-          <div className={`w-12 h-12 rounded-full ${bg} flex items-center justify-center ${text}`}>
-            <i className={`fas ${icon} text-xl`}></i>
-          </div>
-        </div>
-      </div>
-    );
-  };
-  
-  // Menu card component with consistent design
-  const MenuCard = ({ title, icon, description, path, color = 'primary', badge }) => {
-    const colorConfig = {
-      primary: { bg: 'bg-indigo-500', hover: 'bg-indigo-50', text: 'text-indigo-600' },
-      secondary: { bg: 'bg-purple-500', hover: 'bg-purple-50', text: 'text-purple-600' },
-      success: { bg: 'bg-green-500', hover: 'bg-green-50', text: 'text-green-600' },
-      danger: { bg: 'bg-red-500', hover: 'bg-red-50', text: 'text-red-600' },
-      warning: { bg: 'bg-amber-500', hover: 'bg-amber-50', text: 'text-amber-600' },
-      info: { bg: 'bg-blue-500', hover: 'bg-blue-50', text: 'text-blue-600' },
-    };
-    
-    const { bg, hover, text } = colorConfig[color] || colorConfig.primary;
-    
-    return (
-      <Link to={path} className="block">
-        <div className="bg-white rounded-xl shadow-md border border-gray-100 transition-all duration-300 h-full hover:shadow-lg hover:-translate-y-1 group">
-          <div className={`h-1.5 ${bg} rounded-t-xl w-full`}></div>
-          <div className="p-6">
-            <div className="flex items-center mb-3">
-              <div className={`w-12 h-12 rounded-full ${hover} ${text} flex items-center justify-center mr-4 group-hover:${bg} group-hover:text-white transition-all duration-300`}>
-                <i className={`fas ${icon} text-lg`}></i>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 flex items-center flex-wrap">
-                {title}
-                {badge && (
-                  <span className="ml-2 text-xs bg-red-100 text-red-700 py-1 px-2 rounded-full">
-                    {badge}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <p className="text-gray-500 text-sm">{description}</p>
-          </div>
-        </div>
-      </Link>
-    );
-  };
-  
-  // Get user-specific stats based on role
-  const getUserStats = () => {
-    if (isAdmin()) return stats.adminStats;
-    if (isFaculty()) return stats.facultyStats;
-    if (isClubHead()) return stats.clubHeadStats;
-    return stats.studentStats;
-  };
-  
-  // Get stat cards based on user role
-  const getStatCards = () => {
-    const userStats = getUserStats();
-    
-    if (isAdmin()) {
-      return (
-        <>
-          <StatCard title="Total Users" value={userStats.totalUsers} icon="fa-users" color="primary" />
-          <StatCard title="Active Today" value={userStats.activeToday} icon="fa-chart-line" color="success" />
-          <StatCard title="New This Week" value={userStats.newThisWeek} icon="fa-user-plus" color="secondary" />
-          <StatCard title="Pending Requests" value={userStats.pendingRequests} icon="fa-clipboard-list" color="danger" />
-        </>
-      );
-    }
-    
-    if (isFaculty()) {
-      return (
-        <>
-          <StatCard title="Office Hours" value={userStats.officeHours} icon="fa-clock" color="primary" />
-          <StatCard title="Upcoming Meetings" value={userStats.upcomingMeetings} icon="fa-calendar-check" color="success" />
-          <StatCard title="Pending Requests" value={userStats.pendingRequests} icon="fa-clipboard-list" color="warning" />
-          <StatCard title="Publications" value={userStats.publications} icon="fa-book" color="secondary" />
-        </>
-      );
-    }
-    
-    if (isClubHead()) {
-      return (
-        <>
-          <StatCard title="Club Members" value={userStats.memberCount} icon="fa-users" color="primary" />
-          <StatCard title="Upcoming Events" value={userStats.upcomingEvents} icon="fa-calendar-check" color="info" />
-          <StatCard title="Pending Requests" value={userStats.pendingRequests} icon="fa-clipboard-list" color="warning" />
-          <StatCard title="Total Posts" value={userStats.totalPosts} icon="fa-newspaper" color="secondary" />
-        </>
-      );
-    }
-    
-    return (
-      <>
-        <StatCard title="Clubs Joined" value={userStats.clubsJoined} icon="fa-people-group" color="primary" />
-        <StatCard title="Upcoming Events" value={userStats.upcomingEvents} icon="fa-calendar-check" color="secondary" />
-        <StatCard title="Resources" value={userStats.resources} icon="fa-file-alt" color="info" />
-        <StatCard title="Completed Tasks" value={userStats.completedTasks} icon="fa-tasks" color="success" />
-      </>
-    );
-  };
-  
-  // Get menu cards based on user role
-  const getMenuCards = () => {
-    
-    if (isClubHead()) {
-      return (
-        <>
-          <MenuCard 
-            title="Club Profile"
-            icon="fa-users"
-            description="Manage your club's profile and details"
-            path="/club/profile"
-            color="primary"
-          />
-          <MenuCard 
-            title="Create Event"
-            icon="fa-calendar-plus"
-            description="Create and manage club events"
-            path="/club/create-event"
-            color="success"
-            badge="New"
-          />
-          <MenuCard 
-            title="Members"
-            icon="fa-user-group"
-            description="Manage club membership"
-            path="/club/members"
-            color="secondary"
-          />
-          <MenuCard 
-            title="Announcements"
-            icon="fa-bullhorn"
-            description="Create announcements for club members"
-            path="/club/announcements"
-            color="warning"
-          />
-          <MenuCard 
-            title="Resources"
-            icon="fa-box"
-            description="Manage club resources and materials"
-            path="/club/resources"
-            color="info"
-          />
-          <MenuCard 
-            title="Analytics"
-            icon="fa-chart-line"
-            description="View engagement and growth analytics"
-            path="/club/analytics"
-            color="indigo"
-          />
-        </>
-      );
-    }
-    
-    // Faculty menu cards
-    if (isFaculty()) {
-      return (
-        <>
-          <MenuCard 
-            title="Student Appointments"
-            icon="fa-calendar-check"
-            description="View and manage appointment requests from students"
-            path="/faculty-appointments"
-            color="primary"
-          />
-          <MenuCard 
-            title="Office Hours"
-            icon="fa-clock"
-            description="Set and manage your office hours availability"
-            path="/office-hours"
-            color="success"
-          />
-          <MenuCard 
-            title="Course Materials"
-            icon="fa-book"
-            description="Upload and manage course materials and resources"
-            path="/course-materials"
-            color="info"
-          />
-        </>
-      );
-    }
-    
-    // Admin menu cards
-    if (isAdmin()) {
-      return (
-        <>
-          <MenuCard 
-            title="User Management"
-            icon="fa-users-cog"
-            description="Manage users and permissions"
-            path="/admin/users"
-            color="primary"
-          />
-          
-          {/* Add this new card */}
-          <MenuCard 
-            title="Feedback Management"
-            icon="fa-comment-dots"
-            description="Review and respond to user feedback"
-            path="/admin/feedback"
-            color="secondary"
-            badge="New"
-          />
-          
-          <MenuCard 
-            title="System Settings"
-            icon="fa-cogs"
-            description="Configure system settings and preferences"
-            path="/admin/settings"
-            color="info"
-          />
-        </>
-      );
-    }
-    
-    // Default menu cards for students
-    return (
-      <>
-        <MenuCard 
-          title="Faculty Appointments"
-          icon="fa-calendar-plus"
-          description="Schedule meetings with faculty members"
-          path="/college/bookings/faculty-appointment"
-          color="primary"
-        />
-        <MenuCard 
-          title="Course Registration"
-          icon="fa-graduation-cap"
-          description="Register for courses and view your schedule"
-          path="/course-registration"
-          color="success"
-        />
-        <MenuCard 
-          title="Academic Records"
-          icon="fa-file-alt"
-          description="View your grades, transcripts, and academic history"
-          path="/academic-records"
-          color="info"
-        />
-        <MenuCard 
-          title="Campus Events"
-          icon="fa-ticket-alt"
-          description="Browse and register for upcoming campus events"
-          path="/events"
-          color="warning"
-        />
-      </>
-    );
-  };
   
   // Get user role text with formatted display
   const getUserRoleText = () => {
@@ -447,12 +148,6 @@ const Dashboard = () => {
               label="Notifications" 
               onClick={() => {}}
               color="secondary" 
-            />
-            <QuickAction 
-              icon="fa-cog" 
-              label="Settings" 
-              onClick={() => {}}
-              color="primary" 
             />
             <QuickAction 
               icon="fa-comment-alt" 
@@ -527,19 +222,6 @@ const Dashboard = () => {
                 color="danger" 
               />
             </div>
-          </div>
-        </div>
-        
-        {/* Menu Cards - Consistent Design */}
-        <div className="mb-10">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Quick Access</h2>
-            <button className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center">
-              <i className="fas fa-star mr-2"></i> Favorites
-            </button>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {getMenuCards()}
           </div>
         </div>
         
@@ -666,32 +348,63 @@ const Dashboard = () => {
           </div>
         </div>
         
-        {/* System Updates Banner - Enhanced with consistent colors */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl shadow-md overflow-hidden mb-10">
-          <div className="px-6 py-6 md:py-8 flex flex-col md:flex-row items-center">
-            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-white mb-4 md:mb-0 md:mr-6">
-              <i className="fas fa-bullhorn text-xl"></i>
-            </div>
-            <div className="text-center md:text-left md:flex-1">
-              <h3 className="text-xl font-bold text-white mb-2">Platform Updates Available</h3>
-              <p className="text-white/90">
-                New features have been added to enhance your experience. Check out the latest improvements!
-              </p>
-            </div>
-            <button className="mt-5 md:mt-0 md:ml-6 px-5 py-2.5 bg-white/20 hover:bg-white/30 text-white rounded-lg font-medium transition-colors backdrop-blur-sm">
-              Learn More
-            </button>
+        {/* Campus Map Widget - Added functional navigation component */}
+        <div className="bg-white rounded-xl shadow-md overflow-hidden mb-10 border border-gray-100">
+          <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+            <h3 className="font-semibold text-gray-800 flex items-center">
+              <i className="fas fa-map-marked-alt mr-2 text-indigo-500"></i>
+              Campus Navigation
+            </h3>
+            <Link to="/college?tab=map" className="text-sm text-indigo-600 hover:text-indigo-800 flex items-center">
+              <span>Full Map</span>
+              <i className="fas fa-external-link-alt ml-1 text-xs"></i>
+            </Link>
           </div>
-        </div>
-        
-        {/* Stats Section - Consistent design */}
-        <div className="mb-8">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-800">Your Stats</h2>
-            <span className="text-sm text-gray-500">Last Updated: Today</span>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {getStatCards()}
+          <div className="p-6">
+            <div className="campus-map-widget" style={{ height: '400px', overflow: 'hidden' }}>
+              {/* Custom simplified version of the campus map for dashboard */}
+              <div className="flex flex-col h-full">
+                <div className="flex justify-between items-center mb-4">
+                  <h4 className="text-gray-700 font-medium">Find Campus Locations</h4>
+                  <div className="flex items-center text-xs text-gray-500">
+                    <i className="fas fa-info-circle mr-1"></i>
+                    <span>Navigate the campus easily</span>
+                  </div>
+                </div>
+                
+                {/* Map container with fixed height */}
+                <div className="flex-1 w-full min-h-0 border border-gray-200 rounded-lg overflow-hidden">
+                  <iframe
+                    src="https://qgiscloud.com/Harshirh_517/Campus_Navigation/?l=Mahindra_Places%2CSnapped%20geometry%2CBuildings_icons%2CBuildings%2CPathways%2CMahindra_greens%2CSports%2Ccampus_boundary&bl=mapnik&t=Campus_Navigation&e=8730050%2C1986950%2C8732050%2C1987950&hc=1"
+                    title="Mahindra University Campus Map"
+                    width="100%"
+                    height="100%"
+                    style={{ border: 0 }}
+                    allowFullScreen=""
+                    loading="lazy"
+                  />
+                </div>
+                
+                {/* Quick location buttons */}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button className="px-3 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-xs font-medium hover:bg-indigo-100 transition-colors flex items-center">
+                    <i className="fas fa-graduation-cap mr-1.5"></i> Academic Buildings
+                  </button>
+                  <button className="px-3 py-1.5 bg-green-50 text-green-600 rounded-full text-xs font-medium hover:bg-green-100 transition-colors flex items-center">
+                    <i className="fas fa-book mr-1.5"></i> Library
+                  </button>
+                  <button className="px-3 py-1.5 bg-amber-50 text-amber-600 rounded-full text-xs font-medium hover:bg-amber-100 transition-colors flex items-center">
+                    <i className="fas fa-utensils mr-1.5"></i> Cafeteria
+                  </button>
+                  <button className="px-3 py-1.5 bg-blue-50 text-blue-600 rounded-full text-xs font-medium hover:bg-blue-100 transition-colors flex items-center">
+                    <i className="fas fa-futbol mr-1.5"></i> Sports Complex
+                  </button>
+                  <button className="px-3 py-1.5 bg-purple-50 text-purple-600 rounded-full text-xs font-medium hover:bg-purple-100 transition-colors flex items-center">
+                    <i className="fas fa-home mr-1.5"></i> Hostels
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

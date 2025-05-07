@@ -80,6 +80,79 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Register function for user signup
+  const register = async (userData) => {
+    try {
+      // Clear any previous errors
+      setError('');
+      
+      // Make the registration request with user data
+      const response = await api.post('/api/auth/register', userData);
+      
+      // If registration is successful
+      if (response.data && response.data.success) {
+        return { 
+          success: true, 
+          message: response.data.message || 'Registration successful! Verification code has been sent.',
+          email: userData.email 
+        };
+      } else {
+        throw new Error(response.data.message || 'Registration failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      
+      // Handle specific error responses from server
+      if (error.response) {
+        const { data } = error.response;
+        const errorMessage = data.message || 'Registration failed';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      } else {
+        // Handle network or other errors
+        const errorMessage = error.message || 'Network or server error. Please try again.';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      }
+    }
+  };
+
+  // Email verification function
+  const verifyEmail = async (email, otp) => {
+    try {
+      // Clear any previous errors
+      setError('');
+      
+      // Make the verification request
+      const response = await api.post('/api/auth/verify-email', { email, otp });
+      
+      // If verification is successful
+      if (response.data && response.data.success) {
+        return { 
+          success: true, 
+          message: response.data.message || 'Email verified successfully! You can now log in.'
+        };
+      } else {
+        throw new Error(response.data.message || 'Verification failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      
+      // Handle specific error responses from server
+      if (error.response) {
+        const { data } = error.response;
+        const errorMessage = data.message || 'Verification failed';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      } else {
+        // Handle network or other errors
+        const errorMessage = error.message || 'Network or server error. Please try again.';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      }
+    }
+  };
+
   // Fix login function to handle both object and separate parameters
   const login = async (emailOrData, passwordParam) => {
     try {
@@ -194,6 +267,8 @@ export function AuthProvider({ children }) {
     isUserDataRefreshing,
     login,
     logout,
+    register,
+    verifyEmail,
     hasRole,
     isAdmin,
     isStudent,
