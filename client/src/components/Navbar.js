@@ -112,7 +112,7 @@ const MobileNavLink = ({ to, label, hasDropdown, dropdownContent, isActive, onCl
 };
 
 // Mobile-specific component
-const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => {
+const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, handleLogout }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef(null);
@@ -226,92 +226,75 @@ const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => {
           </div>
           
           <div className="mobile-controls">
-            {currentUser ? (
-              <div className="mobile-auth-section relative">
-                <button 
-                  ref={profileButtonRef}
-                  className="flex items-center focus:outline-none" 
-                  onClick={toggleProfileDropdown}
-                  aria-label="Profile"
-                  aria-haspopup="true"
-                  aria-expanded={showProfileDropdown ? 'true' : 'false'}
+            {/* Use consistent profile icon style for both logged-in and non-logged-in states */}
+            <div className="mobile-auth-section relative">
+              <button 
+                ref={profileButtonRef}
+                className="flex items-center focus:outline-none" 
+                onClick={currentUser ? toggleProfileDropdown : handleAuthClick}
+                aria-label={currentUser ? "Profile" : "Sign in"}
+                aria-haspopup={currentUser ? "true" : "false"}
+                aria-expanded={currentUser && showProfileDropdown ? 'true' : 'false'}
+                title={currentUser ? "Profile" : "Login"}
+                data-tooltip={currentUser ? "Profile" : "Login"}
+              >
+                <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
+                  <span className="text-primary-red font-semibold text-base">
+                    <i className="fas fa-user"></i>
+                  </span>
+                </div>
+              </button>
+              
+              {currentUser && showProfileDropdown && (
+                <div 
+                  ref={profileDropdownRef}
+                  className="mobile-profile-dropdown"
+                  role="menu"
                 >
-                  <div className="w-11 h-11 rounded-full bg-red-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm">
-                    {currentUser.profileImage ? (
-                      <img 
-                        src={currentUser.profileImage} 
-                        alt={currentUser.name} 
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-primary-red font-semibold text-base">
-                        {currentUser.name?.charAt(0).toUpperCase() || 'U'}
-                      </span>
-                    )}
-                  </div>
-                </button>
-                
-                {showProfileDropdown && (
-                  <div 
-                    ref={profileDropdownRef}
-                    className="mobile-profile-dropdown"
-                    role="menu"
+                  <Link 
+                    to="/profile" 
+                    className="profile-dropdown-item"
+                    onClick={() => setShowProfileDropdown(false)}
+                    role="menuitem"
                   >
-                    <Link 
-                      to="/profile" 
-                      className="profile-dropdown-item"
-                      onClick={() => setShowProfileDropdown(false)}
-                      role="menuitem"
-                    >
-                      <i className="fas fa-user-circle"></i> 
-                      <span>View Profile</span>
-                    </Link>
-                    
-                    <Link 
-                      to="/dashboard" 
-                      className="profile-dropdown-item"
-                      onClick={() => setShowProfileDropdown(false)}
-                      role="menuitem"
-                    >
-                      <i className="fas fa-tachometer-alt"></i> 
-                      <span>Dashboard</span>
-                    </Link>
-                    
-                    <Link 
-                      to="/change-password" 
-                      className="profile-dropdown-item"
-                      onClick={() => setShowProfileDropdown(false)}
-                      role="menuitem"
-                    >
-                      <i className="fas fa-key"></i> 
-                      <span>Change Password</span>
-                    </Link>
-                    
-                    <button
-                      onClick={() => {
-                        setShowProfileDropdown(false);
-                        window.location.href = '/api/auth/logout';
-                      }}
-                      className="profile-dropdown-item profile-dropdown-item-logout"
-                      role="menuitem"
-                    >
-                      <i className="fas fa-sign-out-alt"></i> 
-                      <span>Sign Out</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="mobile-auth-section">
-                <button 
-                  onClick={handleAuthClick}
-                  className="mobile-auth-btn"
-                  aria-label="Sign in"
-                >
-                  <i className="fas fa-user"></i>
-                </button>
-              </div>
-            )}
+                    <i className="fas fa-user-circle"></i> 
+                    <span>View Profile</span>
+                  </Link>
+                  
+                  <Link 
+                    to="/dashboard" 
+                    className="profile-dropdown-item"
+                    onClick={() => setShowProfileDropdown(false)}
+                    role="menuitem"
+                  >
+                    <i className="fas fa-tachometer-alt"></i> 
+                    <span>Dashboard</span>
+                  </Link>
+                  
+                  <Link 
+                    to="/change-password" 
+                    className="profile-dropdown-item"
+                    onClick={() => setShowProfileDropdown(false)}
+                    role="menuitem"
+                  >
+                    <i className="fas fa-key"></i> 
+                    <span>Change Password</span>
+                  </Link>
+                  
+                  <button
+                    onClick={() => {
+                      setShowProfileDropdown(false);
+                      handleLogout();
+                    }}
+                    className="profile-dropdown-item profile-dropdown-item-logout"
+                    role="menuitem"
+                  >
+                    <i className="fas fa-sign-out-alt"></i> 
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
             <button 
               className="mobile-menu-button"
               onClick={toggleMenu}
@@ -351,7 +334,7 @@ const MobileNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => {
 };
 
 // Desktop-specific component with shared state handling
-const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => {
+const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick, handleLogout }) => {
   const desktopNavRef = useRef(null);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
   const profileDropdownRef = useRef(null);
@@ -401,93 +384,75 @@ const DesktopNavbar = ({ navLinks, currentUser, isActive, handleAuthClick }) => 
         ))}
       </nav>
 
-      {/* Profile dropdown for authenticated users */}
-      {currentUser ? (
-        <div className="desktop-auth-section relative">
-          <button 
-            className="flex items-center space-x-2 focus:outline-none rounded-full hover:ring-2 hover:ring-red-100 transition-all duration-200 p-1"
-            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-            aria-haspopup="true"
-            aria-expanded={showProfileDropdown ? 'true' : 'false'}
+      {/* Profile icon for both authenticated and non-authenticated users */}
+      <div className="desktop-auth-section relative">
+        <button 
+          className="flex items-center space-x-2 focus:outline-none rounded-full hover:ring-2 hover:ring-red-100 transition-all duration-200 p-1"
+          onClick={() => currentUser ? setShowProfileDropdown(!showProfileDropdown) : handleAuthClick()}
+          aria-haspopup={currentUser ? "true" : "false"}
+          aria-expanded={currentUser && showProfileDropdown ? 'true' : 'false'}
+          title={currentUser ? "Profile" : "Login"}
+          data-tooltip={currentUser ? "Profile" : "Login"}
+        >
+          <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow duration-200">
+            <span className="text-primary-red font-semibold text-lg">
+              <i className="fas fa-user"></i>
+            </span>
+          </div>
+        </button>
+        
+        {currentUser && showProfileDropdown && (
+          <div 
+            ref={profileDropdownRef}
+            className="profile-dropdown"
+            role="menu"
           >
-            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center overflow-hidden border-2 border-white shadow-sm hover:shadow-md transition-shadow duration-200">
-              {currentUser.profileImage ? (
-                <img 
-                  src={currentUser.profileImage} 
-                  alt={currentUser.name} 
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <span className="text-primary-red font-semibold text-lg">
-                  {currentUser.name?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              )}
+            <div className="flex flex-col">
+              <Link 
+                to="/profile" 
+                className="profile-dropdown-item"
+                onClick={() => setShowProfileDropdown(false)}
+                role="menuitem"
+              >
+                <i className="fas fa-user-circle text-primary-red"></i> 
+                <span>View Profile</span>
+              </Link>
+              
+              <Link 
+                to="/dashboard" 
+                className="profile-dropdown-item"
+                onClick={() => setShowProfileDropdown(false)}
+                role="menuitem"
+              >
+                <i className="fas fa-tachometer-alt text-primary-red"></i> 
+                <span>Dashboard</span>
+              </Link>
+              
+              <Link 
+                to="/change-password" 
+                className="profile-dropdown-item"
+                onClick={() => setShowProfileDropdown(false)}
+                role="menuitem"
+              >
+                <i className="fas fa-key text-primary-red"></i> 
+                <span>Change Password</span>
+              </Link>
+              
+              <button
+                onClick={() => {
+                  setShowProfileDropdown(false);
+                  handleLogout();
+                }}
+                className="profile-dropdown-item profile-dropdown-item-logout"
+                role="menuitem"
+              >
+                <i className="fas fa-sign-out-alt"></i> 
+                <span>Sign Out</span>
+              </button>
             </div>
-          </button>
-          
-          {showProfileDropdown && (
-            <div 
-              ref={profileDropdownRef}
-              className="profile-dropdown"
-              role="menu"
-            >
-              <div className="flex flex-col">
-                <Link 
-                  to="/profile" 
-                  className="profile-dropdown-item"
-                  onClick={() => setShowProfileDropdown(false)}
-                  role="menuitem"
-                >
-                  <i className="fas fa-user-circle text-primary-red"></i> 
-                  <span>View Profile</span>
-                </Link>
-                
-                <Link 
-                  to="/dashboard" 
-                  className="profile-dropdown-item"
-                  onClick={() => setShowProfileDropdown(false)}
-                  role="menuitem"
-                >
-                  <i className="fas fa-tachometer-alt text-primary-red"></i> 
-                  <span>Dashboard</span>
-                </Link>
-                
-                <Link 
-                  to="/change-password" 
-                  className="profile-dropdown-item"
-                  onClick={() => setShowProfileDropdown(false)}
-                  role="menuitem"
-                >
-                  <i className="fas fa-key text-primary-red"></i> 
-                  <span>Change Password</span>
-                </Link>
-                
-                <button
-                  onClick={() => {
-                    setShowProfileDropdown(false);
-                    window.location.href = '/api/auth/logout';
-                  }}
-                  className="profile-dropdown-item profile-dropdown-item-logout"
-                  role="menuitem"
-                >
-                  <i className="fas fa-sign-out-alt"></i> 
-                  <span>Sign Out</span>
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      ) : (
-        <div className="desktop-auth-section">
-          <button
-            onClick={handleAuthClick}
-            className="auth-icon-btn"
-            aria-label="Sign in"
-          >
-            <i className="fas fa-user"></i>
-          </button>
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -498,7 +463,7 @@ function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
   // Optimized scroll handler with throttling
   const handleScroll = useCallback(() => {
@@ -543,6 +508,15 @@ function Navbar() {
       navigate('/profile');
     } else {
       navigate('/login');
+    }
+  };
+
+  // Handle logout with proper navigation
+  const handleLogout = () => {
+    const result = logout();
+    if (result.success) {
+      // Navigate to home page after logout
+      navigate('/');
     }
   };
 
@@ -626,7 +600,7 @@ function Navbar() {
               </div>
             </Link>
             <Link to="/faculty?department=science" className="dropdown-item">
-              <i className="fas fa-flask text-green-600"></i>
+              <i class="fas fa-flask text-green-600"></i>
               <div>
                 <span>Science Faculty</span>
                 <span className="dropdown-description">Physics, Chemistry & more</span>
@@ -736,12 +710,14 @@ function Navbar() {
         currentUser={currentUser}
         isActive={isActive}
         handleAuthClick={handleAuthClick}
+        handleLogout={handleLogout}
       />
       <MobileNavbar 
         navLinks={navLinks}
         currentUser={currentUser}
         isActive={isActive}
         handleAuthClick={handleAuthClick}
+        handleLogout={handleLogout}
       />
     </header>
   );
