@@ -38,37 +38,66 @@ export const fetchPublicHolidays = async (year) => {
  * @returns {Promise<Array>} - Array of festival events
  */
 export const fetchHinduFestivals = async (year) => {
-  // Try using a free API for Hindu festivals - Holiday API with a free tier
   try {
-    // Using public proxy to avoid CORS issues with the free API
-    const response = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(
-      `https://www.googleapis.com/calendar/v3/calendars/en.indian%23holiday@group.v.calendar.google.com/events?key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&timeMin=${year}-01-01T00:00:00Z&timeMax=${year+1}-01-01T00:00:00Z`
-    )}`);
+    console.log('Fetching Hindu festivals for year:', year);
     
-    if (!response.ok) {
-      throw new Error(`Failed to fetch festivals: ${response.status}`);
+    // First attempt: Try Google Calendar API for Indian holidays
+    const googleCalResponse = await fetch(`https://www.googleapis.com/calendar/v3/calendars/en.indian%23holiday@group.v.calendar.google.com/events?key=AIzaSyBNlYH01_9Hc5S1J9vuFmu2nUqBZJNAXxs&timeMin=${year}-01-01T00:00:00Z&timeMax=${year+1}-01-01T00:00:00Z`, {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' }
+    });
+    
+    if (googleCalResponse.ok) {
+      const data = await googleCalResponse.json();
+      console.log('Successfully fetched Google Calendar Indian festivals:', data.items?.length || 0);
+      
+      if (data.items && data.items.length > 0) {
+        // Transform Google Calendar API data to our event format
+        return data.items.map((event, index) => {
+          const startDate = event.start.date || (event.start.dateTime ? event.start.dateTime.split('T')[0] : null);
+          
+          if (!startDate) return null;
+          
+          return {
+            id: `festival-${year}-${index}`,
+            title: event.summary,
+            date: startDate,
+            time: 'All Day',
+            datetime: `${startDate}T00:00`,
+            endDatetime: `${startDate}T23:59`,
+            category: 'FESTIVAL'
+          };
+        }).filter(Boolean); // Remove null events
+      }
     }
     
-    const data = await response.json();
+    // Second attempt: Fallback to another API
+    console.log('Falling back to secondary API for Indian festivals');
+    const calendarificApiKey = '0b471e87f9e7d03a8a9b9ef97e34ce51a69b3a4e';
+    const response = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${calendarificApiKey}&country=IN&year=${year}`);
     
-    if (!data.items) return [];
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Successfully fetched Calendarific Indian festivals:', data.response?.holidays?.length || 0);
+      
+      if (data.response && data.response.holidays && data.response.holidays.length > 0) {
+        return data.response.holidays
+          .filter(holiday => holiday.type.includes('hindu') || holiday.type.includes('national'))
+          .map((holiday, index) => ({
+            id: `festival-${year}-${index}`,
+            title: holiday.name,
+            date: holiday.date.iso.split('T')[0],
+            time: 'All Day',
+            datetime: `${holiday.date.iso.split('T')[0]}T00:00`,
+            endDatetime: `${holiday.date.iso.split('T')[0]}T23:59`,
+            category: holiday.type.includes('national') ? 'NATIONAL' : 'FESTIVAL'
+          }));
+      }
+    }
     
-    // Transform Google Calendar API data to our event format
-    return data.items.map((event, index) => {
-      const startDate = event.start.date || (event.start.dateTime ? event.start.dateTime.split('T')[0] : null);
-      
-      if (!startDate) return null;
-      
-      return {
-        id: `festival-${year}-${index}`,
-        title: event.summary,
-        date: startDate,
-        time: 'All Day',
-        datetime: `${startDate}T00:00`,
-        endDatetime: `${startDate}T23:59`,
-        category: 'FESTIVAL'
-      };
-    }).filter(Boolean); // Remove null events
+    // If both attempts fail, return empty array and let fallback mechanism handle it
+    console.log('Both API attempts failed, returning empty array for fallback mechanism');
+    return [];
   } catch (error) {
     console.error('Error fetching Hindu festivals:', error);
     return [];
@@ -123,9 +152,26 @@ const getFallbackFestivalDates = (year) => {
   
   // Helper function to adjust lunar calendar dates
   function adjustLunarDate(baseDate, shift) {
-    const date = new Date(baseDate);
-    date.setDate(date.getDate() - shift);
-    return date.toISOString().split('T')[0];
+    try {
+      const date = new Date(baseDate);
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date provided:', baseDate);
+        return baseDate; // Return original if invalid
+      }
+      
+      // Apply the shift
+      date.setDate(date.getDate() - shift);
+      
+      // Format back to YYYY-MM-DD
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      
+      return `${year}-${month}-${day}`;
+    } catch (error) {
+      console.error('Error adjusting lunar date:', error);
+      return baseDate; // Return original if error
+    }
   }
   
   return festivals;

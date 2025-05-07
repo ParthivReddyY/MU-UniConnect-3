@@ -40,7 +40,7 @@ const SelectedEventsList = ({ events }) => {
               <div className="flex flex-col">
                 <span className={`font-medium ${category.textColor}`}>{event.title}</span>
                 <span className="text-gray-500 text-sm">
-                  {event.time === 'All Day' ? (
+                  {event.isAllDay ? (
                     'All Day'
                   ) : (
                     <>
@@ -49,6 +49,9 @@ const SelectedEventsList = ({ events }) => {
                     </>
                   )}
                 </span>
+                {event.location && (
+                  <span className="text-gray-500 text-xs">{event.location}</span>
+                )}
               </div>
             </li>
           );
