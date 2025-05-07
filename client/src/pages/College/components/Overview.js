@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
+import { Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../../contexts/AuthContext';
+import CampusHighlightForm from '../../../components/CampusHighlightForm';
+import CampusHighlightDetail from '../../../components/CampusHighlightDetail';
+import api from '../../../utils/axiosConfig';
 
 const Overview = () => {
   const [activeProgram, setActiveProgram] = useState('engineering');
   const [activeFacility, setActiveFacility] = useState(0);
-  const [activeLeader, setActiveLeader] = useState(0); // Add state for carousel
+  const [activeLeader, setActiveLeader] = useState(0); 
   const [activePartnersPage, setActivePartnersPage] = useState(0);
+  // Add state for campus highlights modal
+  const [showHighlightModal, setShowHighlightModal] = useState(false);
+  const [editingHighlight, setEditingHighlight] = useState(null);
+  const [campusHighlights, setCampusHighlights] = useState([]);
+  const { currentUser } = useAuth();
   const carouselTimerRef = useRef(null);
   const partnersCarouselRef = useRef(null);
 
@@ -366,7 +376,7 @@ const Overview = () => {
         clearInterval(carouselTimerRef.current);
       }
     };
-  }, []); // Empty dependency array ensures this only runs once on mount
+  }, [nextLeader]); // Include nextLeader as dependency
   
   // Reset the timer whenever the user manually changes the slide
   const handleManualNavigation = (action) => {
@@ -410,7 +420,7 @@ const Overview = () => {
         clearInterval(partnersCarouselRef.current);
       }
     };
-  }, []); // Empty dependency array ensures this only runs once on mount
+  }, [nextPartnersPage]); // Include nextPartnersPage as dependency
   
   // Reset the partners carousel timer whenever the user manually changes the slide
   const handlePartnersNavigation = (action) => {
@@ -426,6 +436,59 @@ const Overview = () => {
     partnersCarouselRef.current = setInterval(() => {
       nextPartnersPage();
     }, 8000);
+  };
+
+  // Add function to fetch campus highlights
+  const fetchCampusHighlights = async () => {
+    try {
+      const response = await api.get('/api/campus-highlights');
+      if (response.data && response.data.highlights) {
+        setCampusHighlights(response.data.highlights);
+      }
+    } catch (error) {
+      console.error('Error fetching campus highlights:', error);
+    }
+  };
+
+  // Fetch campus highlights on component mount
+  useEffect(() => {
+    fetchCampusHighlights();
+  }, []);
+
+  // Create refs for sections that will be scrolled to
+  const campusHighlightsRef = useRef(null);
+  const location = useLocation();
+
+  // Handle scroll to section when component mounts or when the URL hash changes
+  useEffect(() => {
+    if (location.hash) {
+      // Get the element to scroll to
+      const elementId = location.hash.replace('#', '');
+      const element = document.getElementById(elementId);
+      
+      // If the element exists, scroll to it with a slight delay to ensure the page is fully rendered
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 300);
+      }
+    }
+  }, [location.hash]);
+
+  // Add state for the highlight detail modal
+  const [selectedHighlight, setSelectedHighlight] = useState(null);
+  const [showHighlightDetail, setShowHighlightDetail] = useState(false);
+
+  // Function to open the highlight detail modal
+  const openHighlightDetail = (highlight) => {
+    setSelectedHighlight(highlight);
+    setShowHighlightDetail(true);
+  };
+
+  // Function to close the highlight detail modal
+  const closeHighlightDetail = () => {
+    setShowHighlightDetail(false);
+    setTimeout(() => setSelectedHighlight(null), 300); // Clear data after animation
   };
 
   return (
@@ -851,81 +914,166 @@ const Overview = () => {
           </div>
         </div>
       </motion.section>
-      
-      {/* Campus Facilities Section with Image Cards */}
+
+      {/* Campus Life Highlights Section */}
       <motion.section 
-        variants={itemVariants}
-        className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-lg p-8 md:p-10"
+        id="campus-highlights"
+        variants={itemVariants} 
+        className="bg-dark-gray text-white rounded-2xl shadow-lg p-8 md:p-10"
       >
-        <h2 className="text-2xl md:text-3xl font-bold mb-3 text-center">Campus Life & Facilities</h2>
-        <p className="text-center text-medium-gray mb-8 max-w-3xl mx-auto">
-          Experience a dynamic and supportive campus environment, with a wide range of facilities and activities
-        </p>
-        
-        <div className="flex flex-nowrap overflow-x-auto gap-6 py-4 scrollbar-hide">
-          {campusFacilities.map((facility, index) => (
-            <div 
-              key={index}
-              className={`flex-shrink-0 w-[280px] group cursor-pointer`}
-              onClick={() => setActiveFacility(index)}
-            >
-              <div className={`
-                relative h-60 rounded-xl overflow-hidden shadow-md transition-all duration-300
-                ${activeFacility === index ? 'ring-4 ring-primary-red' : ''}
-              `}>
-                <img 
-                  src={facility.image} 
-                  alt={facility.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent flex items-end p-4">
-                  <div>
-                    <div className="flex items-center mb-2">
-                      <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center backdrop-blur-sm">
-                        <i className={`${facility.icon} text-white`}></i>
-                      </div>
-                      <h3 className="text-white font-semibold ml-2">{facility.name}</h3>
+        <div className="content-container px-4 md:px-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 md:mb-10">
+            <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0">
+              <span className="relative">
+                Campus Life Highlights
+                <span className="absolute -bottom-3 left-1/2 md:left-0 transform -translate-x-1/2 md:translate-x-0 h-1 w-24 bg-primary-red rounded-full"></span>
+              </span>
+            </h2>
+            {currentUser && currentUser.role === 'admin' && (
+              <div className="flex gap-3">
+                <button 
+                  className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 transition-colors rounded-lg text-white"
+                  onClick={() => {
+                    setEditingHighlight(null); // Ensure we're creating a new highlight, not editing
+                    setShowHighlightModal(true);
+                  }}
+                >
+                  <i className="fas fa-plus"></i>
+                  Add Highlight
+                </button>
+              </div>
+            )}
+          </div>
+          
+          <p className="text-center text-light-gray max-w-3xl mx-auto mb-10 leading-relaxed">
+            Explore the diverse aspects of campus life at Mahindra University, from cutting-edge facilities to vibrant cultural experiences.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+            {campusHighlights && campusHighlights.length > 0 ? (
+              campusHighlights.map((highlight) => (
+                <div key={highlight._id} className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src={highlight.image} 
+                    alt={highlight.title} 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='200' viewBox='0 0 300 200'%3E%3Crect width='300' height='200' fill='%23e6e6e6'/%3E%3Crect x='50' y='50' width='200' height='100' fill='%23d0d0d0'/%3E%3Ctext x='150' y='175' font-size='16' text-anchor='middle' fill='%23666'%3E${encodeURIComponent(highlight.title)}%3C/text%3E%3C/svg%3E`;
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                  
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    <i className={`${highlight.icon || 'fas fa-image'} text-white`}></i>
+                  </div>
+                  
+                  {/* Edit button for admins */}
+                  {currentUser && currentUser.role === 'admin' && (
+                    <button
+                      onClick={() => {
+                        setEditingHighlight(highlight);
+                        setShowHighlightModal(true);
+                      }}
+                      className="absolute top-4 left-4 w-8 h-8 rounded-full bg-white flex items-center justify-center transform transition-transform duration-300 hover:scale-110 z-20"
+                      title="Edit highlight"
+                    >
+                      <i className="fas fa-edit text-primary-red"></i>
+                    </button>
+                  )}
+                  
+                  <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
+                    <h3 className="font-semibold text-xl text-white mb-1">{highlight.title}</h3>
+                    <p className="text-light-gray text-sm mb-3">{highlight.description}</p>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => openHighlightDetail(highlight)}
+                        className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1"
+                      >
+                        <i className="fas fa-info-circle text-xs"></i> Details
+                      </button>
                     </div>
-                    <p className="text-white/80 text-sm line-clamp-2">
-                      {facility.description}
-                    </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-        
-        <div className="mt-6 flex justify-center">
-          {campusFacilities.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setActiveFacility(index)}
-              className={`w-3 h-3 rounded-full mx-1 transition-all duration-300 ${
-                index === activeFacility ? 'bg-primary-red scale-125' : 'bg-gray-300'
-              }`}
-            />
-          ))}
-        </div>
-        
-        <motion.div 
-          key={activeFacility}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.4 }}
-          className="mt-10 bg-white p-6 rounded-xl shadow-sm"
-        >
-          <div className="flex items-center mb-4">
-            <div className="w-10 h-10 rounded-full bg-red-light flex items-center justify-center mr-3">
-              <i className={`${campusFacilities[activeFacility].icon} text-primary-red`}></i>
-            </div>
-            <h3 className="text-xl font-semibold">{campusFacilities[activeFacility].name}</h3>
+              ))
+            ) : (
+              <>
+                {/* Fallback content if no highlights are available */}
+                <div className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src="https://res.cloudinary.com/dmny4ymqp/image/upload/v1746258098/MU_Building_2_12_zhpzto.webp" 
+                    alt="Modern Infrastructure" 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    <i className="fas fa-building text-white"></i>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
+                    <h3 className="font-semibold text-xl text-white mb-1">Modern Infrastructure</h3>
+                    <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">State-of-the-art academic buildings with cutting-edge facilities</p>
+                    <div className="flex gap-3">
+                      <button className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1">
+                        <i className="fas fa-search text-xs"></i> View
+                      </button>
+                      <Link to="/college?tab=facilities" className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1">
+                        <i className="fas fa-info-circle text-xs"></i> Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src="https://res.cloudinary.com/dmny4ymqp/image/upload/v1746425238/lib_etw5ca.jpg" 
+                    alt="Digital Library" 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    <i className="fas fa-book text-white"></i>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
+                    <h3 className="font-semibold text-xl text-white mb-1">Digital Library</h3>
+                    <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Extensive collection of digital and print resources for research and learning</p>
+                    <div className="flex gap-3">
+                      <button className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1">
+                        <i className="fas fa-search text-xs"></i> View
+                      </button>
+                      <Link to="/college?tab=library" className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1">
+                        <i className="fas fa-info-circle text-xs"></i> Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="group relative h-[280px] rounded-xl overflow-hidden shadow-lg">
+                  <img 
+                    src="https://res.cloudinary.com/dmny4ymqp/image/upload/v1746424964/DSC02129_jn5whr.jpg" 
+                    alt="Sports Facilities" 
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/70 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300"></div>
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-primary-red bg-opacity-80 flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    <i className="fas fa-futbol text-white"></i>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-5 transform transition-transform duration-300">
+                    <h3 className="font-semibold text-xl text-white mb-1">Sports Facilities</h3>
+                    <p className="text-light-gray text-sm mb-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">Olympic-sized swimming pool, indoor stadium, and outdoor sports fields</p>
+                    <div className="flex gap-3">
+                      <button className="bg-white/20 hover:bg-white/30 transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1">
+                        <i className="fas fa-search text-xs"></i> View
+                      </button>
+                      <Link to="/college?tab=sports" className="bg-primary-red hover:bg-secondary-red transition-colors px-3 py-1 rounded-md text-sm flex items-center gap-1">
+                        <i className="fas fa-info-circle text-xs"></i> Details
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
-          <p className="text-dark-gray mb-4">{campusFacilities[activeFacility].description}</p>
-          <button className="text-primary-red font-medium flex items-center gap-2 hover:underline">
-            Learn more <i className="fas fa-arrow-right text-sm"></i>
-          </button>
-        </motion.div>
+        </div>
       </motion.section>
       
       {/* Contact Section */}
@@ -1022,6 +1170,44 @@ const Overview = () => {
         </div>
       </motion.section>
       
+      {/* Campus Highlight Detail Modal */}
+      {showHighlightDetail && selectedHighlight && (
+        <CampusHighlightDetail 
+          highlight={selectedHighlight} 
+          onClose={closeHighlightDetail} 
+        />
+      )}
+      
+      {/* Add/Edit Campus Highlight Modal */}
+      {showHighlightModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">
+                  {editingHighlight ? 'Edit Campus Highlight' : 'Add Campus Highlight'}
+                </h2>
+                <button 
+                  onClick={() => setShowHighlightModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <i className="fas fa-times text-xl"></i>
+                </button>
+              </div>
+              
+              <CampusHighlightForm 
+                highlight={editingHighlight} 
+                onClose={() => setShowHighlightModal(false)}
+                onSuccess={() => {
+                  setShowHighlightModal(false);
+                  // Refresh the highlights list
+                  fetchCampusHighlights();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 };

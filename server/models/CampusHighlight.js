@@ -33,6 +33,28 @@ const CampusHighlightSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  // New fields for additional information
+  category: {
+    type: String,
+    trim: true
+  },
+  location: {
+    type: String,
+    trim: true
+  },
+  contactPerson: {
+    type: String,
+    trim: true
+  },
+  contactEmail: {
+    type: String,
+    trim: true
+  },
+  additionalInfo: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Additional information cannot be more than 500 characters']
+  },
   createdAt: {
     type: Date,
     default: Date.now
