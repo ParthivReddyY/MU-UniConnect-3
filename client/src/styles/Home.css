@@ -12,6 +12,45 @@
   margin: 0 auto;
 }
 
+/* Announcement ticker animation */
+@keyframes tickerScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.announcement-ticker {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ticker-content {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.ticker-content.animate-ticker {
+  animation: tickerScroll 20s linear infinite;
+}
+
+.ticker-content.paused {
+  animation-play-state: paused;
+}
+
+/* Double the content for seamless looping */
+.ticker-content > div {
+  padding-right: 2rem;
+}
+
+.announcement-ticker:hover .ticker-content {
+  animation-play-state: paused;
+}
+
 /* Special section styles */
 .hero.full-width {
   width: 100%;
@@ -50,9 +89,15 @@
   -ms-overflow-style: none; /* IE/Edge */
   gap: 40px;
   padding: 8px 0;
-  scroll-behavior: smooth;
   position: relative;
   will-change: scroll-position; /* Optimize for animation */
+}
+
+/* Apply smooth scrolling only in browsers that support it */
+@supports (scroll-behavior: smooth) {
+  .announcement-slider {
+    scroll-behavior: smooth;
+  }
 }
 
 @supports (overscroll-behavior-x: contain) {

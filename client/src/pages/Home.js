@@ -15,7 +15,6 @@ function Home() {
   // Create refs for the slider elements
   const announcementSliderRef = useRef(null);
   const testimonialSliderRef = useRef(null);
-  let autoScrollInterval = useRef(null);
   const [isPaused, setIsPaused] = useState(false);
   
   // Get current user status from auth context
@@ -27,10 +26,59 @@ function Home() {
   const [newsError, setNewsError] = useState(null);
 
   // State for announcements
-  const [announcements, setAnnouncements] = useState([]);  // Start with an empty array instead of default announcements
+  const [announcements, setAnnouncements] = useState([]);
+  
+  // Function to make testimonial slider more accessible
+  const initTestimonialSlider = React.useCallback(() => {
+    const slider = testimonialSliderRef.current;
+    if (!slider) return;
+    
+    // Add keyboard navigation to testimonial cards
+    const cards = slider.querySelectorAll('.testimonial-card');
+    cards.forEach((card, index) => {
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', `Testimonial ${index + 1} of ${cards.length}`);
+      
+      // Add keyboard navigation
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (index < cards.length - 1) {
+            cards[index + 1].focus();
+            cards[index + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (index > 0) {
+            cards[index - 1].focus();
+            cards[index - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+  }, []);
+  
+  // Call initTestimonialSlider when component mounts or testimonialSliderRef changes
+  useEffect(() => {
+    // Capture the ref value inside the effect
+    const slider = testimonialSliderRef.current;
+    
+    initTestimonialSlider();
+    // Return cleanup function to remove event listeners if needed
+    return () => {
+      if (!slider) return;
+      
+      const cards = slider.querySelectorAll('.testimonial-card');
+      cards.forEach((card) => {
+        card.removeAttribute('tabindex');
+        card.removeAttribute('aria-label');
+        // Remove event listeners
+        card.replaceWith(card.cloneNode(true));
+      });
+    };
+  }, [initTestimonialSlider]);
   
   // State for gallery modal
-  const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
   
   // Statistics state
@@ -104,47 +152,14 @@ function Home() {
     },
   ], []);
   
-  // State to track the current scroll position
-  const [scrollPosition, setScrollPosition] = useState(0);
-  
   // Function to handle announcement button clicks
   const handleAnnouncementClick = React.useCallback((link) => {
     navigate(link);
   }, [navigate]);
   
-  // Function to start auto-scrolling with the current position
-  const startAutoScroll = React.useCallback((slider, totalScrollWidth) => {
-    const scrollStep = 1; // Adjust scroll speed
-    let currentPosition = scrollPosition;
-    
-    autoScrollInterval.current = setInterval(() => {
-      if (isPaused) return;
-      
-      // Increment scroll position
-      currentPosition += scrollStep;
-      
-      // When scrolled past all items, reset seamlessly
-      if (currentPosition >= totalScrollWidth) {
-        // Reset to the beginning without animation
-        currentPosition = 0;
-        slider.scrollTo({
-          left: currentPosition,
-          behavior: 'auto' // Use 'auto' for instant reset
-        });
-      } else {
-        // Apply the scroll position
-        slider.scrollLeft = currentPosition;
-        // Update the state with current position
-        setScrollPosition(currentPosition);
-      }
-    }, 30); // Adjust timing for smooth scrolling
-  }, [isPaused, scrollPosition]);
-  
-  // Function to open image in modal
-  const openImageModal = (image) => {
-    setSelectedImage(image);
-    setShowModal(true);
-    document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+  // Function to toggle pause/play for the announcement slider
+  const toggleAnnouncementPause = () => {
+    setIsPaused(prev => !prev);
   };
   
   // Function to close modal
@@ -207,160 +222,44 @@ function Home() {
           setAnnouncements([]);
         }
       } catch (error) {
-        console.error('Error fetching announcements:', error);
-        // Set empty array on error
+        console.error("Error fetching announcements:", error);
         setAnnouncements([]);
       }
     };
-
-    // Try to fetch announcements
+    
     fetchAnnouncements();
-    
-    // Add slider functionality for testimonials and announcements
-    const initSliders = () => {
-      // Initialize announcement auto-scroll
-      initAnnouncementSlider();
-      
-      // Make testimonial slider responsive with keyboard navigation
-      initTestimonialSlider();
-    };
-    
-    initSliders();
-    
-    // Responsive handling for window resize
-    const handleResize = () => {
-      // Reinitialize slider on window resize for better responsive behavior
-      if (window.innerWidth < 768) {
-        // Mobile optimizations
-        const slider = announcementSliderRef.current;
-        if (slider) {
-          slider.style.scrollSnapType = 'x mandatory';
-        }
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    handleResize(); // Initial call
-    
-    // Clean up intervals on component unmount
-    return () => {
-      if (autoScrollInterval.current) {
-        clearInterval(autoScrollInterval.current);
-      }
-      window.removeEventListener('resize', handleResize);
-    };
-  }, [isPaused, navigate]);
-  
-  // Function to initialize the announcement slider with auto-scroll
-  const initAnnouncementSlider = React.useCallback(() => {
-    const slider = announcementSliderRef.current;
-    if (!slider) return;
-    
-    // Clear any existing interval
-    if (autoScrollInterval.current) {
-      clearInterval(autoScrollInterval.current);
-    }
-    
-    // Clone all announcement items initially for continuous scrolling
-    const announceItems = slider.querySelectorAll('.announcement-item');
-    if (announceItems.length === 0) return;
-    
-    // Clear existing clones first
-    const existingClones = slider.querySelectorAll('.announcement-clone');
-    existingClones.forEach(clone => clone.remove());
-    
-    // Clone all items and append to the end for seamless looping
-    announceItems.forEach(item => {
-      const clone = item.cloneNode(true);
-      clone.classList.add('announcement-clone');
-      
-      // Make sure clone has proper event listeners
-      const button = clone.querySelector('button');
-      if (button) {
-        const link = button.getAttribute('data-link');
-        button.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (link) handleAnnouncementClick(link);
-        });
-      }
-      
-      slider.appendChild(clone);
-    });
-    
-    // Calculate total scroll width
-    const totalItems = announceItems.length;
-    const firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
-    const totalScrollWidth = totalItems * firstItemWidth;
-    
-    startAutoScroll(slider, totalScrollWidth);
-  }, [handleAnnouncementClick, startAutoScroll]); // Add missing dependencies
-  
-  // Function to pause auto-scroll on hover/touch
-  const handleAnnouncementMouseEnter = () => {
-    // Store current scroll position
-    const currentPos = announcementSliderRef.current?.scrollLeft || 0;
-    setScrollPosition(currentPos);
-    setIsPaused(true);
-    
-    if (autoScrollInterval.current) {
-      clearInterval(autoScrollInterval.current);
-    }
-  };
-  
-  // Function to resume auto-scroll when hover/touch ends
-  const handleAnnouncementMouseLeave = () => {
-    setIsPaused(false);
-    
-    const slider = announcementSliderRef.current;
-    if (!slider) return;
-    
-    // Get all announcement items including clones
-    const announceItems = slider.querySelectorAll('.announcement-item');
-    if (announceItems.length === 0) return;
-    
-    // Calculate number of original items (total items / 2 since we cloned them)
-    const totalOriginalItems = Math.ceil(announceItems.length / 2);
-    const firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
-    const totalScrollWidth = totalOriginalItems * firstItemWidth;
-    
-    // Resume from current position
-    startAutoScroll(slider, totalScrollWidth);
-  };
-  
-  // Toggle pause/play for the announcement slider
-  const toggleAnnouncementPause = () => {
-    setIsPaused(prev => !prev);
-  };
-
-  // Function to make testimonial slider more accessible
-  const initTestimonialSlider = React.useCallback(() => {
-    const slider = testimonialSliderRef.current;
-    if (!slider) return;
-    
-    // Add keyboard navigation to testimonial cards
-    const cards = slider.querySelectorAll('.testimonial-card');
-    cards.forEach((card, index) => {
-      card.setAttribute('tabindex', '0');
-      card.setAttribute('aria-label', `Testimonial ${index + 1} of ${cards.length}`);
-      
-      // Add keyboard navigation
-      card.addEventListener('keydown', (e) => {
-        if (e.key === 'ArrowRight') {
-          e.preventDefault();
-          if (index < cards.length - 1) {
-            cards[index + 1].focus();
-            cards[index + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        } else if (e.key === 'ArrowLeft') {
-          e.preventDefault();
-          if (index > 0) {
-            cards[index - 1].focus();
-            cards[index - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-          }
-        }
-      });
-    });
   }, []);
+  // Fetch news data from API
+  useEffect(() => {
+    const fetchNews = async () => {
+      try {
+        setNewsLoading(true);
+        setNewsError(null);
+        
+        // Get featured news first - these are typically the most important ones
+        const response = await getFeaturedNews();
+        
+        if (response && Array.isArray(response.news)) {
+          // Sort news by date (newest first) in case they aren't already sorted
+          const sortedNews = response.news.sort((a, b) => 
+            new Date(b.createdAt) - new Date(a.createdAt)
+          );
+          
+          // Take the first 3 news items or less if fewer are available
+          setNewsData(sortedNews.slice(0, 3));
+        } else {
+          setNewsError("No news data available");
+        }
+      } catch (error) {
+        console.error("Error fetching news:", error);
+        setNewsError("Failed to fetch latest news");
+      } finally {
+        setNewsLoading(false);
+      }
+    };
+
+    fetchNews();
+  }, []); // Empty dependency array means this runs once on component mount
   
   // Fetch news data from API
   useEffect(() => {
@@ -544,60 +443,103 @@ function Home() {
       </section>
 
       {/* Announcement Banner - Full Width */}
-      <section className="bg-red-light py-0.5 overflow-hidden">
-        <div className="content-container px-0">
-          <div 
-            className="announcement-slider relative"
-            ref={announcementSliderRef}
-            onMouseEnter={handleAnnouncementMouseEnter}
-            onMouseLeave={handleAnnouncementMouseLeave}
-            onTouchStart={handleAnnouncementMouseEnter}
-            onTouchEnd={handleAnnouncementMouseLeave}
-            aria-label="Announcements"
+      <section className="bg-red-50 py-1 overflow-hidden relative border-y border-red-100">
+        <div className="content-container">
+          {/* Pause/Play button */}
+          <button 
+            type="button" 
+            onClick={toggleAnnouncementPause} 
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-md text-primary-red hover:bg-red-50 transition-colors"
+            aria-label={isPaused ? "Resume announcements" : "Pause announcements"}
           >
-            {announcements.length > 0 ? (
-              announcements.map((announcement) => (
-                <div key={announcement.id} className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
-                  <i className={`fas fa-${announcement.icon} text-primary-red text-sm md:text-base`}></i>
-                  <span className="text-dark-gray text-sm md:text-base truncate flex-1">{announcement.text}</span>
-                  <button 
-                    type="button" 
-                    className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAnnouncementClick(announcement.link);
-                    }}
-                    data-link={announcement.link}
-                  >
-                    {announcement.buttonText}
-                  </button>
-                </div>
-              ))
-            ) : (
-              // Display a scrolling "No announcements" message
-              <div className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px] animate-pulse">
-                <i className="fas fa-info-circle text-primary-red text-sm md:text-base"></i>
-                <span className="text-dark-gray text-sm md:text-base truncate flex-1">No announcements at this time</span>
-                <span className="text-primary-red font-semibold text-sm md:text-base whitespace-nowrap opacity-0">
-                  ‎ {/* Invisible character to maintain layout */}
-                </span>
+            <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'}`}></i>
+          </button>
+
+          {/* Side gradient fades */}
+          <div className="absolute left-0 top-0 h-full w-12 bg-gradient-to-r from-red-50 to-transparent z-[5]"></div>
+          <div className="absolute right-0 top-0 h-full w-12 bg-gradient-to-l from-red-50 to-transparent z-[5]"></div>
+
+          {/* Announcement content wrapper */}
+          <div className="mx-12 relative">
+            <div 
+              className="announcement-ticker relative flex overflow-hidden items-center h-12"
+              ref={announcementSliderRef}
+              aria-live="polite"
+              aria-label="Announcements"
+            >
+              {/* Ticker content with CSS animation */}
+              <div className={`ticker-content flex items-center ${isPaused ? 'paused' : 'animate-ticker'}`}>
+                {announcements.length > 0 ? (
+                  // Duplicate the announcements for seamless looping
+                  <>
+                    {announcements.map((announcement, index) => (
+                      <div 
+                        key={`${announcement.id}-${index}`} 
+                        className="announcement-item flex items-center gap-3 min-w-max px-6"
+                      >
+                        <div className="icon-wrapper flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                          <i className={`fas fa-${announcement.icon} text-primary-red`}></i>
+                        </div>
+                        <span className="text-gray-800 font-medium">{announcement.text}</span>
+                        <button 
+                          type="button" 
+                          className="flex-shrink-0 px-3 py-1 bg-white border border-primary-red text-primary-red text-sm font-medium rounded-md hover:bg-primary-red hover:text-white transition-colors"
+                          onClick={() => handleAnnouncementClick(announcement.link)}
+                          aria-label={`${announcement.buttonText} for: ${announcement.text}`}
+                        >
+                          {announcement.buttonText}
+                        </button>
+                      </div>
+                    ))}
+                    {/* Duplicate the announcements for seamless looping */}
+                    {announcements.map((announcement, index) => (
+                      <div 
+                        key={`${announcement.id}-duplicate-${index}`} 
+                        className="announcement-item flex items-center gap-3 min-w-max px-6"
+                      >
+                        <div className="icon-wrapper flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                          <i className={`fas fa-${announcement.icon} text-primary-red`}></i>
+                        </div>
+                        <span className="text-gray-800 font-medium">{announcement.text}</span>
+                        <button 
+                          type="button" 
+                          className="flex-shrink-0 px-3 py-1 bg-white border border-primary-red text-primary-red text-sm font-medium rounded-md hover:bg-primary-red hover:text-white transition-colors"
+                          onClick={() => handleAnnouncementClick(announcement.link)}
+                          aria-label={`${announcement.buttonText} for: ${announcement.text}`}
+                        >
+                          {announcement.buttonText}
+                        </button>
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <div className="announcement-item flex items-center gap-3 min-w-max px-6">
+                    <div className="icon-wrapper flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+                      <i className="fas fa-info-circle text-primary-red"></i>
+                    </div>
+                    <span className="text-gray-800 font-medium">No announcements at this time</span>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          
-          {announcements.length > 0 && (
-            <div className="announcement-controls flex justify-end mt-0 px-4">
-              <button 
-                type="button" 
-                onClick={toggleAnnouncementPause} 
-                className="text-[10px] text-primary-red py-0 px-1.5 rounded hover:bg-red-100 transition-colors"
-                aria-label={isPaused ? "Resume announcements" : "Pause announcements"}
-              >
-                <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} mr-0.5`}></i> 
-                {isPaused ? 'Resume' : 'Pause'}
-              </button>
             </div>
-          )}
+          </div>
+
+          {/* Next announcement button */}
+          <button 
+            type="button" 
+            onClick={() => {
+              if (announcementSliderRef.current) {
+                const firstItem = announcementSliderRef.current.querySelector('.announcement-item');
+                if (firstItem) {
+                  announcementSliderRef.current.scrollLeft += firstItem.offsetWidth;
+                }
+              }
+            }} 
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 z-10 w-8 h-8 flex items-center justify-center rounded-full bg-white shadow-md text-primary-red hover:bg-red-50 transition-colors"
+            aria-label="Next announcement"
+          >
+            <i className="fas fa-arrow-right"></i>
+          </button>
         </div>
       </section>
 
@@ -1036,7 +978,8 @@ function Home() {
       </section>
 
       {/* Image View Modal */}
-      {showModal && selectedImage && (
+      {/* Image View Modal - Using selectedHighlight instead */}
+      {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="relative max-w-4xl max-h-[90vh] w-full">
             <button 
@@ -1047,20 +990,12 @@ function Home() {
               <i className="fas fa-times text-2xl"></i>
             </button>
             <div className="flex flex-col items-center">
-              <img 
-                src={selectedImage.src} 
-                alt={selectedImage.title || "Campus highlight"} 
-                className="max-h-[70vh] max-w-full object-contain"
-              />
-              <div className="text-white text-center mt-4">
-                <h3 className="text-xl font-semibold">{selectedImage.title}</h3>
-                <p className="text-gray-300 mt-2">{selectedImage.description}</p>
-              </div>
+              {/* Content will be added when this modal is needed */}
+              <p className="text-white">Modal content here</p>
             </div>
           </div>
         </div>
       )}
-      
       {/* Add/Edit Campus Highlight Modal */}
       {showHighlightModal && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
