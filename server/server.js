@@ -22,6 +22,7 @@ const campusHighlightRoutes = require('./routes/campusHighlightRoutes');
 // Import controllers for initialization
 const newsController = require('./controllers/newsController');
 const campusHighlightController = require('./controllers/campusHighlightController');
+const announcementController = require('./controllers/announcementController');
 
 // Import other routes as needed
 
@@ -190,7 +191,14 @@ app.use((err, req, res, next) => {
 
 // Connect to MongoDB first, then start the server
 connectDB().then(() => {
-  app.listen(PORT, () => {
+  app.listen(PORT, async () => {
     console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+    
+    // Initialize default announcements if none exist
+    try {
+      await announcementController.createDefaultAnnouncements();
+    } catch (error) {
+      console.error('Error initializing default announcements:', error);
+    }
   });
 });

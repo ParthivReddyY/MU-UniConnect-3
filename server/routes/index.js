@@ -1,16 +1,35 @@
 const express = require('express');
 const router = express.Router();
 
-// ...existing code...
-
+// Import route modules
+const authRoutes = require('./authRoutes');
+const facultyRoutes = require('./facultyRoutes');
+const appointmentRoutes = require('./appointmentRoutes');
+const presentationRoutes = require('./presentationRoutes');
+const campusHighlightRoutes = require('./campusHighlightRoutes');
 const feedbackRoutes = require('./feedbackRoutes');
 const clubRoutes = require('./clubRoutes');
 const eventRoutes = require('./eventRoutes');
 const newsRoutes = require('./newsRoutes');
 const sitemapRoutes = require('./sitemapRoutes');
+const announcementRoutes = require('./announcementRoutes');
 
-// Register feedback routes - mount at /feedback not /api/feedback
-// This will result in /api/feedback when mounted in server.js
+// Register auth routes
+router.use('/auth', authRoutes);
+
+// Register faculty routes
+router.use('/faculty', facultyRoutes);
+
+// Register appointment routes
+router.use('/appointments', appointmentRoutes);
+
+// Register presentation routes
+router.use('/presentations', presentationRoutes);
+
+// Register campus highlight routes
+router.use('/campus-highlights', campusHighlightRoutes);
+
+// Register feedback routes
 router.use('/feedback', feedbackRoutes);
 
 // Register club routes
@@ -22,13 +41,10 @@ router.use('/events', eventRoutes);
 // Register news routes
 router.use('/news', newsRoutes);
 
+// Register announcement routes
+router.use('/announcements', announcementRoutes);
+
 // Register sitemap routes - will be accessible at /api/sitemap.xml
 router.use('/', sitemapRoutes);
-
-// Make sure auth routes are properly mounted
-const authRoutes = require('./authRoutes');
-router.use('/auth', authRoutes);  // This ensures /api/auth prefix works
-
-// ...existing code...
 
 module.exports = router;

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../App.css';
 import '../styles/Home.css';
 import { useAuth } from '../contexts/AuthContext'; 
@@ -9,6 +9,9 @@ import CampusHighlightForm from '../components/CampusHighlightForm';
 import CampusHighlightDetail from '../components/CampusHighlightDetail';
 
 function Home() {
+  // Navigation hook for redirection
+  const navigate = useNavigate();
+  
   // Create refs for the slider elements
   const announcementSliderRef = useRef(null);
   const testimonialSliderRef = useRef(null);
@@ -22,6 +25,31 @@ function Home() {
   const [newsData, setNewsData] = useState([]);
   const [newsLoading, setNewsLoading] = useState(true);
   const [newsError, setNewsError] = useState(null);
+
+  // State for announcements
+  const [announcements, setAnnouncements] = useState([
+    {
+      id: 1,
+      icon: 'graduation-cap',
+      text: 'May 2025 Graduation Ceremony scheduled for May 15th - Check venue details',
+      buttonText: 'View Details',
+      link: '/college?tab=news&category=academic'
+    },
+    {
+      id: 2,
+      icon: 'calendar-alt',
+      text: 'Summer Internship Fair on May 10th - Over 50 companies participating',
+      buttonText: 'Register Now',
+      link: '/college?tab=events&event=internship-fair'
+    },
+    {
+      id: 3,
+      icon: 'star',
+      text: 'Deadline for summer research grant applications closes on May 20th',
+      buttonText: 'Apply Now',
+      link: '/college?tab=research&section=grants'
+    }
+  ]);
   
   // State for gallery modal
   const [selectedImage, setSelectedImage] = useState(null);
@@ -98,6 +126,11 @@ function Home() {
     },
   ], []);
   
+  // Function to handle announcement button clicks
+  const handleAnnouncementClick = (link) => {
+    navigate(link);
+  };
+  
   // Function to open image in modal
   const openImageModal = (image) => {
     setSelectedImage(image);
@@ -126,6 +159,30 @@ function Home() {
   useEffect(() => {
     console.log("Home component mounted");
     
+    // Fetch announcements from API if available
+    const fetchAnnouncements = async () => {
+      try {
+        const response = await api.get('/api/announcements');
+        if (response?.data?.success && response?.data?.announcements?.length > 0) {
+          // Format the announcements properly
+          const fetchedAnnouncements = response.data.announcements.map(announcement => ({
+            id: announcement._id || announcement.id,
+            icon: announcement.icon || 'bell',
+            text: announcement.text || announcement.message,
+            buttonText: announcement.buttonText || announcement.action || 'Learn More',
+            link: announcement.link || '/college?tab=news'
+          }));
+          setAnnouncements(fetchedAnnouncements);
+        }
+      } catch (error) {
+        console.error('Error fetching announcements:', error);
+        // Keep using default announcements on error
+      }
+    };
+
+    // Try to fetch announcements but use defaults if API fails
+    fetchAnnouncements();
+    
     // Add slider functionality for testimonials and announcements
     const initSliders = () => {
       // Initialize announcement auto-scroll
@@ -145,44 +202,52 @@ function Home() {
         clearInterval(autoScrollInterval.current);
       }
       
+      // Clone all announcement items initially for continuous scrolling
+      const announceItems = slider.querySelectorAll('.announcement-item');
+      if (announceItems.length === 0) return;
+      
+      // Clone all items and append to the end for seamless looping
+      announceItems.forEach(item => {
+        const clone = item.cloneNode(true);
+        
+        // Make sure clone has proper event listeners
+        const button = clone.querySelector('button');
+        if (button) {
+          const link = button.getAttribute('data-link');
+          button.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (link) handleAnnouncementClick(link);
+          });
+        }
+        
+        slider.appendChild(clone);
+      });
+      
       // Set up auto-scrolling
       let scrollPosition = 0;
       const scrollStep = 1; // Adjust scroll speed
+      const totalItems = announceItems.length;
+      let firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
       
       autoScrollInterval.current = setInterval(() => {
         // Skip if paused
         if (isPaused) return;
         
-        // Get the first announcement item
-        const firstItem = slider.querySelector('.announcement-item');
-        if (!firstItem) return;
-        
-        const itemWidth = firstItem.offsetWidth + 40; // Width + gap
-        
         // Increment scroll position
         scrollPosition += scrollStep;
         
-        // When scrolled past the first item, reset position and move it to the end
-        if (scrollPosition >= itemWidth) {
+        // When scrolled past the first set of items, reset seamlessly
+        if (scrollPosition >= totalItems * firstItemWidth) {
+          // Reset to the beginning without animation (instant)
           scrollPosition = 0;
-          
-          // Clone and append the first item to the end, then remove the original
-          const clone = firstItem.cloneNode(true);
-          
-          // Make sure the clone has event listeners
-          const button = clone.querySelector('button');
-          if (button) {
-            button.addEventListener('click', (e) => {
-              e.stopPropagation(); // Prevent triggering parent events
-            });
-          }
-          
-          slider.appendChild(clone);
-          slider.removeChild(firstItem);
+          slider.scrollTo({
+            left: scrollPosition,
+            behavior: 'auto' // Use 'auto' for instant reset
+          });
+        } else {
+          // Apply the scroll position with smooth animation
+          slider.scrollLeft = scrollPosition;
         }
-        
-        // Apply the scroll position
-        slider.scrollLeft = scrollPosition;
       }, 30); // Adjust timing for smooth scrolling
     };
     
@@ -240,7 +305,7 @@ function Home() {
       }
       window.removeEventListener('resize', handleResize);
     };
-  }, [isPaused]);
+  }, [isPaused, navigate]);
   
   // Function to pause auto-scroll on hover/touch
   const handleAnnouncementMouseEnter = () => {
@@ -257,36 +322,35 @@ function Home() {
     const slider = announcementSliderRef.current;
     if (!slider) return;
     
-    // Set up auto-scrolling again
+    // Set up auto-scrolling again - use the same logic as initAnnouncementSlider
+    // but don't clone items again since they're already cloned
+    const announceItems = slider.querySelectorAll('.announcement-item');
+    if (announceItems.length === 0) return;
+    
+    // Get the number of original items (total items / 2 since we cloned them)
+    const totalOriginalItems = Math.ceil(announceItems.length / 2);
+    let firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
     let scrollPosition = slider.scrollLeft;
     const scrollStep = 1;
     
     autoScrollInterval.current = setInterval(() => {
       if (isPaused) return;
       
-      const firstItem = slider.querySelector('.announcement-item');
-      if (!firstItem) return;
-      
-      const itemWidth = firstItem.offsetWidth + 40;
+      // Increment scroll position
       scrollPosition += scrollStep;
       
-      if (scrollPosition >= itemWidth) {
+      // When scrolled past the first set of items, reset seamlessly
+      if (scrollPosition >= totalOriginalItems * firstItemWidth) {
+        // Reset to the beginning without animation
         scrollPosition = 0;
-        const clone = firstItem.cloneNode(true);
-        
-        // Make sure the clone has event listeners
-        const button = clone.querySelector('button');
-        if (button) {
-          button.addEventListener('click', (e) => {
-            e.stopPropagation();
-          });
-        }
-        
-        slider.appendChild(clone);
-        slider.removeChild(firstItem);
+        slider.scrollTo({
+          left: scrollPosition,
+          behavior: 'auto'
+        });
+      } else {
+        // Apply the scroll position
+        slider.scrollLeft = scrollPosition;
       }
-      
-      slider.scrollLeft = scrollPosition;
     }, 30);
   };
   
@@ -488,47 +552,26 @@ function Home() {
             onTouchEnd={handleAnnouncementMouseLeave}
             aria-label="Announcements"
           >
-            <div className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
-              <i className="fas fa-bell text-primary-red text-sm md:text-base"></i>
-              <span className="text-dark-gray text-sm md:text-base truncate flex-1">New Faculty Research Publication Awards announced - Check eligibility now</span>
-              <button 
-                type="button" 
-                className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
-                onClick={(e) => e.stopPropagation()}
-              >Learn More</button>
-            </div>
-            <div className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
-              <i className="fas fa-calendar-check text-primary-red text-sm md:text-base"></i>
-              <span className="text-dark-gray text-sm md:text-base truncate flex-1">Registration for Annual Techfest "Mahindra Ecolectica" is now open - Early bird discounts available</span>
-              <button 
-                type="button" 
-                className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
-                onClick={(e) => e.stopPropagation()}
-              >Register Now</button>
-            </div>
-            <div className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
-              <i className="fas fa-award text-primary-red text-sm md:text-base"></i>
-              <span className="text-dark-gray text-sm md:text-base truncate flex-1">Mahindra University ranks among Top Engineering Institutes in Hyderabad - See our achievements</span>
-              <button 
-                type="button" 
-                className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
-                onClick={(e) => e.stopPropagation()}
-              >View Rankings</button>
-            </div>
+            {announcements.map((announcement) => (
+              <div key={announcement.id} className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
+                <i className={`fas fa-${announcement.icon} text-primary-red text-sm md:text-base`}></i>
+                <span className="text-dark-gray text-sm md:text-base truncate flex-1">{announcement.text}</span>
+                <button 
+                  type="button" 
+                  className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleAnnouncementClick(announcement.link);
+                  }}
+                  data-link={announcement.link}
+                >
+                  {announcement.buttonText}
+                </button>
+              </div>
+            ))}
           </div>
           
-          {/* Controls for announcement slider - shown on all devices now */}
-          <div className="announcement-controls flex justify-end mt-2">
-            <button 
-              type="button" 
-              onClick={toggleAnnouncementPause} 
-              className="text-xs text-primary-red py-1 px-2 rounded hover:bg-red-100 transition-colors"
-              aria-label={isPaused ? "Resume announcements" : "Pause announcements"}
-            >
-              <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} mr-1`}></i> 
-              {isPaused ? 'Resume' : 'Pause'}
-            </button>
-          </div>
+        
         </div>
       </section>
 
@@ -1049,7 +1092,7 @@ function Home() {
       )}
 
       {/* Footer Section */}
-      <footer className="bg-dark-gray text-off-white py-12 md:py-16 pb-0 md:pb-0">
+      <footer className="bg-white text-gray-800 py-12 md:py-16 pb-0 md:pb-0">
         <div className="content-container px-4 md:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10 mb-2">
             <div>
@@ -1060,50 +1103,50 @@ function Home() {
                 width="150"
                 height="38" 
               />
-              <p className="text-light-gray text-sm">Connecting campus. Building community.</p>
+              <p className="text-gray-600 text-sm">Connecting campus. Building community.</p>
             </div>
             
             <div>
-              <h4 className="text-xl text-white font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Quick Links</h4>
+              <h4 className="text-xl text-gray-900 font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Quick Links</h4>
               <ul className="space-y-3">
-                <li><Link to="/" className="text-light-gray hover:text-white hover:underline transition">Home</Link></li>
-                <li><Link to="/faculty" className="text-light-gray hover:text-white hover:underline transition">Faculty</Link></li>
-                <li><Link to="/clubs-events" className="text-light-gray hover:text-white hover:underline transition">Clubs & Events</Link></li>
-                <li><Link to="/college" className="text-light-gray hover:text-white hover:underline transition">College</Link></li>
+                <li><Link to="/" className="text-gray-600 hover:text-primary-red hover:underline transition">Home</Link></li>
+                <li><Link to="/faculty" className="text-gray-600 hover:text-primary-red hover:underline transition">Faculty</Link></li>
+                <li><Link to="/clubs-events" className="text-gray-600 hover:text-primary-red hover:underline transition">Clubs & Events</Link></li>
+                <li><Link to="/college" className="text-gray-600 hover:text-primary-red hover:underline transition">College</Link></li>
               </ul>
             </div>
             
             <div>
-              <h4 className="text-xl text-white font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Contact</h4>
+              <h4 className="text-xl text-gray-900 font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Contact</h4>
               <div className="space-y-4">
-                <p className="flex items-center text-light-gray">
+                <p className="flex items-center text-gray-600">
                   <i className="fas fa-map-marker-alt text-primary-red mr-3 w-5"></i> Mahindra University, Hyderabad
                 </p>
-                <p className="flex items-center text-light-gray">
+                <p className="flex items-center text-gray-600">
                   <i className="fas fa-envelope text-primary-red mr-3 w-5"></i> info@uniconnect.mahindra.edu
                 </p>
-                <p className="flex items-center text-light-gray">
+                <p className="flex items-center text-gray-600">
                   <i className="fas fa-phone text-primary-red mr-3 w-5"></i> (040) 6722-0000
                 </p>
               </div>
             </div>
             
             <div>
-              <h4 className="text-xl text-white font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Follow Us</h4>
+              <h4 className="text-xl text-gray-900 font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Follow Us</h4>
               <div className="flex gap-4">
-                <a href="https://www.facebook.com/MahindraUni" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                <a href="https://www.facebook.com/MahindraUni" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-primary-red hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all">
                   <i className="fab fa-facebook-f"></i>
                 </a>
-                <a href="https://x.com/MahindraUni" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                <a href="https://x.com/MahindraUni" target="_blank" rel="noopener noreferrer" aria-label="X (Twitter)" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-primary-red hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all">
                   <i className="fab fa-twitter"></i>
                 </a>
-                <a href="https://www.instagram.com/mahindrauni/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                <a href="https://www.instagram.com/mahindrauni/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-primary-red hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all">
                   <i className="fab fa-instagram"></i>
                 </a>
-                <a href="https://www.linkedin.com/school/mahindra-unversity/posts/?feedView=all" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                <a href="https://www.linkedin.com/school/mahindra-unversity/posts/?feedView=all" target="_blank" rel="noopener noreferrer" aria-label="LinkedIn" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-primary-red hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all">
                   <i className="fab fa-linkedin-in"></i>
                 </a>
-                <a href="https://www.youtube.com/c/MahindraecolecentraleEduIn14/featured" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="w-10 h-10 flex items-center justify-center rounded-full bg-white bg-opacity-10 text-white hover:bg-primary-red hover:-translate-y-1 transition-all">
+                <a href="https://www.youtube.com/c/MahindraecolecentraleEduIn14/featured" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-100 text-primary-red hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all">
                   <i className="fab fa-youtube"></i>
                 </a>
               </div>
@@ -1111,7 +1154,7 @@ function Home() {
           </div>
           
           {/* Footer bottom border with minimal padding */}
-          <hr className="border-t border-gray-700" />
+          <hr className="border-t border-gray-200" />
         </div>
       </footer>
     </div>

@@ -2,15 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { calculateAcademicProgress, formatAcademicYear } from '../utils/academicUtils';
+import AnnouncementManager from '../components/admin/AnnouncementManager';
 
 const Dashboard = () => {
   const { currentUser, isAdmin, isFaculty, isClubHead, refreshUserData, isUserDataRefreshing } = useAuth();
   const [greeting, setGreeting] = useState('');
   const navigate = useNavigate();
+  const [showDebugInfo, setShowDebugInfo] = useState(false);
   
   // Add state for academic info
   const [academicInfo, setAcademicInfo] = useState(null);
   const [dataFetched, setDataFetched] = useState(false);
+  
+  // Show admin status in the console for debugging
+  useEffect(() => {
+    if (currentUser) {
+      console.log("Current user role:", currentUser.role);
+      console.log("Is admin?", currentUser.role === 'admin');
+      console.log("isAdmin() returns:", isAdmin());
+    }
+  }, [currentUser, isAdmin]);
   
   // Set greeting based on time of day
   useEffect(() => {
@@ -122,10 +133,33 @@ const Dashboard = () => {
   const handleAddStudentId = () => {
     navigate('/profile', { state: { focusField: 'studentId' } });
   };
+
+  // Check if user is admin directly
+  const userIsAdmin = currentUser && currentUser.role === 'admin';
   
   return (
     <div className="bg-gray-50 min-h-screen dashboard-page">
       <div className="w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Debug Information */}
+        <div className="mb-4">
+          <button
+            onClick={() => setShowDebugInfo(!showDebugInfo)}
+            className="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded"
+          >
+            {showDebugInfo ? 'Hide Debug Info' : 'Show Debug Info'}
+          </button>
+          
+          {showDebugInfo && (
+            <div className="mt-2 p-4 bg-gray-100 rounded">
+              <h3 className="font-bold mb-2">Debug Information</h3>
+              <p><strong>Current User:</strong> {currentUser ? currentUser.name : 'Not logged in'}</p>
+              <p><strong>Role:</strong> {currentUser ? currentUser.role : 'N/A'}</p>
+              <p><strong>isAdmin() returns:</strong> {isAdmin() ? 'true' : 'false'}</p>
+              <p><strong>Direct check:</strong> {userIsAdmin ? 'true' : 'false'}</p>
+            </div>
+          )}
+        </div>
+        
         {/* Header Section with Back Button */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
           <div className="flex items-center gap-3">
@@ -347,6 +381,24 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
+        
+        {/* Admin Sections - Only visible to admin users - Fixed conditional rendering */}
+        {userIsAdmin && (
+          <div className="mb-10">
+            <h2 className="text-xl font-bold text-gray-800 mb-4">Admin Controls</h2>
+            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100">
+              <div className="px-6 py-4 border-b border-gray-100">
+                <h3 className="font-semibold text-gray-800 flex items-center">
+                  <i className="fas fa-bullhorn mr-2 text-indigo-500"></i>
+                  Announcement Manager
+                </h3>
+              </div>
+              <div className="p-6">
+                <AnnouncementManager />
+              </div>
+            </div>
+          </div>
+        )}
         
         {/* Campus Map Widget - Added functional navigation component */}
         <div className="bg-white rounded-xl shadow-md overflow-hidden mb-10 border border-gray-100">
