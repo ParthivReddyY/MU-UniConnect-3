@@ -104,10 +104,41 @@ function Home() {
     },
   ], []);
   
+  // State to track the current scroll position
+  const [scrollPosition, setScrollPosition] = useState(0);
+  
   // Function to handle announcement button clicks
-  const handleAnnouncementClick = (link) => {
+  const handleAnnouncementClick = React.useCallback((link) => {
     navigate(link);
-  };
+  }, [navigate]);
+  
+  // Function to start auto-scrolling with the current position
+  const startAutoScroll = React.useCallback((slider, totalScrollWidth) => {
+    const scrollStep = 1; // Adjust scroll speed
+    let currentPosition = scrollPosition;
+    
+    autoScrollInterval.current = setInterval(() => {
+      if (isPaused) return;
+      
+      // Increment scroll position
+      currentPosition += scrollStep;
+      
+      // When scrolled past all items, reset seamlessly
+      if (currentPosition >= totalScrollWidth) {
+        // Reset to the beginning without animation
+        currentPosition = 0;
+        slider.scrollTo({
+          left: currentPosition,
+          behavior: 'auto' // Use 'auto' for instant reset
+        });
+      } else {
+        // Apply the scroll position
+        slider.scrollLeft = currentPosition;
+        // Update the state with current position
+        setScrollPosition(currentPosition);
+      }
+    }, 30); // Adjust timing for smooth scrolling
+  }, [isPaused, scrollPosition]);
   
   // Function to open image in modal
   const openImageModal = (image) => {
@@ -141,23 +172,43 @@ function Home() {
     const fetchAnnouncements = async () => {
       try {
         const response = await api.get('/api/announcements');
-        if (response?.data?.success && response?.data?.announcements) {
-          // Format the announcements properly
-          const fetchedAnnouncements = response.data.announcements.map(announcement => ({
-            id: announcement._id || announcement.id,
-            icon: announcement.icon || 'bell',
-            text: announcement.text || announcement.message,
-            buttonText: announcement.buttonText || announcement.action || 'Learn More',
-            link: announcement.link || '/college?tab=news'
-          }));
-          setAnnouncements(fetchedAnnouncements);
+        console.log("Announcements API response:", response?.data);
+        
+        // Check for announcements in response - more flexible condition checking
+        if (response?.data) {
+          // Handle different response formats
+          let announcementsArray = [];
+          
+          if (response.data.announcements && Array.isArray(response.data.announcements)) {
+            // Standard format with success flag
+            announcementsArray = response.data.announcements;
+          } else if (Array.isArray(response.data)) {
+            // Direct array in response data
+            announcementsArray = response.data;
+          }
+          
+          if (announcementsArray.length > 0) {
+            // Format the announcements properly
+            const fetchedAnnouncements = announcementsArray.map(announcement => ({
+              id: announcement._id || announcement.id || Date.now() + Math.random().toString(),
+              icon: announcement.icon || 'bell',
+              text: announcement.text || announcement.message || announcement.content || '',
+              buttonText: announcement.buttonText || announcement.action || 'Learn More',
+              link: announcement.link || '/college?tab=news'
+            }));
+            console.log("Processed announcements:", fetchedAnnouncements);
+            setAnnouncements(fetchedAnnouncements);
+          } else {
+            console.log("No announcements found in response");
+            setAnnouncements([]);
+          }
         } else {
-          // If no success or no announcements, set an empty array
+          console.log("Invalid response format from announcements API");
           setAnnouncements([]);
         }
       } catch (error) {
         console.error('Error fetching announcements:', error);
-        // Set empty array on error instead of keeping defaults
+        // Set empty array on error
         setAnnouncements([]);
       }
     };
@@ -172,95 +223,6 @@ function Home() {
       
       // Make testimonial slider responsive with keyboard navigation
       initTestimonialSlider();
-    };
-    
-    // Function to initialize the announcement slider with auto-scroll
-    const initAnnouncementSlider = () => {
-      const slider = announcementSliderRef.current;
-      if (!slider) return;
-      
-      // Clear any existing interval
-      if (autoScrollInterval.current) {
-        clearInterval(autoScrollInterval.current);
-      }
-      
-      // Clone all announcement items initially for continuous scrolling
-      const announceItems = slider.querySelectorAll('.announcement-item');
-      if (announceItems.length === 0) return;
-      
-      // Clone all items and append to the end for seamless looping
-      announceItems.forEach(item => {
-        const clone = item.cloneNode(true);
-        
-        // Make sure clone has proper event listeners
-        const button = clone.querySelector('button');
-        if (button) {
-          const link = button.getAttribute('data-link');
-          button.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (link) handleAnnouncementClick(link);
-          });
-        }
-        
-        slider.appendChild(clone);
-      });
-      
-      // Set up auto-scrolling
-      let scrollPosition = 0;
-      const scrollStep = 1; // Adjust scroll speed
-      const totalItems = announceItems.length;
-      let firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
-      
-      autoScrollInterval.current = setInterval(() => {
-        // Skip if paused
-        if (isPaused) return;
-        
-        // Increment scroll position
-        scrollPosition += scrollStep;
-        
-        // When scrolled past the first set of items, reset seamlessly
-        if (scrollPosition >= totalItems * firstItemWidth) {
-          // Reset to the beginning without animation (instant)
-          scrollPosition = 0;
-          slider.scrollTo({
-            left: scrollPosition,
-            behavior: 'auto' // Use 'auto' for instant reset
-          });
-        } else {
-          // Apply the scroll position with smooth animation
-          slider.scrollLeft = scrollPosition;
-        }
-      }, 30); // Adjust timing for smooth scrolling
-    };
-    
-    // Function to make testimonial slider more accessible
-    const initTestimonialSlider = () => {
-      const slider = testimonialSliderRef.current;
-      if (!slider) return;
-      
-      // Add keyboard navigation to testimonial cards
-      const cards = slider.querySelectorAll('.testimonial-card');
-      cards.forEach((card, index) => {
-        card.setAttribute('tabindex', '0');
-        card.setAttribute('aria-label', `Testimonial ${index + 1} of ${cards.length}`);
-        
-        // Add keyboard navigation
-        card.addEventListener('keydown', (e) => {
-          if (e.key === 'ArrowRight') {
-            e.preventDefault();
-            if (index < cards.length - 1) {
-              cards[index + 1].focus();
-              cards[index + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-          } else if (e.key === 'ArrowLeft') {
-            e.preventDefault();
-            if (index > 0) {
-              cards[index - 1].focus();
-              cards[index - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
-          }
-        });
-      });
     };
     
     initSliders();
@@ -289,9 +251,57 @@ function Home() {
     };
   }, [isPaused, navigate]);
   
+  // Function to initialize the announcement slider with auto-scroll
+  const initAnnouncementSlider = React.useCallback(() => {
+    const slider = announcementSliderRef.current;
+    if (!slider) return;
+    
+    // Clear any existing interval
+    if (autoScrollInterval.current) {
+      clearInterval(autoScrollInterval.current);
+    }
+    
+    // Clone all announcement items initially for continuous scrolling
+    const announceItems = slider.querySelectorAll('.announcement-item');
+    if (announceItems.length === 0) return;
+    
+    // Clear existing clones first
+    const existingClones = slider.querySelectorAll('.announcement-clone');
+    existingClones.forEach(clone => clone.remove());
+    
+    // Clone all items and append to the end for seamless looping
+    announceItems.forEach(item => {
+      const clone = item.cloneNode(true);
+      clone.classList.add('announcement-clone');
+      
+      // Make sure clone has proper event listeners
+      const button = clone.querySelector('button');
+      if (button) {
+        const link = button.getAttribute('data-link');
+        button.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (link) handleAnnouncementClick(link);
+        });
+      }
+      
+      slider.appendChild(clone);
+    });
+    
+    // Calculate total scroll width
+    const totalItems = announceItems.length;
+    const firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
+    const totalScrollWidth = totalItems * firstItemWidth;
+    
+    startAutoScroll(slider, totalScrollWidth);
+  }, [handleAnnouncementClick, startAutoScroll]); // Add missing dependencies
+  
   // Function to pause auto-scroll on hover/touch
   const handleAnnouncementMouseEnter = () => {
+    // Store current scroll position
+    const currentPos = announcementSliderRef.current?.scrollLeft || 0;
+    setScrollPosition(currentPos);
     setIsPaused(true);
+    
     if (autoScrollInterval.current) {
       clearInterval(autoScrollInterval.current);
     }
@@ -304,36 +314,17 @@ function Home() {
     const slider = announcementSliderRef.current;
     if (!slider) return;
     
-    // Set up auto-scrolling again - use the same logic as initAnnouncementSlider
-    // but don't clone items again since they're already cloned
+    // Get all announcement items including clones
     const announceItems = slider.querySelectorAll('.announcement-item');
     if (announceItems.length === 0) return;
     
-    // Get the number of original items (total items / 2 since we cloned them)
+    // Calculate number of original items (total items / 2 since we cloned them)
     const totalOriginalItems = Math.ceil(announceItems.length / 2);
-    let firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
-    let scrollPosition = slider.scrollLeft;
-    const scrollStep = 1;
+    const firstItemWidth = announceItems[0].offsetWidth + 12; // Width + gap
+    const totalScrollWidth = totalOriginalItems * firstItemWidth;
     
-    autoScrollInterval.current = setInterval(() => {
-      if (isPaused) return;
-      
-      // Increment scroll position
-      scrollPosition += scrollStep;
-      
-      // When scrolled past the first set of items, reset seamlessly
-      if (scrollPosition >= totalOriginalItems * firstItemWidth) {
-        // Reset to the beginning without animation
-        scrollPosition = 0;
-        slider.scrollTo({
-          left: scrollPosition,
-          behavior: 'auto'
-        });
-      } else {
-        // Apply the scroll position
-        slider.scrollLeft = scrollPosition;
-      }
-    }, 30);
+    // Resume from current position
+    startAutoScroll(slider, totalScrollWidth);
   };
   
   // Toggle pause/play for the announcement slider
@@ -341,6 +332,36 @@ function Home() {
     setIsPaused(prev => !prev);
   };
 
+  // Function to make testimonial slider more accessible
+  const initTestimonialSlider = React.useCallback(() => {
+    const slider = testimonialSliderRef.current;
+    if (!slider) return;
+    
+    // Add keyboard navigation to testimonial cards
+    const cards = slider.querySelectorAll('.testimonial-card');
+    cards.forEach((card, index) => {
+      card.setAttribute('tabindex', '0');
+      card.setAttribute('aria-label', `Testimonial ${index + 1} of ${cards.length}`);
+      
+      // Add keyboard navigation
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          if (index < cards.length - 1) {
+            cards[index + 1].focus();
+            cards[index + 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          if (index > 0) {
+            cards[index - 1].focus();
+            cards[index - 1].scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      });
+    });
+  }, []);
+  
   // Fetch news data from API
   useEffect(() => {
     const fetchNews = async () => {
