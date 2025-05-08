@@ -459,7 +459,9 @@ const NewsUpdates = () => {
                     </span>
                   </div>
                   <div className="prose max-w-none">
-                    <p>{selectedNews.content}</p>
+                    {selectedNews.content.split('\n\n').map((paragraph, index) => (
+                      paragraph ? <p key={index}>{paragraph}</p> : <br key={index} />
+                    ))}
                   </div>
                   <div className="mt-8 flex justify-between items-center">
                     <div className="flex gap-4">
