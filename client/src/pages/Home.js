@@ -871,11 +871,11 @@ function Home() {
       {/* Campus Gallery Preview */}
       <section id="campus-highlights" className="py-16 md:py-20 bg-dark-gray text-white">
         <div className="content-container px-4 md:px-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 md:mb-10">
-            <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4 md:mb-0">
+          <div className="flex flex-col items-center justify-center mb-8 md:mb-10 text-center">
+            <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4">
               <span className="relative">
                 Campus Life Highlights
-                <span className="absolute -bottom-3 left-1/2 md:left-0 transform -translate-x-1/2 md:translate-x-0 h-1 w-24 bg-primary-red rounded-full"></span>
+                <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 h-1 w-24 bg-primary-red rounded-full"></span>
               </span>
             </h2>
           </div>
@@ -1043,11 +1043,6 @@ function Home() {
               <a href="#features" className="px-6 md:px-8 py-3 md:py-4 bg-transparent border-2 border-white text-white font-semibold rounded-lg hover:bg-white hover:bg-opacity-10 transition text-base md:text-lg">Explore Features</a>
             </div>
             <div className="mt-8">
-              <p className="text-lg mb-3">Also available on:</p>
-              <div className="flex justify-center gap-6">
-                <i className="fab fa-android text-2xl md:text-3xl hover:scale-110 transform transition cursor-pointer"></i>
-                <i className="fab fa-apple text-2xl md:text-3xl hover:scale-110 transform transition cursor-pointer"></i>
-              </div>
             </div>
           </div>
         </section>
