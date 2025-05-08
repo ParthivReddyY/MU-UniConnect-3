@@ -694,7 +694,7 @@ const Overview = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 pl-12">
                       {academicPrograms[activeProgram].programs[level].map((program, i) => (
                         <div key={i} className="flex items-start">
-                          <i className="fas fa-check-circle text-green-500 mr-2 mt-1"></i>
+                          <i className="fas  mr-2 mt-1"></i>
                           <span className="text-medium-gray">{program}</span>
                         </div>
                       ))}

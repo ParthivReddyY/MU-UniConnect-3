@@ -27,29 +27,7 @@ function Home() {
   const [newsError, setNewsError] = useState(null);
 
   // State for announcements
-  const [announcements, setAnnouncements] = useState([
-    {
-      id: 1,
-      icon: 'graduation-cap',
-      text: 'May 2025 Graduation Ceremony scheduled for May 15th - Check venue details',
-      buttonText: 'View Details',
-      link: '/college?tab=news&category=academic'
-    },
-    {
-      id: 2,
-      icon: 'calendar-alt',
-      text: 'Summer Internship Fair on May 10th - Over 50 companies participating',
-      buttonText: 'Register Now',
-      link: '/college?tab=events&event=internship-fair'
-    },
-    {
-      id: 3,
-      icon: 'star',
-      text: 'Deadline for summer research grant applications closes on May 20th',
-      buttonText: 'Apply Now',
-      link: '/college?tab=research&section=grants'
-    }
-  ]);
+  const [announcements, setAnnouncements] = useState([]);  // Start with an empty array instead of default announcements
   
   // State for gallery modal
   const [selectedImage, setSelectedImage] = useState(null);
@@ -163,7 +141,7 @@ function Home() {
     const fetchAnnouncements = async () => {
       try {
         const response = await api.get('/api/announcements');
-        if (response?.data?.success && response?.data?.announcements?.length > 0) {
+        if (response?.data?.success && response?.data?.announcements) {
           // Format the announcements properly
           const fetchedAnnouncements = response.data.announcements.map(announcement => ({
             id: announcement._id || announcement.id,
@@ -173,14 +151,18 @@ function Home() {
             link: announcement.link || '/college?tab=news'
           }));
           setAnnouncements(fetchedAnnouncements);
+        } else {
+          // If no success or no announcements, set an empty array
+          setAnnouncements([]);
         }
       } catch (error) {
         console.error('Error fetching announcements:', error);
-        // Keep using default announcements on error
+        // Set empty array on error instead of keeping defaults
+        setAnnouncements([]);
       }
     };
 
-    // Try to fetch announcements but use defaults if API fails
+    // Try to fetch announcements
     fetchAnnouncements();
     
     // Add slider functionality for testimonials and announcements
@@ -541,8 +523,8 @@ function Home() {
       </section>
 
       {/* Announcement Banner - Full Width */}
-      <section className="bg-red-light py-3 overflow-hidden">
-        <div className="content-container px-4">
+      <section className="bg-red-light py-0.5 overflow-hidden">
+        <div className="content-container px-0">
           <div 
             className="announcement-slider relative"
             ref={announcementSliderRef}
@@ -552,26 +534,49 @@ function Home() {
             onTouchEnd={handleAnnouncementMouseLeave}
             aria-label="Announcements"
           >
-            {announcements.map((announcement) => (
-              <div key={announcement.id} className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
-                <i className={`fas fa-${announcement.icon} text-primary-red text-sm md:text-base`}></i>
-                <span className="text-dark-gray text-sm md:text-base truncate flex-1">{announcement.text}</span>
-                <button 
-                  type="button" 
-                  className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleAnnouncementClick(announcement.link);
-                  }}
-                  data-link={announcement.link}
-                >
-                  {announcement.buttonText}
-                </button>
+            {announcements.length > 0 ? (
+              announcements.map((announcement) => (
+                <div key={announcement.id} className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px]">
+                  <i className={`fas fa-${announcement.icon} text-primary-red text-sm md:text-base`}></i>
+                  <span className="text-dark-gray text-sm md:text-base truncate flex-1">{announcement.text}</span>
+                  <button 
+                    type="button" 
+                    className="text-primary-red font-semibold hover:underline bg-transparent border-0 cursor-pointer text-sm md:text-base whitespace-nowrap"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAnnouncementClick(announcement.link);
+                    }}
+                    data-link={announcement.link}
+                  >
+                    {announcement.buttonText}
+                  </button>
+                </div>
+              ))
+            ) : (
+              // Display a scrolling "No announcements" message
+              <div className="announcement-item flex items-center gap-2 md:gap-3 whitespace-nowrap px-2 md:px-4 py-1 min-w-[280px] animate-pulse">
+                <i className="fas fa-info-circle text-primary-red text-sm md:text-base"></i>
+                <span className="text-dark-gray text-sm md:text-base truncate flex-1">No announcements at this time</span>
+                <span className="text-primary-red font-semibold text-sm md:text-base whitespace-nowrap opacity-0">
+                  ‎ {/* Invisible character to maintain layout */}
+                </span>
               </div>
-            ))}
+            )}
           </div>
           
-        
+          {announcements.length > 0 && (
+            <div className="announcement-controls flex justify-end mt-0 px-4">
+              <button 
+                type="button" 
+                onClick={toggleAnnouncementPause} 
+                className="text-[10px] text-primary-red py-0 px-1.5 rounded hover:bg-red-100 transition-colors"
+                aria-label={isPaused ? "Resume announcements" : "Pause announcements"}
+              >
+                <i className={`fas ${isPaused ? 'fa-play' : 'fa-pause'} mr-0.5`}></i> 
+                {isPaused ? 'Resume' : 'Pause'}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -918,7 +923,6 @@ function Home() {
             <h2 className="section-title text-3xl md:text-4xl font-bold text-white mb-4">
               <span className="relative">
                 Campus Life Highlights
-                <span className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 h-1 w-24 bg-primary-red rounded-full"></span>
               </span>
             </h2>
           </div>
