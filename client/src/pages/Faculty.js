@@ -21,7 +21,7 @@ const Faculty = () => {
   const { isAdmin } = useAuth();
   const navigate = useNavigate();
   
-  const pageSize = 12;
+  const pageSize = 24; // Increased from 12 to 24
 
   // Fetch faculty data on component mount
   useEffect(() => {
@@ -482,9 +482,10 @@ const Faculty = () => {
                 </div>
               ) : (
                 currentPageData.map((faculty, index) => (
-                  <div 
+                  <Link 
+                    to={`/faculty-detail/${faculty._id}`}
                     key={faculty._id || index} 
-                    className="group bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative faculty-card animate-fadeIn"
+                    className="group bg-white rounded-lg shadow-sm overflow-hidden border border-gray-100 hover:shadow-lg transition-all duration-300 hover:-translate-y-1 relative faculty-card animate-fadeIn cursor-pointer"
                     style={{animationDelay: `${index * 50}ms`}}
                   >
                     {/* Department badge - styled by department */}
@@ -515,7 +516,7 @@ const Faculty = () => {
                     </div>
                     
                     {/* Enhanced Image Section with modern design */}
-                    <div className="relative h-[180px] overflow-hidden faculty-image-container">
+                    <div className="relative h-[250px] overflow-hidden faculty-image-container">
                       {/* Stylish overlay gradient with department color accent - Reduced opacity */}
                       <div 
                         className="absolute inset-0 z-[1] opacity-100 group-hover:opacity-80 transition-opacity duration-500"
@@ -608,12 +609,19 @@ const Faculty = () => {
                     </div>
                     
                     {/* Content */}
-                    <div className="p-3">
+                    <div className="p-4">
                       <div className="flex flex-col">
+                        <h3 className="text-gray-800 font-semibold text-sm mb-1 line-clamp-2">{faculty.name}</h3>
                         <p className="text-primary-red font-semibold text-xs">{faculty.designation}</p>
                         <p className="text-gray-500 text-xs flex items-center mt-0.5 mb-2">
                           <i className="fas fa-university mr-1.5"></i> {faculty.department}
                         </p>
+                        {faculty.overview && (
+                          <p className="text-gray-600 text-xs mt-1 line-clamp-3">
+                            {faculty.overview.replace(/<[^>]*>/g, '').substring(0, 100)}
+                            {faculty.overview.replace(/<[^>]*>/g, '').length > 100 ? '...' : ''}
+                          </p>
+                        )}
                       </div>
                     </div>
                     
@@ -625,6 +633,7 @@ const Faculty = () => {
                             href={`mailto:${faculty.email}`} 
                             className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
                             title={`Email ${faculty.name}`}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <i className="fas fa-envelope text-xs"></i>
                           </a>
@@ -634,20 +643,20 @@ const Faculty = () => {
                             href={`tel:${faculty.mobileNumber}`} 
                             className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 text-gray-500 hover:bg-primary-red hover:text-white hover:-translate-y-1 transition-all shadow-sm hover:shadow-md hover:border-transparent"
                             title={`Call ${faculty.name}`}
+                            onClick={(e) => e.stopPropagation()}
                           >
                             <i className="fas fa-phone-alt text-xs"></i>
                           </a>
                         )}
                       </div>
-                      <Link 
-                        to={`/faculty-detail/${faculty._id}`} 
+                      <span 
                         className="relative overflow-hidden px-3 py-1.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700 border border-gray-200 group-hover:bg-primary-red group-hover:text-white group-hover:border-primary-red transition-all duration-300 flex items-center gap-1.5"
                       >
                         <i className="fas fa-user-circle"></i> 
                         <span>View Profile</span>
-                      </Link>
+                      </span>
                     </div>
-                  </div>
+                  </Link>
                 ))
               )}
             </div>

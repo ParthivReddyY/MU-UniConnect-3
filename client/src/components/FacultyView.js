@@ -200,21 +200,21 @@ const FacultyView = ({ faculty }) => {
           id="faculty-hero" 
           className="relative w-full"
           style={{ 
-            backgroundColor: '#D32F2F', // Solid red background
+            backgroundColor: '#D32F2F', // Changed back to red (#D32F2F) from white
             boxShadow: '0 10px 30px rgba(0, 0, 0, 0.1)',
             paddingBottom: '6rem' // Increased padding for the design element
           }}
         >
           {/* Glassmorphism overlay - Adjusted for red background */}
-          <div className="absolute inset-0 backdrop-blur-sm z-[1] bg-gradient-to-r from-[#C62828]/10 to-[#D32F2F]/10"></div>
+          <div className="absolute inset-0 backdrop-blur-sm z-[1] bg-gradient-to-r from-red-800/10 to-red-600/10"></div>
 
           {/* Hero content container with upgraded styling */}
           <div className="w-full px-4 py-16 relative z-10">
             <div className="flex flex-col lg:flex-row items-center lg:items-start gap-8 lg:gap-16 max-w-[1800px] mx-auto">
-              {/* Faculty Image Column - with enhanced card effect and grey background */}
+              {/* Faculty Image Column - with white background and card effect */}
               <div className="w-48 h-48 sm:w-64 sm:h-64 lg:w-80 lg:h-80 relative rounded-full overflow-hidden 
-                  border-4 border-gray-300/50 flex-shrink-0 transition-all duration-500 animate-fadeIn
-                  shadow-[0_0_25px_rgba(180,180,180,0.3)] backdrop-blur-md bg-gray-800/20"
+                  border-4 border-white/50 flex-shrink-0 transition-all duration-500 animate-fadeIn
+                  shadow-[0_0_25px_rgba(255,255,255,0.3)] backdrop-blur-md bg-white/90"
               >
                 <img 
                   src={faculty.image || "/img/default-faculty.png"} 
