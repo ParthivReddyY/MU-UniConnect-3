@@ -1123,15 +1123,45 @@ function Home() {
             <div>
               <h4 className="text-xl text-gray-900 font-semibold mb-6 pb-2 border-b border-primary-red inline-block">Contact</h4>
               <div className="space-y-4">
-                <p className="flex items-center text-gray-600">
-                  <i className="fas fa-map-marker-alt text-primary-red mr-3 w-5"></i> Mahindra University, Hyderabad
+                <p className="flex items-start text-gray-600">
+                  <i className="fas fa-map-marker-alt text-primary-red mr-3 w-5 mt-1"></i>
+                  <a 
+                    href="https://maps.google.com/?q=Survey+No:+62/1A,+Bahadurpally,+Jeedimetla,+Hyderabad,+Telangana+500043" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="hover:text-primary-red hover:underline transition"
+                  >
+                    Mahindra University,
+                    <br />
+                    Survey No: 62/1A, Bahadurpally, Jeedimetla, Hyderabad, Telangana 500043
+                  </a>
                 </p>
                 <p className="flex items-center text-gray-600">
-                  <i className="fas fa-envelope text-primary-red mr-3 w-5"></i> info@uniconnect.mahindra.edu
+                  <i className="fas fa-envelope text-primary-red mr-3 w-5"></i>
+                  <a 
+                    href="mailto:info@mahindrauniversity.edu.in" 
+                    className="hover:text-primary-red hover:underline transition"
+                  >
+                    info@mahindrauniversity.edu.in
+                  </a>
                 </p>
-                <p className="flex items-center text-gray-600">
-                  <i className="fas fa-phone text-primary-red mr-3 w-5"></i> (040) 6722-0000
-                </p>
+                <div className="flex items-start text-gray-600">
+                  <i className="fas fa-phone text-primary-red mr-3 w-5 mt-1"></i>
+                  <div className="flex flex-col">
+                    <a 
+                      href="tel:+914067229999" 
+                      className="hover:text-primary-red hover:underline transition"
+                    >
+                      +91 40 6722 9999
+                    </a>
+                    <a 
+                      href="tel:+914067228000" 
+                      className="hover:text-primary-red hover:underline transition"
+                    >
+                      +91 40 6722 8000
+                    </a>
+                  </div>
+                </div>
               </div>
             </div>
             
