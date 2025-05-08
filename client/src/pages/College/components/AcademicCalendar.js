@@ -22,7 +22,7 @@ import {
   parse,
   isValid
 } from 'date-fns';
-import { ChevronLeft, ChevronRight, MoreHorizontal, X, Loader, Calendar, Clock, Tag, Plus, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreHorizontal, X, Calendar, Clock, Tag, Plus, Check } from 'lucide-react';
 import CalendarDayView from './Calendar/views/CalendarDayView';
 import CalendarWeekView from './Calendar/views/CalendarWeekView';
 import CalendarMonthView from './Calendar/views/CalendarMonthView';
@@ -44,13 +44,6 @@ export const EVENT_CATEGORIES = {
   PERSONAL: { name: 'Personal', shortName: 'PERS', color: 'pink', bgColor: 'bg-pink-600', lightBgColor: 'bg-pink-50', textColor: 'text-pink-700', borderColor: 'border-pink-300' },
   DEFAULT: { name: 'Misc', shortName: 'MISC', color: 'gray', bgColor: 'bg-gray-600', lightBgColor: 'bg-gray-50', textColor: 'text-gray-700', borderColor: 'border-gray-300' },
 };
-
-// --- Sample local events for demo purposes ---
-const sampleLocalEvents = [
-  // Event for Today
-  { id: 11, title: 'Team Sync', date: format(new Date(), 'yyyy-MM-dd'), time: '11AM', datetime: `${format(new Date(), 'yyyy-MM-dd')}T11:00`, endDatetime: `${format(new Date(), 'yyyy-MM-dd')}T12:00`, category: 'ADMINISTRATIVE' },
-  { id: 20, title: 'Lunch', date: format(new Date(), 'yyyy-MM-dd'), time: '1PM', datetime: `${format(new Date(), 'yyyy-MM-dd')}T13:00`, endDatetime: `${format(new Date(), 'yyyy-MM-dd')}T14:00`, category: 'PERSONAL' },
-];
 
 // --- Helper Functions ---
 // Improved date parsing with better timezone handling
@@ -498,13 +491,94 @@ const EventForm = ({ isOpen, onClose, onSave, initialDate }) => {
   );
 };
 
-// --- Loading Overlay Component ---
-const LoadingOverlay = ({ message = "Loading calendar events..." }) => (
-  <div className="flex flex-col items-center justify-center h-full w-full bg-white bg-opacity-80 p-6">
-    <Loader className="h-8 w-8 text-red-600 animate-spin mb-4" />
-    <p className="text-gray-600 font-medium text-center">{message}</p>
-  </div>
-);
+// Event Detail Modal Component
+const EventDetailModal = ({ isOpen, event, onClose }) => {
+  if (!isOpen || !event) return null;
+  
+  // Get category styling
+  const category = EVENT_CATEGORIES[event.category || 'DEFAULT'];
+  const eventDate = parseDateTime(event.datetime || event.date);
+  const isUserEvent = event.userId; // If userId exists, it's a user-created event
+  
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-auto overflow-hidden animate-fade-in" 
+           onClick={e => e.stopPropagation()}>
+        {/* Header with category color */}
+        <div className={`px-6 py-4 ${category.lightBgColor} border-b border-gray-200`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className={`h-3 w-3 rounded-full ${category.bgColor} mr-2`}></div>
+              <span className={`text-xs font-medium ${category.textColor}`}>{category.name}</span>
+            </div>
+            <button 
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-500 focus:outline-none"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          <h2 className="text-xl font-semibold mt-2 text-gray-900">{event.title}</h2>
+        </div>
+        
+        {/* Event Content */}
+        <div className="p-6">
+          {/* Date and Time */}
+          <div className="flex items-start mb-4">
+            <Calendar className="h-5 w-5 text-gray-400 mt-0.5 mr-3 flex-shrink-0" />
+            <div>
+              <p className="text-gray-900 font-medium">
+                {eventDate ? format(eventDate, 'EEEE, MMMM d, yyyy') : event.date}
+              </p>
+              <p className="text-gray-600 text-sm">
+                {event.isAllDay ? 'All day' : event.time}
+              </p>
+              {event.repeat && event.repeat !== 'none' && (
+                <p className="text-gray-500 text-xs mt-1">
+                  Repeats {event.repeat.charAt(0).toUpperCase() + event.repeat.slice(1)}
+                </p>
+              )}
+            </div>
+          </div>
+          
+          {/* Location if available */}
+          {event.location && (
+            <div className="flex items-start mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <div>
+                <p className="text-gray-900">{event.location}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Description if available */}
+          {event.description && (
+            <div className="flex items-start mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400 mt-0.5 mr-3 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h7" />
+              </svg>
+              <div>
+                <p className="text-gray-900 whitespace-pre-line">{event.description}</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Created by info - only for user events */}
+          {isUserEvent && (
+            <div className="mt-6 pt-4 border-t border-gray-100">
+              <p className="text-xs text-gray-500">
+                {event.userRole ? `Added by ${event.userRole}` : 'User event'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // --- Main Calendar Application Component ---
 function AcademicCalendar() {
@@ -512,12 +586,13 @@ function AcademicCalendar() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [view, setView] = useState('month');
   const [events, setEvents] = useState([]);
-  const [userEvents, setUserEvents] = useState(sampleLocalEvents);
+  const [userEvents, setUserEvents] = useState([]);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [viewMenuOpen, setViewMenuOpen] = useState(false);
   const [showEventForm, setShowEventForm] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
+  const [selectedEvent, setSelectedEvent] = useState(null); // New state for selected event
   
   // Get auth context to check user roles
   const { currentUser, hasRole } = useAuth();
@@ -531,6 +606,12 @@ function AcademicCalendar() {
   const viewMenuRef = useRef(null);
   const viewChangeInProgressRef = useRef(false);
   const loadedYearsRef = useRef(new Set());
+
+  // Function to show success message temporarily
+  const showSuccess = (message) => {
+    setSuccessMessage(message);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
 
   // Effect to close the view menu when clicking outside
   useEffect(() => {
@@ -552,11 +633,38 @@ function AcademicCalendar() {
     viewChangeInProgressRef.current = false;
   }, [view]);
 
+  // Effect to load user events from the server when component mounts
+  useEffect(() => {
+    const fetchUserEvents = async () => {
+      if (!currentUser) return;
+      
+      try {
+        const response = await fetch('/api/calendar-events/user-events', {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.events && Array.isArray(data.events)) {
+            setUserEvents(data.events);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user events:', error);
+        // Keep the sample events if fetch fails
+      }
+    };
+    
+    fetchUserEvents();
+  }, [currentUser]);
+
   // Effect to load events when the year changes
   useEffect(() => {
     const fetchEventsForCurrentView = async () => {
       try {
-        setLoading(true);
+        // Don't show loading state, just fetch in background
         setError(null);
         
         const currentYear = getYear(currentDate);
@@ -576,43 +684,132 @@ function AcademicCalendar() {
         const yearsToFetch = [...yearsToLoad].filter(year => !loadedYearsRef.current.has(year));
         
         if (yearsToFetch.length === 0) {
-          setLoading(false);
           return;
         }
         
         try {
           // Import the service dynamically to avoid webpack issues
-          const CalendarService = await import('../../../services/CalendarEventService');
+          const CalendarEventService = await import('../../../services/CalendarEventService').then(module => module.default);
           
           // Process all needed years
           let newEvents = [];
           for (const year of yearsToFetch) {
-            const yearEvents = await CalendarService.getEventsForYear(year);
+            console.log(`Fetching events for year ${year}`);
+            const yearEvents = await CalendarEventService.getEventsForYear(year);
+            console.log(`Received ${yearEvents.length} events for year ${year}`);
+            
             newEvents = [...newEvents, ...yearEvents];
             loadedYearsRef.current.add(year);
           }
           
-          // Merge with existing events
+          // Merge with existing events, ensuring we don't duplicate
           setEvents(prevEvents => {
-            const existingEventIds = new Set(prevEvents.map(e => e.id));
-            const uniqueNewEvents = newEvents.filter(e => !existingEventIds.has(e.id));
-            return [...prevEvents, ...uniqueNewEvents];
+            // Create a map of existing event IDs
+            const existingEventMap = new Map(prevEvents.map(e => [e.id, e]));
+            
+            // Add new events, replacing existing ones with the same ID
+            newEvents.forEach(newEvent => {
+              existingEventMap.set(newEvent.id, newEvent);
+            });
+            
+            // Convert map values back to array
+            return Array.from(existingEventMap.values());
           });
         } catch (importError) {
           console.error('Error importing calendar service:', importError);
-          setError('Could not load calendar service. Using local data only.');
+          setError('Could not load all calendar events. Using local data only.');
+          
+          // Use fallback events generator when the service fails
+          for (const year of yearsToFetch) {
+            const fallbackEvents = generateFallbackEvents(year);
+            console.log(`Generated ${fallbackEvents.length} fallback events for year ${year}`);
+            setEvents(prevEvents => [...prevEvents, ...fallbackEvents]);
+            loadedYearsRef.current.add(year);
+          }
         }
-        
       } catch (err) {
         console.error('Error fetching calendar events:', err);
-        setError('Failed to load calendar events. Please try again later.');
-      } finally {
-        setLoading(false);
+        setError('Failed to load some calendar events. Please try again later.');
       }
     };
 
     fetchEventsForCurrentView();
   }, [currentDate, view]);
+
+  // Add the fallback generator function directly to ensure it's available
+  const generateFallbackEvents = (year) => {
+    const baseId = year * 1000;
+    
+    // Helper function to adjust lunar calendar dates
+    function adjustLunarDate(baseDate, shift) {
+      try {
+        const date = new Date(baseDate);
+        if (isNaN(date.getTime())) {
+          console.error('Invalid date provided:', baseDate);
+          return baseDate; // Return original if invalid
+        }
+        
+        // Apply the shift
+        date.setDate(date.getDate() - shift);
+        
+        // Format back to YYYY-MM-DD
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        
+        return `${year}-${month}-${day}`;
+      } catch (error) {
+        console.error('Error adjusting lunar date:', error);
+        return baseDate; // Return original if error
+      }
+    }
+    
+    const baseYear = 2023; // Reference year for festival dates
+    const yearDiff = year - baseYear;
+    
+    // Approximate shifts for lunar calendar-based festivals
+    const lunarShift = Math.floor(yearDiff * 10.875) % 30;
+    
+    // Start with basic events that don't change much between years
+    let events = [
+      { title: 'New Year', date: `${year}-01-01`, category: 'HOLIDAY' },
+      { title: 'Makar Sankranti', date: `${year}-01-14`, category: 'FESTIVAL' },
+      { title: 'Republic Day', date: `${year}-01-26`, category: 'NATIONAL' },
+      { title: 'Holi', date: adjustLunarDate(`${year}-03-08`, lunarShift), category: 'FESTIVAL' },
+      { title: 'Ram Navami', date: adjustLunarDate(`${year}-03-30`, lunarShift), category: 'FESTIVAL' },
+      { title: 'Buddha Purnima', date: adjustLunarDate(`${year}-05-05`, lunarShift), category: 'FESTIVAL' },
+      { title: 'Independence Day', date: `${year}-08-15`, category: 'NATIONAL' },
+      { title: 'Janmashtami', date: adjustLunarDate(`${year}-08-19`, lunarShift), category: 'FESTIVAL' },
+      { title: 'Teachers Day', date: `${year}-09-05`, category: 'ACADEMIC' },
+      { title: 'Gandhi Jayanti', date: `${year}-10-02`, category: 'NATIONAL' },
+      { title: 'Dussehra', date: adjustLunarDate(`${year}-10-15`, lunarShift), category: 'FESTIVAL' },
+      { title: 'Diwali', date: adjustLunarDate(`${year}-11-12`, lunarShift), category: 'FESTIVAL' },
+      { title: 'Christmas', date: `${year}-12-25`, category: 'HOLIDAY' }
+    ];
+    
+    // Add academic events
+    events = [...events, ...[
+      { title: 'New Academic Year Begins', date: `${year}-07-01`, category: 'ACADEMIC' },
+      { title: 'Orientation Day', date: `${year}-07-03`, category: 'ACADEMIC' },
+      { title: 'Mid Term Exams Start', date: `${year}-09-20`, category: 'ACADEMIC' },
+      { title: 'Mid Term Exams End', date: `${year}-09-27`, category: 'ACADEMIC' },
+      { title: 'End Semester Exams Start', date: `${year}-12-01`, category: 'ACADEMIC' },
+      { title: 'End Semester Exams End', date: `${year}-12-15`, category: 'ACADEMIC' }
+    ]];
+    
+    // Format events properly
+    return events.map((event, index) => {
+      return {
+        id: baseId + index,
+        title: event.title,
+        date: event.date,
+        time: 'All Day',
+        datetime: `${event.date}T00:00`,
+        endDatetime: `${event.date}T23:59`,
+        category: event.category
+      };
+    });
+  };
 
   // --- Date Navigation Handlers ---
   const navigate = (direction) => {
@@ -696,9 +893,47 @@ function AcademicCalendar() {
     }
   };
 
-  const handleSaveEvent = (newEvent) => {
-    setUserEvents(prev => [...prev, newEvent]);
-    // Add success notification if needed
+  // Save event to both local state and the server
+  const handleSaveEvent = async (newEvent) => {
+    try {
+      // Save to the server if user is logged in
+      if (currentUser) {
+        const eventToSave = {
+          ...newEvent,
+          userId: currentUser.id,
+          userRole: currentUser.role
+        };
+        
+        const response = await fetch('/api/calendar-events', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          },
+          body: JSON.stringify(eventToSave)
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Use the server-generated ID and data
+          setUserEvents(prev => [...prev, data.event]);
+          showSuccess("Event created successfully!");
+        } else {
+          const errorData = await response.json();
+          console.error('Server error:', errorData);
+          setError(`Failed to save event: ${errorData.message || 'Unknown error'}`);
+          setTimeout(() => setError(null), 5000);
+        }
+      } else {
+        // Just add to local state if not logged in
+        setUserEvents(prev => [...prev, newEvent]);
+        showSuccess("Event created successfully!");
+      }
+    } catch (error) {
+      console.error('Error saving event:', error);
+      setError("Failed to save event. Please check your connection and try again.");
+      setTimeout(() => setError(null), 5000);
+    }
   };
 
   // Add handler for double-click on day
@@ -719,6 +954,11 @@ function AcademicCalendar() {
       }
       setShowEventForm(true);
     }
+  };
+
+  // Handle event click to show details
+  const handleEventClick = (event) => {
+    setSelectedEvent(event);
   };
 
   // --- Dynamic Header Title ---
@@ -742,6 +982,22 @@ function AcademicCalendar() {
 
   // All events combined for display
   const allEvents = [...events, ...userEvents];
+
+  // --- Success Message Component ---
+  const SuccessMessage = ({ message }) => (
+    <div className="bg-green-50 border border-green-300 text-green-700 p-4 rounded-md mb-4 animate-fade-in">
+      <div className="flex items-center">
+        <div className="flex-shrink-0">
+          <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+        </div>
+        <div className="ml-3">
+          <p className="text-sm">{message}</p>
+        </div>
+      </div>
+    </div>
+  );
 
   // --- Error Message Component ---
   const ErrorMessage = ({ message }) => (
@@ -892,16 +1148,19 @@ function AcademicCalendar() {
       {/* Display error if any */}
       {error && <ErrorMessage message={error} />}
 
+      {/* Display success message if any */}
+      {successMessage && <SuccessMessage message={successMessage} />}
+
       {/* Calendar Grid Area - Clean white background with hidden scrollbars */}
       <div className="shadow-sm ring-1 ring-gray-200 lg:flex lg:flex-auto lg:flex-col bg-white mt-2 h-[85vh] overflow-hidden rounded-b-lg relative">
-        {loading && <LoadingOverlay />}
-        
         <div key={`view-${view}`} className="flex-auto h-full overflow-auto">
           {view === 'day' && (
             <CalendarDayView
               currentDate={selectedDate}
               events={allEvents}
               onEventDoubleClick={handleEventDoubleClick}
+              onEventClick={handleEventClick}
+              onDayDoubleClick={handleDayDoubleClick}
             />
           )}
           {view === 'week' && (
@@ -911,6 +1170,8 @@ function AcademicCalendar() {
               events={allEvents}
               onDateClick={handleDateClick}
               onEventDoubleClick={handleEventDoubleClick}
+              onEventClick={handleEventClick}
+              onDayDoubleClick={handleDayDoubleClick}
               weekStartsOn={weekStartsOn}
             />
           )}
@@ -920,9 +1181,10 @@ function AcademicCalendar() {
               selectedDate={selectedDate}
               onDateClick={handleDateClick}
               onEventDoubleClick={handleEventDoubleClick}
+              onEventClick={handleEventClick}
+              onDayDoubleClick={handleDayDoubleClick}
               events={allEvents}
               weekStartsOn={weekStartsOn}
-              onDayDoubleClick={handleDayDoubleClick}
             />
           )}
           {view === 'year' && (
@@ -931,6 +1193,7 @@ function AcademicCalendar() {
                 currentYearDate={currentDate}
                 onMonthClick={handleMonthClick}
                 events={allEvents}
+                onEventClick={handleEventClick}
               />
             </div>
           )}
@@ -956,6 +1219,13 @@ function AcademicCalendar() {
           <SelectedEventsList events={eventsForDate(selectedDate)} />
         </div>
       )}
+
+      {/* Event Detail Modal */}
+      <EventDetailModal 
+        isOpen={!!selectedEvent}
+        event={selectedEvent}
+        onClose={() => setSelectedEvent(null)}
+      />
     </div>
   );
 }
