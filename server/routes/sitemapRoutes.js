@@ -76,6 +76,9 @@ router.get('/college', async (req, res, next) => {
           ? newsItem.image 
           : `https://www.uni-connect.live${newsItem.image}`;
         
+        // Ensure the image URL is properly encoded
+        const encodedImageUrl = encodeURI(imageUrl);
+        
         // Extract venue information from content if available
         let venue = '';
         if (newsItem.content && newsItem.content.includes('Venue:')) {
@@ -94,28 +97,73 @@ router.get('/college', async (req, res, next) => {
           enhancedDescription = `${enhancedDescription} Venue: ${venue}.`;
         }
         
+        // Escape all special characters in title and description to prevent HTML issues
+        const escapeHtml = (text) => {
+          return text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        };
+        
+        const safeTitle = escapeHtml(newsItem.title);
+        const safeDescription = escapeHtml(enhancedDescription);
+        const safeVenue = escapeHtml(venue);
+        const safeAuthor = escapeHtml(newsItem.author);
+        const safeCategoryLabel = escapeHtml(newsItem.categoryLabel);
+        
+        // Full canonical URL for the news page
+        const canonicalUrl = `https://www.uni-connect.live/college?tab=news&id=${newsItem._id}`;
+        
+        // Replace any existing OG tags to prevent duplicates
+        let modifiedHtml = data;
+        
+        // Remove existing Open Graph tags
+        modifiedHtml = modifiedHtml.replace(/<meta property="og:[^>]+>/g, '');
+        modifiedHtml = modifiedHtml.replace(/<meta name="twitter:[^>]+>/g, '');
+        
+        // Replace the title tag
+        modifiedHtml = modifiedHtml.replace(/<title>[^<]+<\/title>/, 
+          `<title>${safeTitle} | MU-UniConnect</title>`);
+        
+        // Add canonical link
+        if (!modifiedHtml.includes('<link rel="canonical"')) {
+          modifiedHtml = modifiedHtml.replace('</head>', `<link rel="canonical" href="${canonicalUrl}" />\n</head>`);
+        } else {
+          modifiedHtml = modifiedHtml.replace(/<link rel="canonical"[^>]+>/, 
+            `<link rel="canonical" href="${canonicalUrl}" />`);
+        }
+        
         // Prepare Open Graph meta tags with enhanced information
         const ogTags = `
-    <meta property="og:type" content="article" />
-    <meta property="og:url" content="https://www.uni-connect.live/college?tab=news&id=${newsItem._id}" />
-    <meta property="og:title" content="${newsItem.title}" />
-    <meta property="og:description" content="${enhancedDescription}" />
-    <meta property="og:image" content="${imageUrl}" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:site_name" content="MU-UniConnect" />
-    <meta property="article:published_time" content="${new Date(newsItem.createdAt).toISOString()}" />
-    <meta property="article:modified_time" content="${new Date(newsItem.updatedAt).toISOString()}" />
-    <meta property="article:section" content="${newsItem.categoryLabel}" />
-    <meta property="article:author" content="${newsItem.author}" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="${newsItem.title}" />
-    <meta name="twitter:description" content="${enhancedDescription}" />
-    <meta name="twitter:image" content="${imageUrl}" />`;
+    <!-- Primary Meta Tags -->
+    <meta name="title" content="${safeTitle} | MU-UniConnect">
+    <meta name="description" content="${safeDescription}">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="article">
+    <meta property="og:url" content="${canonicalUrl}">
+    <meta property="og:title" content="${safeTitle}">
+    <meta property="og:description" content="${safeDescription}">
+    <meta property="og:image" content="${encodedImageUrl}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:site_name" content="MU-UniConnect">
+    <meta property="fb:app_id" content="1234567890123456">
+    <meta property="article:published_time" content="${new Date(newsItem.createdAt).toISOString()}">
+    <meta property="article:modified_time" content="${new Date(newsItem.updatedAt).toISOString()}">
+    <meta property="article:section" content="${safeCategoryLabel}">
+    <meta property="article:author" content="${safeAuthor}">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="${safeTitle}">
+    <meta name="twitter:description" content="${safeDescription}">
+    <meta name="twitter:image" content="${encodedImageUrl}">`;
         
-        // Insert the OG tags into the head of the HTML document
-        const modifiedHtml = data.replace(/<title>.*?<\/title>/, 
-          `<title>${newsItem.title} | MU-UniConnect</title>${ogTags}`);
+        // Add the OG tags into the head of the HTML document
+        modifiedHtml = modifiedHtml.replace('</head>', `${ogTags}\n</head>`);
         
         // Add JSON-LD structured data for even better SEO and rich results
         const jsonLdScript = `
@@ -123,13 +171,17 @@ router.get('/college', async (req, res, next) => {
     {
       "@context": "https://schema.org",
       "@type": "NewsArticle",
-      "headline": "${newsItem.title}",
-      "image": "${imageUrl}",
+      "mainEntityOfPage": {
+        "@type": "WebPage",
+        "@id": "${canonicalUrl}"
+      },
+      "headline": "${safeTitle}",
+      "image": ["${encodedImageUrl}"],
       "datePublished": "${new Date(newsItem.createdAt).toISOString()}",
       "dateModified": "${new Date(newsItem.updatedAt).toISOString()}",
       "author": {
         "@type": "Organization",
-        "name": "${newsItem.author}"
+        "name": "${safeAuthor}"
       },
       "publisher": {
         "@type": "Organization",
@@ -139,16 +191,25 @@ router.get('/college', async (req, res, next) => {
           "url": "https://www.uni-connect.live/img/uniconnectTB.png"
         }
       },
-      "description": "${newsItem.excerpt}"
-      ${venue ? `, "location": {"@type": "Place", "name": "${venue}"}` : ''}
+      "description": "${safeDescription}"
+      ${safeVenue ? `, "location": {"@type": "Place", "name": "${safeVenue}"}` : ''}
     }
     </script>`;
         
-        // Add the structured data to the HTML
-        const finalHtml = modifiedHtml.replace('</head>', `${jsonLdScript}</head>`);
+        // Add the structured data to the HTML (or replace existing)
+        if (modifiedHtml.includes('<script type="application/ld+json">')) {
+          modifiedHtml = modifiedHtml.replace(/<script type="application\/ld\+json">[^<]+<\/script>/, jsonLdScript);
+        } else {
+          modifiedHtml = modifiedHtml.replace('</head>', `${jsonLdScript}\n</head>`);
+        }
+        
+        // Set proper response headers for social media crawlers
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        res.status(200);
         
         // Send the modified HTML
-        res.send(finalHtml);
+        res.send(modifiedHtml);
       });
     } catch (error) {
       console.error('Error generating dynamic meta tags:', error);

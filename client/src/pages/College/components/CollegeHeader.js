@@ -22,8 +22,8 @@ const CollegeHeader = () => {
       {/* Dark Overlay */}
       <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/50 to-black/70" />
       
-      {/* Content */}
-      <div className="relative z-20 h-full flex flex-col justify-center items-center text-center px-4">
+      {/* Content - changed z-index from z-20 to z-1 */}
+      <div className="relative z-1 h-full flex flex-col justify-center items-center text-center px-4">
         <motion.div style={{ opacity: useTransform(scrollY, [0, 300], [1, 0]) }}>
           <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">Mahindra University</h1>
           <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto mb-8">
@@ -53,8 +53,8 @@ const CollegeHeader = () => {
         </motion.div>
       </div>
       
-      {/* Curved bottom */}
-      <div className="absolute bottom-0 left-0 right-0 z-20">
+      {/* Curved bottom - changed z-index from z-20 to z-1 */}
+      <div className="absolute bottom-0 left-0 right-0 z-1">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 100" fill="#f9fafb">
           <path d="M0,96L60,85.3C120,75,240,53,360,53.3C480,53,600,75,720,74.7C840,75,960,53,1080,48C1200,43,1320,53,1380,58.7L1440,64L1440,100L1380,100C1320,100,1200,100,1080,100C960,100,840,100,720,100C600,100,480,100,360,100C240,100,120,100,60,100L0,100Z"></path>
         </svg>
