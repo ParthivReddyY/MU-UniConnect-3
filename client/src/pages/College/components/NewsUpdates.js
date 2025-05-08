@@ -424,8 +424,8 @@ const NewsUpdates = () => {
           
           {/* News Detail Modal */}
           {selectedNews && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-              <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+              <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto relative">
                 <div className="relative">
                   <img 
                     src={selectedNews.image}
@@ -496,7 +496,7 @@ const NewsUpdates = () => {
               {/* Share Dialog */}
               {showShareDialog && (
                 <div 
-                  className="absolute inset-0 bg-black/30 flex items-center justify-center z-10"
+                  className="fixed inset-0 bg-black/30 flex items-center justify-center z-[10000]"
                   onClick={closeShareDialog}
                 >
                   <div 
