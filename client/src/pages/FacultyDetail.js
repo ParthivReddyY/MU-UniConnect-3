@@ -47,6 +47,19 @@ const FacultyDetail = () => {
     return currentUser.email === faculty.email;
   };
 
+  // Navigation and action handlers
+  const handleBackToFaculty = () => {
+    navigate('/faculty');
+  };
+
+  const handleEditToggle = () => {
+    toggleEditMode();
+  };
+
+  const handleDeleteClick = () => {
+    setShowDeleteModal(true);
+  };
+
   // Handle image change from ImageUploader component
   const handleImageChange = (data) => {
     // Clear image data if null is passed
@@ -307,49 +320,9 @@ const FacultyDetail = () => {
 
   return (
     <div className="w-full">
-      {/* Use higher top padding to avoid navbar overlap */}
-      <div className="pt-20">
+      <div>
         {/* Page content container */}
         <div className="max-w-full px-4 md:px-8 mx-auto">
-          {/* Back button and actions row */}
-          <div className="flex flex-col md:flex-row justify-between items-center mb-6 max-w-7xl mx-auto">
-            <button
-              onClick={() => navigate('/faculty')}
-              className="flex items-center px-5 py-3 rounded-md bg-white border-2 border-primary-red text-primary-red hover:bg-light-red hover:translate-x-[-5px] transition-all duration-300 ease-in-out shadow-sm font-medium text-base w-full md:w-auto mb-4 md:mb-0"
-              aria-label="Back to Faculty Directory"
-            >
-              <i className="fas fa-arrow-left mr-3"></i> Back to Faculty Directory
-            </button>
-            
-            {/* Action buttons container */}
-            <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-              {/* Edit button - only show when not adding new faculty and user has permission */}
-              {!isNewFaculty && hasEditPermission() && (
-                <button 
-                  onClick={toggleEditMode}
-                  className={`px-5 py-3 rounded-md font-medium transition-all ${
-                    isEditing 
-                      ? 'bg-gray-200 text-gray-800 hover:bg-gray-300' 
-                      : 'bg-primary-red text-white hover:bg-secondary-red'
-                  } shadow-md w-full sm:w-auto`}
-                >
-                  <i className={`fas ${isEditing ? 'fa-times mr-2' : 'fa-edit mr-2'}`}></i>
-                  {isEditing ? 'Cancel Editing' : 'Edit Profile'}
-                </button>
-              )}
-              
-              {/* Delete button - only show for admin and when not adding new faculty */}
-              {!isNewFaculty && isAdmin() && !isEditing && (
-                <button 
-                  onClick={() => setShowDeleteModal(true)}
-                  className="px-5 py-3 rounded-md font-medium transition-all bg-white border-2 border-red-500 text-red-500 hover:bg-red-50 shadow-md w-full sm:w-auto"
-                >
-                  <i className="fas fa-trash mr-2"></i>Delete Faculty
-                </button>
-              )}
-            </div>
-          </div>
-
           {/* View/Edit Mode Toggle */}
           {isEditing ? (
             <form onSubmit={handleSubmit(onSubmit)} className="bg-gray-100 rounded-lg shadow-lg p-6 mb-8 border border-gray-200 mx-auto">
@@ -743,8 +716,13 @@ const FacultyDetail = () => {
               </div>
             </form>
           ) : (
-            /* Render faculty view using the new component */
-            <FacultyView faculty={faculty} />
+            /* Render faculty view using the new component with action buttons as props */
+            <FacultyView 
+              faculty={faculty} 
+              onBack={handleBackToFaculty}
+              onEdit={hasEditPermission() ? handleEditToggle : null}
+              onDelete={isAdmin() && !isNewFaculty ? handleDeleteClick : null}
+            />
           )}
           
           {/* Delete confirmation modal */}

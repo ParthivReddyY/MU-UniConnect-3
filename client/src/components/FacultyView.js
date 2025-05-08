@@ -3,7 +3,7 @@ import { renderHTML } from '../utils/editorUtils';
 import ScrollProgress from './ScrollProgress';
 import { Link } from 'react-router-dom';
 
-const FacultyView = ({ faculty }) => {
+const FacultyView = ({ faculty, onBack, onEdit, onDelete }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [visibleSections, setVisibleSections] = useState({});
   const [scrollPosition, setScrollPosition] = useState(0);
@@ -245,6 +245,38 @@ const FacultyView = ({ faculty }) => {
               
               {/* Faculty Info Column - Updated with grey colors */}
               <div className="text-center lg:text-left flex-1 backdrop-blur-sm bg-gray-800/30 rounded-xl p-6 border border-gray-500/20 shadow-lg">
+                {/* Navigation buttons at the top of the info column */}
+                {onBack && (
+                  <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-3">
+                    <button
+                      onClick={onBack}
+                      className="flex items-center px-4 py-2 rounded-full bg-white/20 text-white hover:bg-white/30 hover:translate-x-[-5px] transition-all duration-300 ease-in-out shadow-sm font-medium text-sm w-full md:w-auto mb-2 md:mb-0 backdrop-blur-sm"
+                    >
+                      <i className="fas fa-arrow-left mr-2"></i> Back to Faculty Directory
+                    </button>
+                    
+                    <div className="flex gap-2">
+                      {onEdit && (
+                        <button 
+                          onClick={onEdit}
+                          className="px-4 py-2 rounded-full font-medium transition-all bg-white/20 text-white hover:bg-white/30 shadow-sm backdrop-blur-sm"
+                        >
+                          <i className="fas fa-edit mr-1"></i> Edit
+                        </button>
+                      )}
+                      
+                      {onDelete && (
+                        <button 
+                          onClick={onDelete}
+                          className="px-4 py-2 rounded-full font-medium transition-all bg-red-500/50 text-white hover:bg-red-500/70 shadow-sm backdrop-blur-sm"
+                        >
+                          <i className="fas fa-trash mr-1"></i> Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
                 {/* Faculty name and title */}
                 <div className="animate-fadeInUp" style={{ animationDelay: '0.2s' }}>
                   <h1 className="text-4xl sm:text-5xl font-bold text-white mb-2">{faculty.name}</h1>
