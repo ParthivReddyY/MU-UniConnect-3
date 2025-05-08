@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { motion } from 'framer-motion';
 
 const CampusMap = () => {
   // State management
@@ -157,7 +156,10 @@ const CampusMap = () => {
         const { latitude, longitude } = position.coords;
         console.log(`User location successfully retrieved: ${latitude}, ${longitude}`);
         
-        // Check if within campus bounds (approximate bounds of Mahindra University)
+        // For testing purposes, temporarily bypass bounds check
+        // When ready for production, uncomment this code to check if within campus bounds
+        /*
+        // Approximate bounds of Mahindra University
         const campusBounds = {
           north: 17.5745,
           south: 17.5645,
@@ -165,9 +167,6 @@ const CampusMap = () => {
           west: 78.4320
         };
         
-        // For testing purposes, temporarily bypass bounds check
-        // Remove this bypass in production and use the actual check below
-        /*
         if (latitude >= campusBounds.south && 
             latitude <= campusBounds.north && 
             longitude >= campusBounds.west && 
@@ -241,8 +240,8 @@ const CampusMap = () => {
     { id: 'parking', name: 'Parking', icon: 'fas fa-parking' }
   ];
 
-  // Sample campus buildings and places data
-  const campusPlaces = [
+  // Sample campus buildings and places data - memoized to prevent recreation on every render
+  const campusPlaces = React.useMemo(() => [
     {
       id: 'academic-block-a',
       name: 'Academic Block A',
@@ -363,7 +362,7 @@ const CampusMap = () => {
       accessibility: true,
       hours: 'Open 24 hours'
     }
-  ];
+  ], []);
 
   // Effect for search functionality
   useEffect(() => {
@@ -379,7 +378,7 @@ const CampusMap = () => {
     );
     
     setSearchResults(results);
-  }, [searchQuery]);
+  }, [searchQuery, campusPlaces]);
 
   // Function to toggle sidebar
   const toggleSidebar = () => {
