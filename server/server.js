@@ -85,7 +85,7 @@ app.get('/health', (req, res) => {
 });
 
 // Serve sitemap.xml from the root for better SEO
-// Fix: Mount sitemap routes at root level instead of at specific path
+// IMPORTANT: Mount sitemap routes first to intercept requests for OpenGraph metadata
 app.use(sitemapRoutes);
 
 // API connectivity test endpoint
