@@ -1,12 +1,38 @@
 # MU-UniConnect
 
-A comprehensive platform for Mahindra University students, faculty, and club heads.
+A comprehensive platform designed to connect Mahindra University students, faculty, and club heads in one integrated ecosystem.
+
+## Live Deployment
+
+**Access MU-UniConnect:** [https://www.uni-connect.live/](https://www.uni-connect.live/)
+
+## Overview
+
+MU-UniConnect serves as the central hub for Mahindra University's digital community, streamlining communication, event management, and administrative processes. The platform provides role-specific functionality for students, faculty, club heads, and administrators.
+
+## Features
+
+- **User Authentication**: Secure login system with role-based access control
+- **Student Services**: Course registration, event participation, and club memberships
+- **Faculty Portal**: Course management, attendance tracking, and student communication
+- **Club Management**: Event creation, member management, and activity reporting
+- **Administrative Dashboard**: User management, access control, and system configuration
+- **Notification System**: Real-time updates and announcements for all users
+- **Resource Sharing**: Document repository and knowledge sharing platform
 
 ## Project Structure
 
 This repository contains both frontend and backend code:
-- Frontend (React): Located in the root directory
-- Backend (Node.js/Express): Located in the `server` directory
+- **Frontend (React)**: Located in the root directory
+- **Backend (Node.js/Express)**: Located in the `server` directory
+
+## Technology Stack
+
+- **Frontend**: React.js, Material-UI, Redux
+- **Backend**: Node.js, Express.js
+- **Database**: MongoDB
+- **Authentication**: JWT (JSON Web Tokens)
+- **Email Service**: SMTP integration for notifications
 
 ## Setup Instructions
 
@@ -57,14 +83,35 @@ This repository contains both frontend and backend code:
    ```
    npm start
    ```
+4. The application will be available at `http://localhost:3000`
 
 ## API Documentation
 
-The server runs on port 9000 by default and provides RESTful API endpoints at `/api/`.
+The backend API server runs on port 9000 by default and provides RESTful endpoints at `/api/`.
 
-## Features
+### Core API Endpoints
 
-- User authentication (students, faculty, club heads, admins)
-- Student registration and verification
-- Password reset functionality
-- Role-based access control
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/register` | POST | Register a new user |
+| `/api/auth/login` | POST | Authenticate a user |
+| `/api/auth/reset-password` | POST | Request password reset |
+| `/api/users/profile` | GET | Get user profile information |
+| `/api/events` | GET/POST | Retrieve and create events |
+| `/api/clubs` | GET/POST | Retrieve and manage clubs |
+
+For detailed API documentation and testing, you can use tools like Postman or Swagger.
+
+## Contributing
+
+Contributions to MU-UniConnect are welcome! Please follow these steps:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature-name`)
+3. Commit your changes (`git commit -m 'Add some feature'`)
+4. Push to the branch (`git push origin feature-name`)
+5. Open a Pull Request
+
+## License
+
+This project is proprietary and maintained by Mahindra University.
