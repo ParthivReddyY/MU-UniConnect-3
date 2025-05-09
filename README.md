@@ -99,6 +99,13 @@ This repository contains both frontend and backend code:
 
 ---
 
+## ⚠️ Important Note
+
+> **.env files are not uploaded to GitHub for security reasons.**  
+> To obtain the required `.env` files for local development, please contact: **se22ucse2982@mahindrauniversity.edu.in** or **7207087769** 
+
+---
+
 ## 📚 API Documentation
 
 The backend API server runs on port 9000 by default and provides RESTful endpoints at `/api/`.
