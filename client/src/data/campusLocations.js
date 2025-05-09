@@ -327,7 +327,7 @@ export const findNearestLocations = (coords, limit = 5) => {
   return locationsWithDistance.slice(0, limit);
 };
 
-export default {
+const campusLocations = {
   getAllLocations,
   getLocationsByCategory,
   getLocationById,
@@ -336,3 +336,5 @@ export default {
   CAMPUS_BOUNDS,
   LOCATION_CATEGORIES
 };
+
+export default campusLocations;
