@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -8,7 +8,6 @@ import api from '../../../utils/axiosConfig';
 
 const Overview = () => {
   const [activeProgram, setActiveProgram] = useState('engineering');
-  const [activeFacility, setActiveFacility] = useState(0);
   const [activeLeader, setActiveLeader] = useState(0); 
   const [activePartnersPage, setActivePartnersPage] = useState(0);
   // Add state for campus highlights modal
@@ -297,39 +296,7 @@ const Overview = () => {
     }
   ];
 
-  const campusFacilities = [
-    {
-      name: "Modern Infrastructure",
-      icon: "fas fa-building",
-      description: "State-of-the-art classrooms, lecture halls, and research facilities designed for optimal learning experiences.",
-      image: "https://images.unsplash.com/photo-1594072702031-f0e2a602dd2c?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    },
-    {
-      name: "Library Resources",
-      icon: "fas fa-book",
-      description: "Extensive collection of books, journals, and digital resources with comfortable study spaces and research support.",
-      image: "https://images.unsplash.com/photo-1521587760476-6c12a4b040da?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    },
-    {
-      name: "Sports Facilities",
-      icon: "fas fa-futbol",
-      description: "Indoor and outdoor sports facilities including gymnasium, swimming pool, courts, and playing fields.",
-      image: "https://images.unsplash.com/photo-1558443957-d056622df610?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    },
-    {
-      name: "Student Housing",
-      icon: "fas fa-bed",
-      description: "Modern hostel accommodations with comfortable rooms, dining facilities, and recreational spaces for resident students.",
-      image: "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    },
-    {
-      name: "Cultural Centers",
-      icon: "fas fa-theater-masks",
-      description: "Dedicated spaces for cultural events, performances, and club activities to enrich student life beyond academics.",
-      image: "https://images.unsplash.com/photo-1560523160-754a9e25c68f?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80"
-    }
-  ];
-
+  
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -354,14 +321,14 @@ const Overview = () => {
   };
 
   // Function to navigate to next leader in carousel
-  const nextLeader = () => {
+  const nextLeader = useCallback(() => {
     setActiveLeader((prev) => (prev + 1) % leadership.length);
-  };
+  }, [leadership.length]);
 
   // Function to navigate to previous leader in carousel
-  const prevLeader = () => {
+  const prevLeader = useCallback(() => {
     setActiveLeader((prev) => (prev === 0 ? leadership.length - 1 : prev - 1));
-  };
+  }, [leadership.length]);
 
   // Auto-rotate the carousel every 6 seconds
   useEffect(() => {
@@ -398,14 +365,14 @@ const Overview = () => {
   const totalPartnerPages = Math.ceil(globalPartners.length / 3);
   
   // Function to navigate to next page in the partners carousel
-  const nextPartnersPage = () => {
+  const nextPartnersPage = useCallback(() => {
     setActivePartnersPage((prev) => (prev + 1) % totalPartnerPages);
-  };
+  }, [totalPartnerPages]);
 
   // Function to navigate to previous page in the partners carousel
-  const prevPartnersPage = () => {
+  const prevPartnersPage = useCallback(() => {
     setActivePartnersPage((prev) => (prev === 0 ? totalPartnerPages - 1 : prev - 1));
-  };
+  }, [totalPartnerPages]);
   
   // Auto-rotate the partners carousel every 8 seconds
   useEffect(() => {
@@ -455,8 +422,7 @@ const Overview = () => {
     fetchCampusHighlights();
   }, []);
 
-  // Create refs for sections that will be scrolled to
-  const campusHighlightsRef = useRef(null);
+  // Get location for hash-based navigation
   const location = useLocation();
 
   // Handle scroll to section when component mounts or when the URL hash changes

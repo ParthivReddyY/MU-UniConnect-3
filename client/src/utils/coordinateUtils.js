@@ -208,7 +208,7 @@ export const getSimpleDirections = (fromLocation, toLocation) => {
   return `Head ${direction} for approximately ${formattedDistance} to reach ${toLocation.name}.`;
 };
 
-export default {
+const coordinateUtils = {
   convertToQgisCloudCoordinates,
   createCenteredMapUrl,
   isWithinCampusBounds,
@@ -217,3 +217,5 @@ export default {
   getCardinalDirection,
   getSimpleDirections
 };
+
+export default coordinateUtils;
