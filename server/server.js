@@ -18,6 +18,7 @@ const uploadRoutes = require('./routes/uploadRoutes');
 const proxyRoutes = require('./routes/proxyRoutes');
 const sitemapRoutes = require('./routes/sitemapRoutes');
 const campusHighlightRoutes = require('./routes/campusHighlightRoutes');
+const searchRoutes = require('./routes/searchRoutes'); // Added: Import search routes
 
 // Import controllers for initialization
 const newsController = require('./controllers/newsController');
@@ -87,6 +88,24 @@ app.get('/health', (req, res) => {
 // Serve sitemap.xml from the root for better SEO
 // IMPORTANT: Mount sitemap routes first to intercept requests for OpenGraph metadata
 app.use(sitemapRoutes);
+
+// Add handlers for specific public-facing paths BEFORE API routes and static serving
+// This ensures that these paths are correctly handled by the server,
+// typically by serving the main HTML file for a SPA.
+
+// Handler for /search (delegates to searchRoutes.js)
+app.use(searchRoutes); // Added: Use search routes
+
+// Handler for /presentations
+app.get('/presentations', (req, res) => {
+  if (process.env.NODE_ENV === 'production') {
+    res.sendFile(path.resolve(__dirname, '../client/build', 'index.html'));
+  } else {
+    // In development, you might not have a 'client/build' folder if you're using a dev server like webpack-dev-server.
+    // This response is a placeholder. Your client-side routing should handle /presentations.
+    res.send('Presentations page (Development mode - client/build/index.html not served directly for this route)');
+  }
+});
 
 // API connectivity test endpoint
 app.get('/api/test-connection', (req, res) => {
