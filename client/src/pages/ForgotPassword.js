@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -21,8 +21,73 @@ const ForgotPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState('');
+  const [passwordStrength, setPasswordStrength] = useState({
+    strength: 0,
+    label: '',
+    color: '',
+    hasMinLength: false,
+    hasLowercase: false,
+    hasUppercase: false,
+    hasNumber: false,
+    hasSpecial: false
+  });
 
   const { forgotPassword, verifyResetOTP, resetPassword } = useAuth();
+  
+  // Password strength calculation
+  const getPasswordStrength = (password) => {
+    if (!password) return {
+      strength: 0,
+      label: '',
+      color: '',
+      hasMinLength: false,
+      hasLowercase: false,
+      hasUppercase: false,
+      hasNumber: false,
+      hasSpecial: false
+    };
+    
+    const hasLowercase = /[a-z]/.test(password);
+    const hasUppercase = /[A-Z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password);
+    const hasMinLength = password.length >= 8;
+    
+    let strength = 0;
+    if (password.length >= 6) strength += 1;
+    if (hasMinLength) strength += 1;
+    if (hasLowercase) strength += 1;
+    if (hasUppercase) strength += 1;
+    if (hasNumber) strength += 1;
+    if (hasSpecial) strength += 1;
+    
+    const strengthMap = {
+      0: { label: 'Very Weak', color: 'bg-red-700' },
+      1: { label: 'Very Weak', color: 'bg-red-600' },
+      2: { label: 'Weak', color: 'bg-orange-500' },
+      3: { label: 'Medium', color: 'bg-yellow-500' },
+      4: { label: 'Strong', color: 'bg-green-500' },
+      5: { label: 'Very Strong', color: 'bg-green-600' },
+      6: { label: 'Excellent', color: 'bg-indigo-600' }
+    };
+    
+    return {
+      strength,
+      label: strengthMap[strength].label,
+      color: strengthMap[strength].color,
+      hasMinLength,
+      hasLowercase,
+      hasUppercase,
+      hasNumber,
+      hasSpecial
+    };
+  };
+  
+  // Update password strength when password changes
+  useEffect(() => {
+    setPasswordStrength(getPasswordStrength(password));
+  }, [password]);
+  
 
   // Function to request password reset OTP
   const handleRequestOTP = async (e) => {
@@ -84,8 +149,7 @@ const ForgotPassword = () => {
       setIsSubmitting(false);
     }
   };
-  
-  // Function to reset password
+    // Function to reset password
   const handleResetPassword = async (e) => {
     e.preventDefault();
     
@@ -94,8 +158,13 @@ const ForgotPassword = () => {
       return;
     }
     
-    if (password.length < 6) {
-      setPasswordError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+    
+    if (passwordStrength.strength < 3) {
+      setPasswordError('Password is too weak. Please use a stronger password with a mix of characters.');
       return;
     }
     
@@ -194,14 +263,13 @@ const ForgotPassword = () => {
           )}
           
           <form className="px-10 pb-10 pt-2" onSubmit={handleResetPassword}>
-            <div className="mb-6">
-              <label htmlFor="password" className={labelClass}>New Password</label>
-              <div className="relative group">
+            <div className="mb-6">              <label htmlFor="password" className={labelClass}>New Password</label>
+              <div className="relative group">                
                 <input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   className={passwordInputClass(passwordError)}
-                  placeholder="Minimum 6 characters"
+                  placeholder="Enter your new password"
                   value={password}
                   onChange={(e) => {
                     setPassword(e.target.value);
@@ -210,8 +278,7 @@ const ForgotPassword = () => {
                 />
                 <div className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 group-hover:text-red-400 transition-colors">
                   <i className="fas fa-lock"></i>
-                </div>
-                <button
+                </div>                <button
                   type="button"
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"
                   onClick={() => setShowPassword(!showPassword)}
@@ -219,6 +286,62 @@ const ForgotPassword = () => {
                   <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                 </button>
               </div>
+              
+              {/* Password Rules */}
+              <p className="text-xs text-gray-400 mt-1 mb-2">
+                <i className="fas fa-info-circle mr-1"></i>
+                Password must be at least 8 characters with uppercase, lowercase, numbers, and special characters.
+              </p>
+              
+              {/* Password Strength Indicator */}
+              {password && (
+                <div className="mt-3 mb-4">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-xs text-gray-300">Password Strength:</span>
+                    <span className={`text-xs font-medium ${
+                      passwordStrength.strength < 3 
+                        ? 'text-red-400' 
+                        : passwordStrength.strength < 5 
+                          ? 'text-yellow-400' 
+                          : 'text-green-400'
+                    }`}>
+                      {passwordStrength.label}
+                    </span>
+                  </div>
+                  
+                  {/* Strength bar */}
+                  <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full ${passwordStrength.color}`} 
+                      style={{ width: `${(passwordStrength.strength / 6) * 100}%` }}
+                    ></div>
+                  </div>
+                  
+                  {/* Requirements checklist */}
+                  <div className="mt-3 grid grid-cols-1 gap-1.5">
+                    <div className={`flex items-center text-xs ${passwordStrength.hasMinLength ? 'text-green-400' : 'text-gray-400'}`}>
+                      <i className={`fas fa-${passwordStrength.hasMinLength ? 'check-circle' : 'circle'} mr-2`}></i>
+                      At least 8 characters
+                    </div>
+                    <div className={`flex items-center text-xs ${passwordStrength.hasLowercase ? 'text-green-400' : 'text-gray-400'}`}>
+                      <i className={`fas fa-${passwordStrength.hasLowercase ? 'check-circle' : 'circle'} mr-2`}></i>
+                      Lowercase letter (a-z)
+                    </div>
+                    <div className={`flex items-center text-xs ${passwordStrength.hasUppercase ? 'text-green-400' : 'text-gray-400'}`}>
+                      <i className={`fas fa-${passwordStrength.hasUppercase ? 'check-circle' : 'circle'} mr-2`}></i>
+                      Uppercase letter (A-Z)
+                    </div>
+                    <div className={`flex items-center text-xs ${passwordStrength.hasNumber ? 'text-green-400' : 'text-gray-400'}`}>
+                      <i className={`fas fa-${passwordStrength.hasNumber ? 'check-circle' : 'circle'} mr-2`}></i>
+                      Number (0-9)
+                    </div>
+                    <div className={`flex items-center text-xs ${passwordStrength.hasSpecial ? 'text-green-400' : 'text-gray-400'}`}>
+                      <i className={`fas fa-${passwordStrength.hasSpecial ? 'check-circle' : 'circle'} mr-2`}></i>
+                      Special character (!@#$%)
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             
             <div className="mb-6">

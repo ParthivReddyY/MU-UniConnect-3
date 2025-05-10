@@ -260,6 +260,101 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Forgot password function - request OTP for password reset
+  const forgotPassword = async (email) => {
+    try {
+      setError('');
+      
+      const response = await api.post('/api/auth/forgot-password', { email });
+      
+      if (response.data && response.data.success) {
+        return { 
+          success: true, 
+          message: response.data.message || 'Verification code sent to your email',
+          email: response.data.email || email 
+        };
+      } else {
+        throw new Error(response.data.message || 'Failed to send verification code');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      
+      if (error.response) {
+        const { data } = error.response;
+        const errorMessage = data.message || 'Failed to process request';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      } else {
+        const errorMessage = error.message || 'Network or server error. Please try again.';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      }
+    }
+  };
+  
+  // Verify reset OTP function
+  const verifyResetOTP = async (email, otp) => {
+    try {
+      setError('');
+      
+      const response = await api.post('/api/auth/verify-reset-otp', { email, otp });
+      
+      if (response.data && response.data.success) {
+        return { 
+          success: true, 
+          message: response.data.message || 'Code verified successfully',
+          email: response.data.email || email
+        };
+      } else {
+        throw new Error(response.data.message || 'Verification failed');
+      }
+    } catch (error) {
+      console.error('OTP verification error:', error);
+      
+      if (error.response) {
+        const { data } = error.response;
+        const errorMessage = data.message || 'Verification failed';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      } else {
+        const errorMessage = error.message || 'Network or server error. Please try again.';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      }
+    }
+  };
+  
+  // Reset password function
+  const resetPassword = async (email, otp, password) => {
+    try {
+      setError('');
+      
+      const response = await api.post('/api/auth/reset-password', { email, otp, password });
+      
+      if (response.data && response.data.success) {
+        return { 
+          success: true, 
+          message: response.data.message || 'Password reset successful'
+        };
+      } else {
+        throw new Error(response.data.message || 'Password reset failed');
+      }
+    } catch (error) {
+      console.error('Password reset error:', error);
+      
+      if (error.response) {
+        const { data } = error.response;
+        const errorMessage = data.message || 'Password reset failed';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      } else {
+        const errorMessage = error.message || 'Network or server error. Please try again.';
+        setError(errorMessage);
+        return { success: false, message: errorMessage };
+      }
+    }
+  };
+
   const value = {
     currentUser,
     loading,
@@ -275,7 +370,10 @@ export function AuthProvider({ children }) {
     isFaculty,
     isClubHead,
     refreshUserData,
-    updateUserProfile
+    updateUserProfile,
+    forgotPassword,
+    verifyResetOTP,
+    resetPassword
   };
 
   return (
